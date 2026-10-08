@@ -22,7 +22,7 @@ gantt
     #2 tldraw license and shape library spike :done, s2, 2026-10-12, 2d
 
     section Foundation
-    #3 Scaffold Electron + React + TS         :f1, after s1, 3d
+    #3 Scaffold Electron + React + TS         :done, f1, after s1, 3d
     #4 SQLite schema and migrations           :f2, after f1, 3d
 
     section Content engine
