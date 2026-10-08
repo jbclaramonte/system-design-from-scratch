@@ -18,8 +18,8 @@ gantt
     axisFormat %d %b
 
     section Spikes
-    #1 CLI latency and streaming spike        :crit, s1, 2026-10-12, 3d
-    #2 tldraw license and shape library spike :s2, 2026-10-12, 2d
+    #1 CLI latency and streaming spike        :done, crit, s1, 2026-10-12, 3d
+    #2 tldraw license and shape library spike :done, s2, 2026-10-12, 2d
 
     section Foundation
     #3 Scaffold Electron + React + TS         :f1, after s1, 3d
