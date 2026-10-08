@@ -1,0 +1,19 @@
+# Dependencies and build output
+node_modules/
+dist/
+out/
+release/
+
+# Local secrets and config (never commit license keys or API keys)
+.env
+.env.local
+.env.*.local
+
+# OS and editor
+.DS_Store
+.idea/
+.vscode/
+
+# Obsidian per-user state (keep the vault content, ignore workspace files)
+docs/.obsidian/workspace*.json
+docs/.obsidian/cache
