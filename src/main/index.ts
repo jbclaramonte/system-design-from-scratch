@@ -6,7 +6,13 @@ import { openAppDatabase, type Database } from './db'
 import { createGenerationIpc, GenerationService } from './generation'
 import { createDesignIpc } from './ipc/design'
 import { createHandlers } from './ipc/handlers'
+import { createMasteryIpc, createMasteryService } from './mastery'
+import { createSettingsIpc } from './settings/settingsIpc'
+import { getSettings } from './db/repositories/settings'
+import { resolveCliPath } from './generation/resolveCli'
 import { createQuizIpc } from './ipc/quiz'
+import { createFreeAnswerGrader } from './quiz/freeAnswerGrader'
+import { localGraders } from './quiz/grading'
 import { createQuizService } from './quiz/service'
 import { registerHandlers } from './ipc/registerHandlers'
 import { isExternalWebUrl } from './security'
@@ -66,8 +72,15 @@ void app.whenReady().then(() => {
   const opened = openAppDatabase(app.getPath('userData'))
   db = opened.db
   console.log(`Database ready at schema version ${opened.schemaVersion}`)
-  // CLAUDE_CLI_PATH overrides the automatic lookup until the settings screen exposes it.
-  generation = new GenerationService({ db, cli: { path: process.env['CLAUDE_CLI_PATH'] } })
+  const appDb = db
+  // The CLI path setting wins; CLAUDE_CLI_PATH (dev, tests) applies when it is empty.
+  const envCliPath = process.env['CLAUDE_CLI_PATH'] || undefined
+  generation = new GenerationService({
+    db,
+    resolveCli: () =>
+      resolveCliPath({ configuredPath: getSettings(appDb).claudeCliPath ?? envCliPath })
+  })
+  const generationService = generation
   const corpus = loadCorpus(corpusPath(app.getAppPath()))
   // Primer topics only for now: the Foundations Module topics are not defined yet.
   const seeded = seedTopics(db, corpus)
@@ -76,13 +89,25 @@ void app.whenReady().then(() => {
   session.defaultSession.setPermissionRequestHandler((_contents, _permission, callback) =>
     callback(false)
   )
+  const quizService = createQuizService(db, localGraders, {
+    freeAnswerGrader: createFreeAnswerGrader(generation)
+  })
+  const masteryDeps = { db, corpus, service: generation }
   registerHandlers(
     ipcMain,
     createHandlers({
       generation: createGenerationIpc(generation),
       design: createDesignIpc(db, { allowScratch: !app.isPackaged }),
       lesson: createLessonIpc({ db, corpus, service: generation }),
-      quiz: createQuizIpc(db, createQuizService(db), { allowDevFixture: !app.isPackaged })
+      quiz: createQuizIpc(db, quizService, { allowDevFixture: !app.isPackaged }),
+      mastery: createMasteryIpc(
+        masteryDeps,
+        createMasteryService({ ...masteryDeps, quiz: quizService })
+      ),
+      settings: createSettingsIpc(db, {
+        onCliPathChange: () => generationService.resetCliPath(),
+        fallbackCliPath: envCliPath
+      })
     })
   )
   createMainWindow()

@@ -21,7 +21,7 @@ export function QuizResults({ result }: { result: RoundResult }) {
         Score <strong>{formatPercent(round.scorePercent ?? 0)}</strong>, Mastery Threshold{' '}
         {formatPercent(masteryThreshold)}.
         {skippedQuestionIds.length > 0 &&
-          ` ${skippedQuestionIds.length} free-answer question(s) not counted until free-answer grading is available.`}
+          ` ${skippedQuestionIds.length} question(s) not counted: no grader was available for them.`}
       </p>
 
       <h3>By notion</h3>

@@ -21,6 +21,7 @@ Local SQLite database of the app, owned by the Electron main process. Table name
 |---|---|---|
 | 1 | `initial-schema` | Every table below. |
 | 2 | `notion-sources-and-question-flags` | `notions.source_sections`; `questions.flagged_at`, `flag_reason`, `replaced_by_question_id` (#7). |
+| 3 | `mastery-loop` | Table `round_limit_choices`; settings `questions_per_quiz`, `claude_cli_path` (#11). |
 
 ## Diagram
 
@@ -37,6 +38,7 @@ erDiagram
   notions ||--o{ question_notions : ""
   notions ||--o{ remediation_lessons : "targeted by"
   rounds |o--o{ remediation_lessons : "followed by"
+  rounds ||--o| round_limit_choices : "choice at the Round Limit"
   questions ||--o{ attempts : "answered by"
   rounds |o--o{ attempts : ""
   attempts ||--o{ attempt_notions : ""
@@ -123,6 +125,10 @@ erDiagram
     text feedback
     text attempted_at
   }
+  round_limit_choices {
+    int round_id PK
+    text choice "another_angle or skip"
+  }
   attempt_notions {
     int attempt_id PK
     int notion_id PK
@@ -180,7 +186,8 @@ Generated rows carry `grounded` and `source_sections` ([[Grounding]]) and an opt
 - `questions`: [[Question]]s of a quiz, unique `position` per quiz. `type` is one of `single_choice`, `multiple_choice`, `scenario`, `free_answer`. `body` holds the type-specific payload (choices with their `correct` flag, explanation, scenario, expected points and model answer, source sections; see [[Prompts]]). Deleted with their quiz, unless they have attempts. A faulty question is flagged (`flagged_at`, `flag_reason`) and may be replaced: the replacement takes its position, the flagged row moves after the last position and points to it with `replaced_by_question_id` (history; attempts stay valid). `listQuestions` skips replaced questions, `listQuestionHistory` keeps them.
 - `question_notions`: tags each question with one or more notions.
 - `rounds`: one [[Round]] of the [[Mastery Loop]] on a topic, playing one quiz. `number` is unique per topic and never restarts, so the history stays ordered; the [[Round Limit]] counts rounds since the last passed round of that topic. `completed_at`, `score_percent` (0 to 100) and `passed` are all null until the round is graded, then all set; `passed` is stored because the [[Mastery Threshold]] can change later.
-- `attempts`: one [[Attempt]] per answer: `attempted_at` (date), `question_id`, `question_type`, `answer` (JSON), `result` (`correct`, `partially_correct`, `incorrect`), `score` (0 to 1), optional `feedback` (free answer grading) and `round_id`. Attempts are history: a question or round with attempts cannot be deleted.
+- `attempts`: one [[Attempt]] per answer: `attempted_at` (date), `question_id`, `question_type`, `answer` (JSON), `result` (`correct`, `partially_correct`, `incorrect`), `score` (0 to 1), optional `feedback` (free answers: the grading record as JSON, with the grading in force, the contest and the replaced gradings; see [[Quiz Engine#Free answers (#10)]]) and `round_id`. Attempts are history: a question or round with attempts cannot be deleted.
+- `round_limit_choices`: the learner's choice on a failed [[Round]] that reached the [[Round Limit]]: `another_angle` or `skip` (one per round, changed when the learner comes back to a skipped topic). See [[Mastery Loop Implementation]].
 - `attempt_notions`: notions of the question at the time of the attempt, copied on insert, so per-notion history survives retagging. Indexed by notion for the [[Notion Map]] and [[Dashboard]].
 
 > [!note] Spaced repetition
@@ -195,7 +202,7 @@ Generated rows carry `grounded` and `source_sections` ([[Grounding]]) and an opt
 ### Generation and data
 
 - `content_cache`: [[Content Cache]]. `cache_key` is the SHA-256 of the canonical JSON of `{ kind, inputs, promptVersion }` (object keys sorted). `kind` is `lesson`, `remediation_lesson` or `quiz` (a `notion_outline` Generation is stored in `notions` instead). Storing an entry with an existing key replaces its content.
-- `settings`: key/value, values as JSON. Seeded with `mastery_threshold = 100` ([[Mastery Threshold]]) and `round_limit = 3` ([[Round Limit]]).
+- `settings`: key/value, values as JSON. Seeded with `mastery_threshold = 100` ([[Mastery Threshold]]), `round_limit = 3` ([[Round Limit]]), `questions_per_quiz = null` (automatic) and `claude_cli_path = null` (automatic lookup). Edited on the Settings screen ([[Mastery Loop Implementation#Settings]]).
 - `schema_migrations`: applied migrations.
 
 ## Code

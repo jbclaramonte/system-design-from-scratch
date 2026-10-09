@@ -19,4 +19,4 @@ Tables `questions` and `question_notions`, repository `src/main/db/repositories/
 
 Generated shape (answer key, explanation, rubric) in `src/main/generation/prompts/quiz.ts`. A faulty question is flagged with `flagQuestion` and replaced by `regenerateQuestion` (`src/main/generation/pipelines.ts`), which keeps the flagged one as history. See [[Prompts]].
 
-Single-choice, multiple-choice and scenario questions are graded by `gradeAnswer` / `localGraders` (`src/main/quiz/grading.ts`); free answers have no grader yet (#10). Rules in [[Quiz Engine]].
+Single-choice, multiple-choice and scenario questions are graded by `gradeAnswer` / `localGraders` (`src/main/quiz/grading.ts`). Free answers are graded by a Generation of kind `free_answer_grading` against their expected points and model answer: prompt in `src/main/generation/prompts/freeAnswerGrading.ts`, grader in `src/main/quiz/freeAnswerGrader.ts`, called by `submitFreeAnswer` in `src/main/quiz/service.ts`. Rules in [[Quiz Engine]].

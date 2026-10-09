@@ -47,7 +47,7 @@ sequenceDiagram
 - The `lessons` row is what the learner saw ([[Data Model]]): created on `done` unless the topic already has one with the same `content_cache_key`.
 
 > [!important] Quiz Pre-generation and the quiz screen
-> The pre-generated quiz is `prepareQuiz(deps, topicId, { lessonMarkdown })` with default options, where `lessonMarkdown` is the lesson the learner read (latest `lessons` row of the topic). A foreground quiz request finds it in the Content Cache only with the same options. A failed Pre-generation is logged and not retried until the lesson is opened again.
+> The pre-generated quiz is `prepareQuiz(deps, topicId, firstRoundQuizOptions(lessonMarkdown, settings))` (`src/main/mastery/quizOptions.ts`), where `lessonMarkdown` is the lesson the learner read (latest `lessons` row of the topic). A foreground quiz request finds it in the Content Cache only with the same options: the first round of the [[Mastery Loop]] builds them with the same function ([[Mastery Loop Implementation]]). A failed Pre-generation is logged and not retried until the lesson is opened again.
 
 ## IPC
 

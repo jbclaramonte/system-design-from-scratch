@@ -15,4 +15,4 @@ Lesson, quiz, remediation lessons on missed notions, new quiz with fresh questio
 
 ## In code
 
-Not implemented yet (#11). Its Generations are ready: quiz options `focusNotions`, `reminderNotions` and `avoidPrompts` for the rounds, and the Remediation Lesson prompt (`src/main/generation/prompts/`). See [[Prompts]].
+`src/main/mastery/`: pure state machine `deriveMastery` (`state.ts`, the step is derived from the database, so the loop survives restarts), `createMasteryService` and `mastery:*` IPC (`service.ts`, `masteryIpc.ts`), round quiz options with `focusNotions`, `reminderNotions` and `avoidPrompts` (`quizOptions.ts`), `getTopicMastery` and `latestNotionScores` (`queries.ts`). Topic screen in `src/renderer/src/mastery/`. See [[Mastery Loop Implementation]].

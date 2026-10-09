@@ -267,6 +267,11 @@ export class GenerationService {
     for (const job of this.jobs) this.abortJob(job)
   }
 
+  /** Forgets the resolved CLI path, so the next Generation resolves it again (path setting changed). */
+  resetCliPath(): void {
+    this.cliPath = undefined
+  }
+
   private fromCache(key: string, schema: z.ZodType | undefined): GenerationOutput | undefined {
     const entry = getCachedContent(this.db, key)
     // An entry that no longer matches the schema is regenerated (schema changed, same version).

@@ -3,8 +3,10 @@
  *
  * Answer keys never cross the IPC boundary before an answer is submitted: the renderer gets a
  * `QuestionView` (no `correct` flag, no explanation) and the main process grades. Feedback
- * (`QuestionFeedback`) carries the answer key once the question is answered.
+ * (`QuestionFeedback`) carries the answer key once the question is answered. The model answer of
+ * a free-answer question is only sent with its grading.
  */
+import type { GenerationErrorInfo } from './generation'
 
 export const questionTypes = [
   'single_choice',
@@ -21,14 +23,17 @@ export type LocallyGradedType = (typeof locallyGradedTypes)[number]
 export type AttemptResult = 'correct' | 'partially_correct' | 'incorrect'
 
 /**
- * Outcome of grading one answer, stored on the Attempt. Shared by every grader (local ones here,
- * the free-answer grader of #10).
+ * Outcome of grading one answer, stored on the Attempt. Shared by every grader (the local ones
+ * and the free-answer grading Generation).
  */
 export interface GradingResult {
   result: AttemptResult
   /** Mastery credit between 0 and 1, the value the quiz and notion scores sum up. */
   score: number
-  /** Text feedback stored on the Attempt (free-answer grading); null for local grading. */
+  /**
+   * Feedback stored on the Attempt: a `FreeAnswerGradingRecord` as JSON for a free answer, null
+   * for local grading.
+   */
   feedback: string | null
 }
 
@@ -37,8 +42,19 @@ export interface ChoiceAnswer {
   selected: number[]
 }
 
-/** Answer sent by the renderer. #10 adds the free-answer shape. */
-export type QuestionAnswer = ChoiceAnswer
+/** Answer to a free-answer question: the learner's text, graded by a Generation. */
+export interface FreeAnswer {
+  text: string
+}
+
+/** Longest free answer accepted, in characters (a short answer is one to a few sentences). */
+export const FREE_ANSWER_MAX_LENGTH = 1200
+
+/** Longest justification accepted when the learner contests a free-answer grade. */
+export const CONTEST_JUSTIFICATION_MAX_LENGTH = 500
+
+/** Answer sent by the renderer. */
+export type QuestionAnswer = ChoiceAnswer | FreeAnswer
 
 export interface NotionRef {
   id: number
@@ -58,7 +74,10 @@ export interface QuestionView {
   /** Choice texts in display order; the answer refers to them by index. Empty for free answers. */
   choices: string[]
   notions: NotionRef[]
-  /** False when no grader exists yet for the type (free answer until #10): the player skips it. */
+  /**
+   * False when no grader is configured for the type (free answers without a Generation service,
+   * as in some tests): the player skips it and the round leaves it out of the score.
+   */
   gradable: boolean
 }
 
@@ -97,24 +116,92 @@ export interface ChoiceFeedbackItem {
   selected: boolean
 }
 
-/** Feedback on an answered question, with the answer key. */
-export interface QuestionFeedback extends GradingResult {
+interface QuestionFeedbackBase extends GradingResult {
   questionId: number
   type: QuestionType
   /** French. */
   prompt: string
+  /**
+   * Informational, the mastery `score` stays all-or-nothing. Multiple choice: (correct picks -
+   * wrong picks) / correct choices, floored at 0. Free answer: covered expected points / expected
+   * points. Null for the other types.
+   */
+  partialCredit: number | null
+}
+
+/** Feedback on an answered choice question (single choice, multiple choice, scenario). */
+export interface ChoiceQuestionFeedback extends QuestionFeedbackBase {
   kind: 'choice'
   choices: ChoiceFeedbackItem[]
   /** Scenario situation, shown again next to its trade-off justification. */
   scenario: string | null
   /** Stored explanation (for a scenario, the trade-off justification). French. */
   explanation: string
-  /**
-   * Multiple choice only, informational: (correct picks - wrong picks) / correct choices, floored
-   * at 0. The mastery `score` stays all-or-nothing. Null for the other types.
-   */
-  partialCredit: number | null
 }
+
+/**
+ * What the free-answer grading Generation returns (see docs/Quiz Engine.md). `expectedPoints` is
+ * aligned with the question's expected points, in order. French text.
+ */
+export type FreeAnswerGrading = {
+  verdict: AttemptResult
+  expectedPoints: { covered: boolean; justification: string }[]
+  misconceptions: string[]
+  /** Short explanation tied to the notion. */
+  explanation: string
+  /** What to review, one short item each. */
+  toReview: string[]
+}
+
+/** An earlier grading of the same Attempt, replaced after a contest. */
+export type PastFreeAnswerGrading = {
+  promptVersion: string
+  grading: FreeAnswerGrading
+}
+
+/**
+ * The free-answer grading stored on the Attempt (`attempts.feedback`, as JSON): the grading in
+ * force, the contest if any, and the gradings it replaced, oldest first.
+ */
+export type FreeAnswerGradingRecord = {
+  promptVersion: string
+  grading: FreeAnswerGrading
+  contest: { justification: string; contestedAt: string } | null
+  history: PastFreeAnswerGrading[]
+}
+
+export interface ExpectedPointFeedback {
+  /** The expected point, from the question's rubric. French. */
+  point: string
+  covered: boolean
+  justification: string
+}
+
+/** Feedback on an answered free-answer question. Model answer revealed only now. */
+export interface FreeAnswerQuestionFeedback extends QuestionFeedbackBase {
+  kind: 'free_answer'
+  /** The learner's answer. */
+  answer: string
+  expectedPoints: ExpectedPointFeedback[]
+  misconceptions: string[]
+  explanation: string
+  toReview: string[]
+  modelAnswer: string
+  /** Set once the grade was contested: the justification and the grading it replaced. */
+  contest: {
+    justification: string
+    previous: {
+      result: AttemptResult
+      expectedPoints: ExpectedPointFeedback[]
+      explanation: string
+    }
+  } | null
+  /** The grade can still be contested: not correct, not contested yet, round still open. */
+  contestable: boolean
+}
+
+/** Feedback on an answered question, with the answer key. */
+export type QuestionFeedback = ChoiceQuestionFeedback | FreeAnswerQuestionFeedback
 
 export interface NotionScore extends NotionRef {
   questionCount: number
@@ -154,7 +241,7 @@ export interface RoundResult {
   masteryThreshold: number
   questions: QuestionFeedback[]
   notionScores: NotionScore[]
-  /** Questions left out of the score because their type has no grader yet (free answer). */
+  /** Questions left out of the score because no grader is configured for their type. */
   skippedQuestionIds: number[]
 }
 
@@ -162,3 +249,12 @@ export interface SubmittedAnswer {
   questionId: number
   answer: QuestionAnswer
 }
+
+/**
+ * Outcome of a free-answer grading over IPC. A failed Generation is an outcome, not a thrown
+ * error, so the renderer gets its typed code (`cli_not_found`, `cancelled`...). Nothing is
+ * recorded on failure: the learner can retry or skip.
+ */
+export type FreeAnswerGradingOutcome =
+  | { status: 'graded'; feedback: QuestionFeedback }
+  | { status: 'failed'; error: GenerationErrorInfo }

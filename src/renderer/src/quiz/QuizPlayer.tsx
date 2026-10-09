@@ -1,8 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
 import type { QuestionFeedback, RoundResult, RoundStart } from '../../../shared/quiz'
+import { ContestForm } from './ContestForm'
 import { errorMessage } from './errorMessage'
+import { FreeAnswerForm } from './FreeAnswerForm'
 import { QuestionFeedbackView } from './QuestionFeedbackView'
-import { allGradableAnswered, nextQuestionIndex, toggleChoice } from './progress'
+import {
+  allGradableAnswered,
+  nextQuestionIndex,
+  postponedQuestions,
+  toggleChoice
+} from './progress'
 
 const typeLabels = {
   single_choice: 'Single choice',
@@ -13,7 +20,8 @@ const typeLabels = {
 
 /**
  * Plays a Round one question at a time: answer, see the feedback right away, move on. Grading
- * happens in the main process; the questions come without their answer keys.
+ * happens in the main process (free answers through a Generation); the questions come without
+ * their answer keys.
  */
 export function QuizPlayer({
   start,
@@ -33,6 +41,15 @@ export function QuizPlayer({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const headingRef = useRef<HTMLHeadingElement>(null)
+  // Free-answer texts not graded yet, kept when the learner answers later.
+  const [drafts, setDrafts] = useState<ReadonlyMap<number, string>>(new Map())
+  const setDraft = (questionId: number, text: string | null) =>
+    setDrafts((previous) => {
+      const next = new Map(previous)
+      if (text === null) next.delete(questionId)
+      else next.set(questionId, text)
+      return next
+    })
 
   const answered = new Set(feedback.keys())
   const index = reviewing
@@ -46,6 +63,11 @@ export function QuizPlayer({
     headingRef.current?.focus()
   }, [question?.id, done])
 
+  const showGraded = (graded: QuestionFeedback) => {
+    setFeedback((previous) => new Map(previous).set(graded.questionId, graded))
+    setReviewing(graded)
+  }
+
   const submit = () => {
     if (!question || selected.length === 0) return
     setBusy(true)
@@ -53,8 +75,7 @@ export function QuizPlayer({
     window.api
       .submitAnswer({ roundId: round.id, questionId: question.id, answer: { selected } })
       .then((graded) => {
-        setFeedback((previous) => new Map(previous).set(graded.questionId, graded))
-        setReviewing(graded)
+        showGraded(graded)
         setSelected([])
       })
       .catch((reason: unknown) => setError(errorMessage(reason)))
@@ -76,12 +97,31 @@ export function QuizPlayer({
   const progress = `Round ${round.number} · ${quiz.topicTitle}`
 
   if (done) {
+    const postponed = postponedQuestions(quiz.questions, answered, skipped)
     return (
       <section data-testid="quiz-player">
         <p>{progress}</p>
         <h2 ref={headingRef} tabIndex={-1}>
-          All questions answered
+          {postponed.length === 0
+            ? 'All questions answered'
+            : `${postponed.length} question(s) left to answer`}
         </h2>
+        {postponed.length > 0 && (
+          <p>
+            Every question counts in the score.{' '}
+            <button
+              data-testid="answer-postponed"
+              onClick={() =>
+                setSkipped(
+                  (previous) =>
+                    new Set([...previous].filter((id) => !postponed.some((q) => q.id === id)))
+                )
+              }
+            >
+              Answer them now
+            </button>
+          </p>
+        )}
         {error && <p role="alert">{error}</p>}
         <button
           data-testid="complete-round"
@@ -119,7 +159,7 @@ export function QuizPlayer({
             {question.prompt}
           </p>
           <p data-testid="question-not-gradable">
-            This question type is coming with free-answer grading. It is not counted in this round.
+            No grader is available for this question. It is not counted in this round.
           </p>
           <button
             data-testid="skip-question"
@@ -136,12 +176,33 @@ export function QuizPlayer({
           <div role="status">
             <QuestionFeedbackView feedback={reviewing} />
           </div>
+          {reviewing.kind === 'free_answer' && reviewing.contestable && (
+            <ContestForm
+              key={reviewing.questionId}
+              roundId={round.id}
+              feedback={reviewing}
+              onContested={showGraded}
+            />
+          )}
           <p>
             <button data-testid="next-question" onClick={() => setReviewing(null)} autoFocus>
               Next
             </button>
           </p>
         </>
+      ) : question.type === 'free_answer' ? (
+        <FreeAnswerForm
+          key={question.id}
+          roundId={round.id}
+          question={question}
+          draft={drafts.get(question.id) ?? ''}
+          onDraftChange={(text) => setDraft(question.id, text)}
+          onGraded={(graded) => {
+            setDraft(question.id, null)
+            showGraded(graded)
+          }}
+          onAnswerLater={() => setSkipped((previous) => new Set(previous).add(question.id))}
+        />
       ) : (
         <form
           onSubmit={(event) => {

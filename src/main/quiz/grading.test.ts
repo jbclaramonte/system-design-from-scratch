@@ -1,13 +1,19 @@
 import { describe, expect, it } from 'vitest'
 import type { Json } from '../../shared/json'
-import type { QuestionType } from '../../shared/quiz'
+import type { FreeAnswerGrading, FreeAnswerGradingRecord, QuestionType } from '../../shared/quiz'
 import {
+  coveredShare,
+  freeAnswerFeedback,
   gradeAnswer,
   InvalidAnswerError,
   meetsThreshold,
   normalizeChoiceAnswer,
+  normalizeFreeAnswer,
   notionScores,
+  parseGradingRecord,
   quizScorePercent,
+  recordGradingResult,
+  verdictScore,
   type GradableQuestion
 } from './grading'
 
@@ -169,10 +175,10 @@ describe('multiple choice', () => {
 })
 
 describe('gradeAnswer', () => {
-  it('has no local grader for free answers', () => {
+  it('has no local grader for free answers: they are graded by a Generation', () => {
     const free = question('free_answer', { expectedPoints: ['x'], modelAnswer: 'y' })
 
-    expect(() => gradeAnswer(free, { text: 'z' })).toThrow(/No grader for free_answer/)
+    expect(() => gradeAnswer(free, { text: 'z' })).toThrow(/graded by a Generation/)
   })
 
   it('uses an injected grader (the extension point for free answers)', () => {
@@ -198,6 +204,100 @@ describe('gradeAnswer', () => {
     expect(() =>
       gradeAnswer(question('single_choice', { choices: [] }), { selected: [0] })
     ).toThrow()
+  })
+})
+
+describe('free answers', () => {
+  const free = question('free_answer', {
+    expectedPoints: ['Expiration', 'Données périmées'],
+    modelAnswer: 'Le TTL fait expirer l’entrée.',
+    sourceSections: []
+  })
+  const grading = (verdict: FreeAnswerGrading['verdict'], covered: boolean[]) => ({
+    verdict,
+    expectedPoints: covered.map((isCovered, index) => ({
+      covered: isCovered,
+      justification: `J${index}`
+    })),
+    misconceptions: [],
+    explanation: `Explication ${verdict}`,
+    toReview: []
+  })
+
+  it('normalizes a free answer: trimmed, not empty, bounded', () => {
+    expect(normalizeFreeAnswer({ text: '  Le TTL.  ' })).toEqual({ text: 'Le TTL.' })
+    expect(() => normalizeFreeAnswer({ text: ' \n ' })).toThrow(InvalidAnswerError)
+    expect(() => normalizeFreeAnswer({ text: 'x'.repeat(1201) })).toThrow(/1200 characters/)
+    expect(normalizeFreeAnswer({ text: 'x'.repeat(1200) }).text).toHaveLength(1200)
+    expect(() => normalizeFreeAnswer({ selected: [0] })).toThrow(InvalidAnswerError)
+  })
+
+  it('maps a verdict to an all-or-nothing score, like multiple choice', () => {
+    expect(verdictScore('correct')).toBe(1)
+    expect(verdictScore('partially_correct')).toBe(0)
+    expect(verdictScore('incorrect')).toBe(0)
+    expect(coveredShare(grading('partially_correct', [true, false]))).toBe(0.5)
+    expect(coveredShare(grading('incorrect', []))).toBe(0)
+  })
+
+  it('stores the grading record as JSON and reads it back', () => {
+    const record: FreeAnswerGradingRecord = {
+      promptVersion: 'v1',
+      grading: grading('partially_correct', [true, false]),
+      contest: null,
+      history: []
+    }
+
+    const stored = recordGradingResult(record)
+
+    expect(stored).toMatchObject({ result: 'partially_correct', score: 0 })
+    expect(parseGradingRecord(stored.feedback)).toEqual(record)
+    expect(() => parseGradingRecord(null)).toThrow(/no grading/)
+    expect(() => parseGradingRecord('{"grading": {}}')).toThrow()
+  })
+
+  it('builds the feedback with the expected points, the model answer and the contest', () => {
+    const record: FreeAnswerGradingRecord = {
+      promptVersion: 'v2',
+      grading: grading('partially_correct', [true, false]),
+      contest: { justification: 'Relis.', contestedAt: '2026-01-01T00:00:00.000Z' },
+      history: [{ promptVersion: 'v1', grading: grading('incorrect', [false, false]) }]
+    }
+
+    const feedback = freeAnswerFeedback(free, 'Ma réponse', record, { contestable: true })
+
+    expect(feedback).toMatchObject({
+      kind: 'free_answer',
+      result: 'partially_correct',
+      score: 0,
+      feedback: 'Explication partially_correct',
+      partialCredit: 0.5,
+      answer: 'Ma réponse',
+      expectedPoints: [
+        { point: 'Expiration', covered: true, justification: 'J0' },
+        { point: 'Données périmées', covered: false, justification: 'J1' }
+      ],
+      modelAnswer: 'Le TTL fait expirer l’entrée.',
+      contest: { justification: 'Relis.', previous: { result: 'incorrect' } },
+      // Already contested.
+      contestable: false
+    })
+    expect(
+      freeAnswerFeedback(
+        free,
+        'x',
+        { ...record, contest: null, history: [] },
+        { contestable: true }
+      ).contestable
+    ).toBe(true)
+    expect(
+      freeAnswerFeedback(
+        free,
+        'x',
+        { ...record, grading: grading('correct', [true, true]), contest: null },
+        { contestable: true }
+      ).contestable
+    ).toBe(false)
   })
 })
 

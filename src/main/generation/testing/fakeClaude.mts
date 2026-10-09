@@ -117,6 +117,14 @@ function fail(message: string, stderr: string) {
 }
 
 const validQuiz = { questions: [{ prompt: 'Q?', choices: ['a', 'b'], correct: [0] }] }
+// A free-answer grading of a question with one expected point.
+const validGrading = {
+  verdict: 'correct',
+  expectedPoints: [{ covered: true, justification: 'La réponse parle des données périmées.' }],
+  misconceptions: [],
+  explanation: 'Bien vu : le TTL limite la durée d’une donnée périmée.',
+  toReview: []
+}
 
 let stdin = ''
 process.stdin.setEncoding('utf8')
@@ -164,6 +172,11 @@ switch (scenario) {
     init()
     structured(validQuiz)
     end('', { structured_output: validQuiz })
+    break
+  case 'grading':
+    init()
+    structured(validGrading)
+    end('', { structured_output: validGrading })
     break
   case 'json-invalid-once':
     init()

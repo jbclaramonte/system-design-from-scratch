@@ -338,3 +338,23 @@ export function listAttemptsByRound(db: Database, roundId: number): Attempt[] {
     .all<AttemptRow>({ roundId })
     .map(toAttempt)
 }
+
+/**
+ * Replaces the grading of an attempt (a contested free-answer grade, re-graded once). The answer,
+ * date and notion tags stay; the caller keeps the replaced grading in `feedback`.
+ */
+export function updateAttemptGrading(
+  db: Database,
+  id: number,
+  grading: { result: AttemptResult; score: number; feedback: string | null }
+): Attempt {
+  const { changes } = db
+    .prepare(
+      `UPDATE attempts SET result = $result, score = $score, feedback = $feedback,
+         updated_at = ${NOW}
+       WHERE id = $id`
+    )
+    .run({ id, ...grading })
+  if (changes === 0) throw new Error(`Attempt ${id} does not exist.`)
+  return getAttempt(db, id)!
+}

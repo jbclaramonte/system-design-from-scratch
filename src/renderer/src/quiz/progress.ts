@@ -19,6 +19,16 @@ export const allGradableAnswered = (
   answered: ReadonlySet<number>
 ): boolean => questions.every((q) => !q.gradable || answered.has(q.id))
 
+/**
+ * Gradable questions the learner skipped to answer later (a free answer whose grading failed,
+ * for example) and has not answered yet: the Round cannot be completed without them.
+ */
+export const postponedQuestions = (
+  questions: readonly QuestionView[],
+  answered: ReadonlySet<number>,
+  skipped: ReadonlySet<number>
+): QuestionView[] => questions.filter((q) => q.gradable && skipped.has(q.id) && !answered.has(q.id))
+
 /** Toggles a choice: replaces the selection for a single answer, adds or removes otherwise. */
 export function toggleChoice(
   selected: readonly number[],

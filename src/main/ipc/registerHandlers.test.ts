@@ -37,6 +37,26 @@ const handlers: IpcHandlers = {
   },
   'lesson:start': () => undefined,
   'lesson:cancel': () => undefined,
+  'mastery:listTopics': () => [],
+  'mastery:getState': () => {
+    throw new Error('no topic')
+  },
+  'mastery:startRound': () => undefined,
+  'mastery:startRemediation': () => undefined,
+  'mastery:cancel': () => undefined,
+  'mastery:choose': () => {
+    throw new Error('no topic')
+  },
+  'settings:get': () => ({
+    masteryThreshold: 100,
+    roundLimit: 3,
+    questionsPerQuiz: null,
+    claudeCliPath: null
+  }),
+  'settings:update': () => {
+    throw new Error('invalid')
+  },
+  'settings:testCli': async () => ({ ok: true, path: '/x/claude', version: '1.0.0' }),
   'quiz:listTopics': () => [],
   'quiz:listQuizzes': () => [],
   'quiz:load': () => {
@@ -51,7 +71,14 @@ const handlers: IpcHandlers = {
   'quiz:completeRound': () => {
     throw new Error('no round')
   },
-  'quiz:createDevQuiz': () => ({ topicId: 1, quizId: 1 })
+  'quiz:createDevQuiz': () => ({ topicId: 1, quizId: 1 }),
+  'quiz:submitFreeAnswer': async () => {
+    throw new Error('no round')
+  },
+  'quiz:contestGrade': async () => {
+    throw new Error('no round')
+  },
+  'quiz:cancelGrading': () => undefined
 }
 
 describe('registerHandlers', () => {
@@ -70,13 +97,25 @@ describe('registerHandlers', () => {
       'generation:start',
       'lesson:cancel',
       'lesson:start',
+      'mastery:cancel',
+      'mastery:choose',
+      'mastery:getState',
+      'mastery:listTopics',
+      'mastery:startRemediation',
+      'mastery:startRound',
+      'quiz:cancelGrading',
       'quiz:completeRound',
+      'quiz:contestGrade',
       'quiz:createDevQuiz',
       'quiz:listQuizzes',
       'quiz:listTopics',
       'quiz:load',
       'quiz:startRound',
       'quiz:submitAnswer',
+      'quiz:submitFreeAnswer',
+      'settings:get',
+      'settings:testCli',
+      'settings:update',
       'system:ping',
       'topic:get',
       'topic:list'

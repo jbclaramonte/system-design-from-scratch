@@ -1,15 +1,24 @@
 // Deterministic local grading of choice questions (single choice, multiple choice, scenario),
-// quiz and per-notion scores. Pure: no database, no Electron. Rules in docs/Quiz Engine.md.
+// the free-answer pieces that need no Generation (answer checks, verdict to score, feedback from
+// the stored grading), quiz and per-notion scores. Pure: no database, no Electron. Rules in
+// docs/Quiz Engine.md.
 import { z } from 'zod'
 import type { Json } from '../../shared/json'
-import type {
-  ChoiceAnswer,
-  GradingResult,
-  LocallyGradedType,
-  NotionRef,
-  NotionScore,
-  QuestionFeedback,
-  QuestionType
+import {
+  FREE_ANSWER_MAX_LENGTH,
+  type AttemptResult,
+  type ChoiceAnswer,
+  type ChoiceQuestionFeedback,
+  type ExpectedPointFeedback,
+  type FreeAnswer,
+  type FreeAnswerGrading,
+  type FreeAnswerGradingRecord,
+  type FreeAnswerQuestionFeedback,
+  type GradingResult,
+  type LocallyGradedType,
+  type NotionRef,
+  type NotionScore,
+  type QuestionType
 } from '../../shared/quiz'
 
 /** An answer the grader refuses (malformed, unknown choice): nothing is recorded. */
@@ -41,12 +50,12 @@ export interface GradedAnswer {
   grading: GradingResult
   /** The answer as stored on the Attempt (normalized). */
   answer: Json
-  feedback: QuestionFeedback
+  feedback: ChoiceQuestionFeedback
 }
 
 /**
- * A grader for one question type. `free_answer` has none locally: #10 registers its grader
- * (a Generation) next to these; questions without a grader are skipped by the quiz service.
+ * A synchronous grader for one question type. `free_answer` has none: it is graded by a
+ * Generation (`FreeAnswerGrader` in `freeAnswerGrader.ts`), asynchronously, by the quiz service.
  */
 export interface Grader {
   grade(question: GradableQuestion, answer: unknown): GradedAnswer
@@ -77,7 +86,7 @@ function choiceFeedback(
   selected: readonly number[],
   grading: GradingResult,
   partialCredit: number | null
-): QuestionFeedback {
+): ChoiceQuestionFeedback {
   return {
     questionId: question.id,
     type: question.type,
@@ -160,8 +169,131 @@ export function gradeAnswer(
   graders: Graders = localGraders
 ): GradedAnswer {
   const grader = graders[question.type]
-  if (!grader) throw new Error(`No grader for ${question.type} questions yet.`)
+  if (!grader) {
+    throw new Error(
+      question.type === 'free_answer'
+        ? 'Free answers are graded by a Generation: submit them one at a time.'
+        : `No grader for ${question.type} questions.`
+    )
+  }
   return grader.grade(question, answer)
+}
+
+// Free answers
+
+/** `questions.body` of a free-answer question, as stored by `saveQuiz` (see docs/Prompts.md). */
+const freeAnswerBodySchema = z.object({
+  expectedPoints: z.array(z.string().min(1)).min(1),
+  modelAnswer: z.string()
+})
+export type FreeAnswerBody = z.infer<typeof freeAnswerBodySchema>
+
+export function parseFreeAnswerBody(body: Json): FreeAnswerBody {
+  return freeAnswerBodySchema.parse(body)
+}
+
+/**
+ * Validates a free answer: `{ text }`, trimmed, not empty, at most `FREE_ANSWER_MAX_LENGTH`
+ * characters. Checked before any Generation, so a refused answer costs nothing.
+ */
+export function normalizeFreeAnswer(answer: unknown): FreeAnswer {
+  const parsed = z.object({ text: z.string() }).safeParse(answer)
+  if (!parsed.success) throw new InvalidAnswerError('A free answer must be { text: string }.')
+  const text = parsed.data.text.trim()
+  if (text.length === 0) throw new InvalidAnswerError('Write an answer first.')
+  if (text.length > FREE_ANSWER_MAX_LENGTH) {
+    throw new InvalidAnswerError(`An answer is at most ${FREE_ANSWER_MAX_LENGTH} characters.`)
+  }
+  return { text }
+}
+
+/**
+ * Mastery credit of a free-answer verdict: all-or-nothing, like multiple choice. A
+ * `partially_correct` answer scores 0, so its notions go to remediation.
+ */
+export const verdictScore = (verdict: AttemptResult): number => (verdict === 'correct' ? 1 : 0)
+
+/** Informational closeness of a free answer: covered expected points over expected points. */
+export const coveredShare = (grading: FreeAnswerGrading): number =>
+  grading.expectedPoints.length === 0
+    ? 0
+    : grading.expectedPoints.filter((point) => point.covered).length / grading.expectedPoints.length
+
+const gradingSchema = z.object({
+  verdict: z.enum(['correct', 'partially_correct', 'incorrect']),
+  expectedPoints: z.array(z.object({ covered: z.boolean(), justification: z.string() })),
+  misconceptions: z.array(z.string()),
+  explanation: z.string(),
+  toReview: z.array(z.string())
+})
+
+const gradingRecordSchema = z.object({
+  promptVersion: z.string(),
+  grading: gradingSchema,
+  contest: z.object({ justification: z.string(), contestedAt: z.string() }).nullable(),
+  history: z.array(z.object({ promptVersion: z.string(), grading: gradingSchema }))
+})
+
+/** The grading record stored as JSON in `attempts.feedback`. */
+export function parseGradingRecord(feedback: string | null): FreeAnswerGradingRecord {
+  if (feedback === null) throw new Error('A free-answer attempt has no grading.')
+  return gradingRecordSchema.parse(JSON.parse(feedback))
+}
+
+/** What the Attempt stores for a free-answer grading record. */
+export const recordGradingResult = (record: FreeAnswerGradingRecord): GradingResult => ({
+  result: record.grading.verdict,
+  score: verdictScore(record.grading.verdict),
+  feedback: JSON.stringify(record)
+})
+
+const pointFeedback = (body: FreeAnswerBody, grading: FreeAnswerGrading): ExpectedPointFeedback[] =>
+  body.expectedPoints.map((point, index) => ({
+    point,
+    covered: grading.expectedPoints[index]?.covered ?? false,
+    justification: grading.expectedPoints[index]?.justification ?? ''
+  }))
+
+/**
+ * Feedback on a graded free answer, from its stored record: the grading in force, the expected
+ * points with their coverage, and the model answer (revealed only once graded).
+ */
+export function freeAnswerFeedback(
+  question: GradableQuestion,
+  answer: string,
+  record: FreeAnswerGradingRecord,
+  { contestable }: { contestable: boolean }
+): FreeAnswerQuestionFeedback {
+  const body = parseFreeAnswerBody(question.body)
+  const { grading, contest, history } = record
+  const previous = history.at(-1)?.grading
+  return {
+    questionId: question.id,
+    type: question.type,
+    prompt: question.prompt,
+    kind: 'free_answer',
+    ...recordGradingResult(record),
+    feedback: grading.explanation,
+    partialCredit: coveredShare(grading),
+    answer,
+    expectedPoints: pointFeedback(body, grading),
+    misconceptions: grading.misconceptions,
+    explanation: grading.explanation,
+    toReview: grading.toReview,
+    modelAnswer: body.modelAnswer,
+    contest:
+      contest && previous
+        ? {
+            justification: contest.justification,
+            previous: {
+              result: previous.verdict,
+              expectedPoints: pointFeedback(body, previous),
+              explanation: previous.explanation
+            }
+          }
+        : null,
+    contestable: contestable && grading.verdict !== 'correct' && contest === null
+  }
 }
 
 /** One graded question, for the scores. */

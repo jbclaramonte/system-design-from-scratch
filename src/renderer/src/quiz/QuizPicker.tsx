@@ -86,8 +86,10 @@ export function QuizPicker({ onStart }: { onStart: (quizId: number) => void }) {
               <button data-testid={`start-quiz-${quiz.id}`} onClick={() => onStart(quiz.id)}>
                 Quiz #{quiz.id}
               </button>{' '}
-              {quiz.questionCount} questions ({quiz.gradableQuestionCount} graded locally),{' '}
-              {quiz.grounded ? 'grounded' : 'ungrounded'},{' '}
+              {quiz.questionCount} questions
+              {quiz.gradableQuestionCount < quiz.questionCount &&
+                ` (${quiz.questionCount - quiz.gradableQuestionCount} not graded)`}
+              , {quiz.grounded ? 'grounded' : 'ungrounded'},{' '}
               {new Date(quiz.createdAt).toLocaleString()}
             </li>
           ))}

@@ -51,11 +51,15 @@ src/
     corpus/          Source Corpus: primer split, excerpt lookup (docs/Corpus.md)
     generation/      Generation service: Claude Code CLI runner, queue, Content Cache, IPC
     content/         Topic seeding from the corpus, lesson flow over IPC (docs/Lesson View.md)
+    mastery/         Mastery Loop state machine, service and IPC (docs/Mastery Loop Implementation.md)
+    settings/        Settings over IPC, Claude CLI path test
   preload/           Exposes the typed window.api bridge to the renderer
   renderer/          React app (index.html with the CSP, src/ for components, src/dev/ dev-only)
                      src/design/: Design Canvas (tldraw, typed shapes, Design Scene autosave,
                      export/: Design Export, see docs/Design Export.md)
                      src/lesson/: Lesson view (topic list, streamed Markdown, source chips)
+                     src/mastery/: topic screen driving the Mastery Loop (Learn button)
+                     src/settings/: Settings screen
   shared/            Code shared by both sides, including the IPC contract (ipc.ts)
 resources/corpus/    Generated primer corpus (CC BY 4.0), see docs/Corpus.md
 scripts/             Build-time scripts (build-corpus.ts), run with plain node
@@ -92,8 +96,10 @@ on your Claude subscription. Requirements:
   out, generations fail with an explicit `cli_not_found` or `not_logged_in` error.
 - An app launched from Finder or the Dock does not see your shell PATH. The app looks for `claude`
   on PATH, then in `~/.claude/local`, `~/.local/bin`, `/opt/homebrew/bin`, `/usr/local/bin`,
-  `~/.npm-global/bin`, then asks your login shell. To force a path, start the app with
-  `CLAUDE_CLI_PATH=/absolute/path/to/claude`.
+  `~/.npm-global/bin`, then asks your login shell. To force a path, set it in **Settings > Claude
+  Code CLI path** (applied at once; the **Test** button runs `claude --version` on it). The
+  `CLAUDE_CLI_PATH=/absolute/path/to/claude` environment variable is still read when the setting
+  is empty (development, tests).
 - Each call runs isolated from your Claude Code setup (no hooks, plugins, MCP servers, settings or
   tools), with `--model sonnet --effort low`, from an empty temp directory.
 

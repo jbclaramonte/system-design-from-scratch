@@ -19,7 +19,7 @@ import {
 import { sourceSectionsSchema } from './notionOutline'
 
 /** Bump with any change to the prompt or schema below. */
-export const QUIZ_PROMPT_VERSION = 'quiz-1'
+export const QUIZ_PROMPT_VERSION = 'quiz-2'
 
 export const DEFAULT_QUESTION_COUNT = 6
 export const QUIZ_EXCERPT_TOKENS = 8000
@@ -49,7 +49,8 @@ export interface QuizRules {
   notionSlugs: string[]
   /** Notions the quiz must cover (the focus notions, or every notion). */
   targetNotions: string[]
-  /** Questions tagged with no target notion allowed (reminders). */
+  /** Reminder questions: tagged with no target notion, only on already acquired notions. */
+  minReminderQuestions: number
   maxReminderQuestions: number
   /** Allowed `sourceSections`; empty when ungrounded. */
   sectionIds: string[]
@@ -151,6 +152,12 @@ export function quizSchema(rules: QuizRules): z.ZodType<QuizContent> {
         }
       })
 
+      if (reminders < rules.minReminderQuestions) {
+        issue(
+          [],
+          `At least ${rules.minReminderQuestions} reminder question(s) on already acquired notions are required, got ${reminders}.`
+        )
+      }
       if (reminders > rules.maxReminderQuestions) {
         issue(
           [],
@@ -202,7 +209,10 @@ export function quizRules(
     types,
     notionSlugs: targeted ? [...focus, ...reminder] : [...known],
     targetNotions: targeted ? focus : [...known],
-    maxReminderQuestions: targeted && reminder.length ? Math.max(1, Math.floor(count / 3)) : 0,
+    // With acquired notions to recall, a targeted round must include 1 to 2 reminder questions.
+    minReminderQuestions: targeted && reminder.length ? 1 : 0,
+    maxReminderQuestions:
+      targeted && reminder.length ? Math.min(2, Math.max(1, Math.floor(count / 3))) : 0,
     sectionIds,
     avoidPrompts: options.avoidPrompts ?? []
   }
@@ -241,7 +251,7 @@ export function buildQuizGeneration(
     `Write a quiz of exactly ${rules.count} question(s) on the topic "${topic.title}" (id \`${topic.slug}\`).`,
     `Notions (tag questions with these slugs only):\n${notionList(listed)}`,
     targeted
-      ? `This is a new round after a failed quiz. Write fresh questions mainly on the notions the learner missed: ${rules.targetNotions.map((s) => `\`${s}\``).join(', ')}. ${reminder.length ? `Add at most ${rules.maxReminderQuestions} reminder question(s) on already acquired notions: ${reminder.map((s) => `\`${s}\``).join(', ')}.` : ''}`
+      ? `This is a new round after a failed quiz. Write fresh questions mainly on the notions the learner missed: ${rules.targetNotions.map((s) => `\`${s}\``).join(', ')}. ${reminder.length ? `Add ${rules.minReminderQuestions === rules.maxReminderQuestions ? 'exactly' : `${rules.minReminderQuestions} to`} ${rules.maxReminderQuestions} reminder question(s), tagged ONLY with already acquired notions: ${reminder.map((s) => `\`${s}\``).join(', ')}.` : ''}`
       : `Cover as many notions as possible (every notion if there is room).`,
     options.replaces &&
       `This question replaces one the learner flagged as faulty. Flagged question: "${options.replaces.prompt}". ${options.replaces.reason ? `Learner's reason: "${options.replaces.reason}". ` : ''}Test the same notions with a different, correct and unambiguous question that avoids that flaw.`,

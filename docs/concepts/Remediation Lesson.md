@@ -17,4 +17,6 @@ Short generated lesson about a single missed [[Notion]], written from a differen
 
 Table `remediation_lessons`, repository `src/main/db/repositories/learningContent.ts`. See [[Data Model]].
 
-Prompt `buildRemediationLessonGeneration` (`src/main/generation/prompts/remediationLesson.ts`, angles `concrete_example` and `analogy`), request built by `prepareRemediationLesson` (`src/main/generation/pipelines.ts`), grounded on the notion's own sections. See [[Prompts]].
+Prompt `buildRemediationLessonGeneration` (`src/main/generation/prompts/remediationLesson.ts`, angles `concrete_example`, `analogy`, `contrast` and `guided_questions`, with the angles already used on the notion), request built by `prepareRemediationLesson` (`src/main/generation/pipelines.ts`), grounded on the notion's own sections. See [[Prompts]].
+
+One per missed notion of a failed [[Round]], each on the next angle not used yet for its notion; generated, streamed and recorded (with the round) by the [[Mastery Loop]] service (`src/main/mastery/`), shown by `RemediationLesson` (`src/renderer/src/mastery/`). See [[Mastery Loop Implementation]].

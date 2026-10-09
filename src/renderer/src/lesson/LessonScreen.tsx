@@ -67,13 +67,27 @@ function statusText({ status, text }: LessonState): string | null {
   }
 }
 
-export function LessonScreen({ topic, onRetry }: { topic: TopicSummary; onRetry: () => void }) {
+export function LessonScreen({
+  topic,
+  onRetry,
+  onDone
+}: {
+  topic: TopicSummary
+  onRetry: () => void
+  /** Called once the lesson is complete (streamed or from the Content Cache). */
+  onDone?: () => void
+}) {
   const { state, cancel } = useLesson(topic.id)
   const scrollRef = useRef<HTMLDivElement>(null)
   const followRef = useRef(true)
   const running = isLessonRunning(state.status)
   const status = statusText(state)
   const grounded = state.grounded ?? !topic.inFoundationsModule
+
+  const done = state.status === 'done'
+  useEffect(() => {
+    if (done) onDone?.()
+  }, [done, onDone])
 
   // Follow the stream while the learner stays at the bottom; scrolling up stops following.
   useLayoutEffect(() => {

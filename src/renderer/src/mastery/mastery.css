@@ -1,0 +1,79 @@
+.mastery-topic {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.mastery-header h2 {
+  margin: 0.25rem 0;
+}
+
+.mastery-progress {
+  margin: 0.25rem 0 0.5rem;
+  color: #444;
+  font-size: 0.9em;
+}
+
+.mastery-badge {
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: #eee;
+  color: #333;
+  font-size: 0.8em;
+}
+
+.mastery-in_progress {
+  background: #eef;
+  color: #335;
+}
+
+.mastery-mastered {
+  background: #e6f4ea;
+  color: #1e5631;
+}
+
+.mastery-limit_reached {
+  background: #fdecea;
+  color: #611a15;
+}
+
+.mastery-skipped {
+  background: #fff4e5;
+  color: #8a4b00;
+}
+
+.mastery-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  max-width: 72ch;
+  padding-bottom: 2rem;
+  line-height: 1.5;
+}
+
+.mastery-footer {
+  padding: 0.5rem 0 1rem;
+}
+
+.mastery-targets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.5rem 0;
+}
+
+.mastery-targets button[aria-current='true'] {
+  font-weight: bold;
+}
+
+.mastery-choices {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.5rem 1rem;
+  align-items: center;
+}
+
+.mastery-remediation {
+  margin-top: 0.5rem;
+}

@@ -14,6 +14,18 @@ import type { DesignExport, DesignExportSummary } from './designGraph'
 import type { LessonCancelRequest, LessonStartRequest, LessonStreamEvent } from './lesson'
 import type { TopicDetail, TopicGetRequest, TopicSummary } from './topic'
 import type {
+  MasteryCancelRequest,
+  MasteryChooseRequest,
+  MasteryRemediationRequest,
+  MasteryStartRoundRequest,
+  MasteryState,
+  MasteryStreamEvent,
+  MasteryTopicRequest,
+  TopicMasterySummary
+} from './mastery'
+import type { AppSettings, CliCheck, CliCheckRequest } from './settings'
+import type {
+  FreeAnswerGradingOutcome,
   QuestionFeedback,
   QuizRef,
   QuizSummary,
@@ -86,6 +98,22 @@ export interface IpcChannels {
   'design:openScratchExercise': { request: void; response: DesignExerciseRef }
   /** Hands a Design Export to the main process (validated; used by the evaluation, #14). */
   'design:exportScene': { request: DesignExport; response: DesignExportSummary }
+  /** Topics in Learning Path order, with their mastery. */
+  'mastery:listTopics': { request: void; response: TopicMasterySummary[] }
+  /** Where the topic is in the Mastery Loop, derived from the database. */
+  'mastery:getState': { request: MasteryTopicRequest; response: MasteryState }
+  /** Resumes the open round or prepares and starts the next one; events on `mastery:event`. */
+  'mastery:startRound': { request: MasteryStartRoundRequest; response: void }
+  /** Streams the Remediation Lesson of a missed notion; events on `mastery:event`. */
+  'mastery:startRemediation': { request: MasteryRemediationRequest; response: void }
+  'mastery:cancel': { request: MasteryCancelRequest; response: void }
+  /** Choice at the Round Limit: another angle, or skip and come back later. */
+  'mastery:choose': { request: MasteryChooseRequest; response: MasteryState }
+  'settings:get': { request: void; response: AppSettings }
+  /** Validated, applied at once (no restart). */
+  'settings:update': { request: Partial<AppSettings>; response: AppSettings }
+  /** Resolves the Claude Code CLI (the given path, or the automatic lookup) and runs `--version`. */
+  'settings:testCli': { request: CliCheckRequest; response: CliCheck }
   /** Topics in Learning Path order. */
   'topic:list': { request: void; response: TopicSummary[] }
   /** A topic with its Notion Outline status. */
@@ -112,12 +140,25 @@ export interface IpcChannels {
   }
   /** Dev only (rejected in a packaged app): creates a fixture quiz on a dev topic. */
   'quiz:createDevQuiz': { request: void; response: QuizRef }
+  /** Grades a free answer through a Generation and records it as an Attempt (nothing on failure). */
+  'quiz:submitFreeAnswer': {
+    request: { roundId: number; questionId: number; answer: { text: string } }
+    response: FreeAnswerGradingOutcome
+  }
+  /** Contests a free-answer grade once: re-graded with the justification. */
+  'quiz:contestGrade': {
+    request: { roundId: number; questionId: number; justification: string }
+    response: FreeAnswerGradingOutcome
+  }
+  /** Cancels the free-answer grading (or contest re-grade) of a question in progress. */
+  'quiz:cancelGrading': { request: { roundId: number; questionId: number }; response: void }
 }
 
 /** Event channel (main to renderer) to payload type. */
 export interface IpcEvents {
   'generation:event': GenerationStreamEvent
   'lesson:event': LessonStreamEvent
+  'mastery:event': MasteryStreamEvent
 }
 
 export type IpcEventChannel = keyof IpcEvents
@@ -140,19 +181,32 @@ export const apiChannels = {
   getTopic: 'topic:get',
   startLesson: 'lesson:start',
   cancelLesson: 'lesson:cancel',
+  listMasteryTopics: 'mastery:listTopics',
+  getMasteryState: 'mastery:getState',
+  startMasteryRound: 'mastery:startRound',
+  startRemediation: 'mastery:startRemediation',
+  cancelMastery: 'mastery:cancel',
+  chooseAtRoundLimit: 'mastery:choose',
+  getSettings: 'settings:get',
+  updateSettings: 'settings:update',
+  testCli: 'settings:testCli',
   listQuizTopics: 'quiz:listTopics',
   listQuizzes: 'quiz:listQuizzes',
   loadQuiz: 'quiz:load',
   startRound: 'quiz:startRound',
   submitAnswer: 'quiz:submitAnswer',
   completeRound: 'quiz:completeRound',
-  createDevQuiz: 'quiz:createDevQuiz'
+  createDevQuiz: 'quiz:createDevQuiz',
+  submitFreeAnswer: 'quiz:submitFreeAnswer',
+  contestGrade: 'quiz:contestGrade',
+  cancelGrading: 'quiz:cancelGrading'
 } as const satisfies Record<string, IpcChannel>
 
 /** `window.api` subscription method to event channel. */
 export const apiEvents = {
   onGenerationEvent: 'generation:event',
-  onLessonEvent: 'lesson:event'
+  onLessonEvent: 'lesson:event',
+  onMasteryEvent: 'mastery:event'
 } as const satisfies Record<string, IpcEventChannel>
 
 type ApiChannels = typeof apiChannels

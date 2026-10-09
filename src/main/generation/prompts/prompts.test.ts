@@ -313,8 +313,16 @@ describe('quiz prompt and schema', () => {
         single('3', ['client-caching'])
       ]
     }
+    const noReminder = {
+      questions: [
+        single('1', ['cache-aside']),
+        single('2', ['cache-aside']),
+        single('3', ['cache-aside'])
+      ]
+    }
     expect(errorOf(ok, options)).toBeNull()
     expect(errorOf(tooManyReminders, options)).toMatch(/At most 1 question/)
+    expect(errorOf(noReminder, options)).toMatch(/At least 1 reminder question/)
     // Notions outside focus and reminders cannot be tagged in that round.
     expect(
       errorOf({ questions: [...ok.questions.slice(0, 2), single('3', ['write-through'])] }, options)
@@ -326,7 +334,7 @@ describe('quiz prompt and schema', () => {
     })
     expect(build.prompt.user).toContain('mainly on the notions the learner missed: `cache-aside`')
     expect(build.prompt.user).toContain(
-      'reminder question(s) on already acquired notions: `client-caching`'
+      'reminder question(s), tagged ONLY with already acquired notions: `client-caching`'
     )
     expect(build.prompt.user).toContain('- Ancienne question ?')
     expect(() => quizRules(cacheNotions, CACHE_SECTIONS, { focusNotions: ['nope'] })).toThrow(

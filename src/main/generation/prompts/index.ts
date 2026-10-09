@@ -1,4 +1,5 @@
 export * from './common'
+export * from './freeAnswerGrading'
 export * from './lesson'
 export * from './notionOutline'
 export * from './quiz'

@@ -374,8 +374,16 @@ describe('content cache', () => {
 
 describe('settings', () => {
   it('has seeded defaults and persists updates', () => {
-    expect(getSettings(db)).toEqual({ masteryThreshold: 100, roundLimit: 3 })
-    expect(updateSettings(db, { roundLimit: 5 })).toEqual({ masteryThreshold: 100, roundLimit: 5 })
+    const defaults = {
+      masteryThreshold: 100,
+      roundLimit: 3,
+      questionsPerQuiz: null,
+      claudeCliPath: null
+    }
+    expect(getSettings(db)).toEqual(defaults)
+    expect(updateSettings(db, { roundLimit: 5 })).toEqual({ ...defaults, roundLimit: 5 })
     expect(getSettings(db).roundLimit).toBe(5)
+    expect(updateSettings(db, { claudeCliPath: '/opt/claude' }).claudeCliPath).toBe('/opt/claude')
+    expect(updateSettings(db, { claudeCliPath: null }).claudeCliPath).toBeNull()
   })
 })

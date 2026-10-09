@@ -17,6 +17,8 @@ import {
   type PipelineDeps
 } from '../generation/pipelines'
 import { sendEvent } from '../ipc/sendEvent'
+import { getSettings } from '../db/repositories/settings'
+import { firstRoundQuizOptions } from '../mastery/quizOptions'
 import type { GenerationErrorInfo, GenerationOutput } from '../../shared/generation'
 import type {
   LessonCancelRequest,
@@ -54,7 +56,7 @@ export function lessonSources(corpus: Corpus, sectionIds: readonly string[]): Le
 }
 
 /** Rejects with a `cancelled` GenerationError as soon as `signal` aborts. */
-function abortable<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
+export function abortable<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
   if (signal.aborted) return Promise.reject(new GenerationError('cancelled'))
   return new Promise((resolve, reject) => {
     const onAbort = () => reject(new GenerationError('cancelled'))
@@ -64,7 +66,7 @@ function abortable<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
 }
 
 /** Typed error for the renderer. Non-Generation failures keep their message, code `unknown`. */
-function toErrorInfo(error: unknown): GenerationErrorInfo {
+export function toErrorInfo(error: unknown): GenerationErrorInfo {
   if (error instanceof GenerationError) return error.toInfo()
   if (error instanceof Error) return { code: 'unknown', message: error.message }
   return toGenerationError(error).toInfo()
@@ -107,11 +109,11 @@ export function createLessonIpc(deps: PipelineDeps, options: LessonIpcOptions = 
   }
 
   /**
-   * Pre-generates the quiz of the lesson the learner is reading (answerable from it). A later
-   * foreground `prepareQuiz(deps, topicId, { lessonMarkdown })` finds it in the Content Cache.
+   * Pre-generates the quiz of the lesson the learner is reading (answerable from it), with the
+   * first round's options: the Mastery Loop's first round finds it in the Content Cache.
    */
   function pregenerateQuiz(topicId: number, lessonMarkdown: string): void {
-    prepareQuiz(deps, topicId, { lessonMarkdown })
+    prepareQuiz(deps, topicId, firstRoundQuizOptions(lessonMarkdown, getSettings(db)))
       .then((request) => service.pregenerate(request).result)
       .catch((error: unknown) => {
         if (!(error instanceof GenerationError && error.code === 'cancelled')) {

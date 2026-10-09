@@ -239,3 +239,14 @@ export function listRemediationLessonsByNotion(
     .all<RemediationLessonRow>({ notionId })
     .map(toRemediationLesson)
 }
+
+/** Remediation lessons on the notions of a topic, oldest first. */
+export function listRemediationLessonsByTopic(db: Database, topicId: number): RemediationLesson[] {
+  return db
+    .prepare(
+      `SELECT ${REMEDIATION_LESSON_COLUMNS} FROM remediation_lessons
+       WHERE notion_id IN (SELECT id FROM notions WHERE topic_id = $topicId) ORDER BY id`
+    )
+    .all<RemediationLessonRow>({ topicId })
+    .map(toRemediationLesson)
+}

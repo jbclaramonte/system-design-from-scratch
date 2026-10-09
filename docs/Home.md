@@ -18,6 +18,7 @@ Desktop app to learn system design: lesson, quiz, targeted remediation until mas
 - [[Prompts|Prompts and output schemas]] (sample: [[samples/cache|Cache]])
 - [[Quiz Engine|Quiz Engine and local grading]]
 - [[Lesson View|Lesson view and topic bootstrap]]
+- [[Mastery Loop Implementation|Mastery Loop, remediation and settings]]
 
 ## Concept notes
 

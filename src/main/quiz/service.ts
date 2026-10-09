@@ -1,6 +1,7 @@
 // Quiz service: loads a quiz without its answer keys, plays it as a Round, grades each answer in
-// the main process, records it as an Attempt tagged with notions, and completes the Round against
-// the Mastery Threshold. The Mastery Loop around it (remediation, next round) is #11.
+// the main process (choice questions locally, free answers through a Generation), records it as
+// an Attempt tagged with notions, and completes the Round against the Mastery Threshold. The
+// Mastery Loop around it (remediation, next round) is #11.
 import type { Database } from '../db'
 import {
   completeRound as storeRoundOutcome,
@@ -13,30 +14,40 @@ import {
   listQuestions,
   listQuizzesByTopic,
   nextRoundNumber,
-  recordAttempt
+  recordAttempt,
+  updateAttemptGrading
 } from '../db/repositories/assessment'
 import { getTopic, listNotionsByTopic, listTopics } from '../db/repositories/learningContent'
 import { getSettings } from '../db/repositories/settings'
 import type { Attempt, Question, Quiz, Round } from '../db/types'
-import type {
-  NotionRef,
-  QuestionFeedback,
-  QuestionView,
-  QuizSummary,
-  QuizTopic,
-  QuizView,
-  RoundResult,
-  RoundStart,
-  RoundView,
-  SubmittedAnswer
-} from '../../shared/quiz'
 import {
+  CONTEST_JUSTIFICATION_MAX_LENGTH,
+  type FreeAnswerGradingRecord,
+  type NotionRef,
+  type QuestionFeedback,
+  type QuestionView,
+  type QuizSummary,
+  type QuizTopic,
+  type QuizView,
+  type RoundResult,
+  type RoundStart,
+  type RoundView,
+  type SubmittedAnswer
+} from '../../shared/quiz'
+import type { FreeAnswerGrader } from './freeAnswerGrader'
+import {
+  freeAnswerFeedback,
   gradeAnswer,
+  InvalidAnswerError,
   localGraders,
   meetsThreshold,
+  normalizeFreeAnswer,
   notionScores,
   parseChoiceBody,
+  parseFreeAnswerBody,
+  parseGradingRecord,
   quizScorePercent,
+  recordGradingResult,
   type Graders
 } from './grading'
 
@@ -46,7 +57,27 @@ export interface QuizService {
   loadQuiz(quizId: number): QuizView
   /** Resumes the open round of the quiz, or starts one with the topic's next round number. */
   startRound(quizId: number): RoundStart
+  /** Grades a choice answer locally and records it. Free answers go through `submitFreeAnswer`. */
   submitAnswer(roundId: number, submitted: SubmittedAnswer): QuestionFeedback
+  /**
+   * Grades a free answer through a Generation (outside any transaction), then records the
+   * Attempt. Rejects with the `GenerationError` when the grading fails: nothing is recorded.
+   */
+  submitFreeAnswer(
+    roundId: number,
+    submitted: SubmittedAnswer,
+    signal?: AbortSignal
+  ): Promise<QuestionFeedback>
+  /**
+   * Contests the grade of a free answer, once: re-graded with the learner's justification, the
+   * new grading replaces the first on the Attempt, which keeps the first in its history.
+   */
+  contestGrade(
+    roundId: number,
+    questionId: number,
+    justification: string,
+    signal?: AbortSignal
+  ): Promise<QuestionFeedback>
   /** Submits the given answers (if any), then grades the round. Atomic. */
   completeRound(roundId: number, answers?: readonly SubmittedAnswer[]): RoundResult
   /** Result of a completed round. */
@@ -64,9 +95,24 @@ const toRoundView = (round: Round): RoundView => ({
   passed: round.passed
 })
 
-/** `graders` defaults to the local ones; #10 adds the free-answer grader. */
-export function createQuizService(db: Database, graders: Graders = localGraders): QuizService {
-  const gradable = (question: Question) => graders[question.type] !== undefined
+export interface QuizServiceOptions {
+  /** Grades free answers. Without it, free-answer questions are skipped (left out of scores). */
+  freeAnswerGrader?: FreeAnswerGrader
+}
+
+/** `graders` (synchronous, choice questions) defaults to the local ones. */
+export function createQuizService(
+  db: Database,
+  graders: Graders = localGraders,
+  { freeAnswerGrader }: QuizServiceOptions = {}
+): QuizService {
+  const gradable = (question: Question) =>
+    graders[question.type] !== undefined ||
+    (question.type === 'free_answer' && freeAnswerGrader !== undefined)
+
+  /** Free-answer gradings in progress, by `roundId:questionId`: one at a time per question. */
+  const gradingInProgress = new Set<string>()
+  const gradingKey = (roundId: number, questionId: number) => `${roundId}:${questionId}`
 
   const notionRefs = (topicId: number): NotionRef[] =>
     listNotionsByTopic(db, topicId).map(({ id, slug, title }) => ({ id, slug, title }))
@@ -99,9 +145,18 @@ export function createQuizService(db: Database, graders: Graders = localGraders)
     }
   }
 
-  /** Feedback of a recorded attempt: the stored grading, with the answer key re-attached. */
-  function attemptFeedback(attempt: Attempt): QuestionFeedback {
+  /**
+   * Feedback of a recorded attempt: the stored grading, with the answer key re-attached. A free
+   * answer's grade can be contested while its round is open.
+   */
+  function attemptFeedback(attempt: Attempt, roundOpen: boolean): QuestionFeedback {
     const question = getQuestion(db, attempt.questionId)!
+    if (question.type === 'free_answer') {
+      const { text } = attempt.answer as { text: string }
+      return freeAnswerFeedback(question, text, parseGradingRecord(attempt.feedback), {
+        contestable: roundOpen
+      })
+    }
     const { feedback } = gradeAnswer(question, attempt.answer, graders)
     return { ...feedback, result: attempt.result, score: attempt.score, feedback: attempt.feedback }
   }
@@ -111,7 +166,8 @@ export function createQuizService(db: Database, graders: Graders = localGraders)
     return new Map(listAttemptsByRound(db, round.id).map((a) => [a.questionId, a]))
   }
 
-  function submit(round: Round, { questionId, answer }: SubmittedAnswer): QuestionFeedback {
+  /** A question in play in the round's quiz. */
+  function requireQuestionInPlay(round: Round, questionId: number): Question {
     const question = getQuestion(db, questionId)
     if (!question || question.quizId !== round.quizId) {
       throw new Error(`Question ${questionId} is not part of round ${round.number}.`)
@@ -119,9 +175,53 @@ export function createQuizService(db: Database, graders: Graders = localGraders)
     if (question.replacedByQuestionId !== null) {
       throw new Error(`Question ${questionId} was replaced.`)
     }
+    return question
+  }
+
+  function requireUnanswered(round: Round, questionId: number): void {
     if (roundAttempts(round).has(questionId)) {
       throw new Error(`Question ${questionId} is already answered in round ${round.number}.`)
     }
+  }
+
+  function requireFreeAnswerGrader(): FreeAnswerGrader {
+    if (!freeAnswerGrader) throw new Error('Free-answer grading is not available.')
+    return freeAnswerGrader
+  }
+
+  /** Runs one free-answer grading of a question at a time; a second one is refused. */
+  async function withGradingLock<T>(round: Round, questionId: number, run: () => Promise<T>) {
+    const key = gradingKey(round.id, questionId)
+    if (gradingInProgress.has(key)) {
+      throw new Error(`Question ${questionId} is already being graded.`)
+    }
+    gradingInProgress.add(key)
+    try {
+      return await run()
+    } finally {
+      gradingInProgress.delete(key)
+    }
+  }
+
+  function gradingRequestFor(round: Round, question: Question) {
+    const body = parseFreeAnswerBody(question.body)
+    const topicId = requireQuiz(round.quizId).topicId
+    const notions = listNotionsByTopic(db, topicId)
+      .filter((notion) => question.notionIds.includes(notion.id))
+      .map(({ slug, title, description }) => ({ slug, title, description }))
+    return {
+      question: {
+        prompt: question.prompt,
+        expectedPoints: body.expectedPoints,
+        modelAnswer: body.modelAnswer
+      },
+      notions
+    }
+  }
+
+  function submit(round: Round, { questionId, answer }: SubmittedAnswer): QuestionFeedback {
+    const question = requireQuestionInPlay(round, questionId)
+    requireUnanswered(round, questionId)
     const graded = gradeAnswer(question, answer, graders)
     recordAttempt(db, {
       questionId,
@@ -140,7 +240,7 @@ export function createQuizService(db: Database, graders: Graders = localGraders)
     return {
       round: toRoundView(round),
       masteryThreshold,
-      questions: graded.map(attemptFeedback),
+      questions: graded.map((attempt) => attemptFeedback(attempt, round.completedAt === null)),
       notionScores: notionScores(graded, notionRefs(topicId)),
       skippedQuestionIds: questions.filter((q) => !gradable(q)).map((q) => q.id)
     }
@@ -195,7 +295,9 @@ export function createQuizService(db: Database, graders: Graders = localGraders)
         return {
           round: toRoundView(round),
           quiz: service.loadQuiz(quizId),
-          answered: [...roundAttempts(round).values()].map(attemptFeedback)
+          answered: [...roundAttempts(round).values()].map((attempt) =>
+            attemptFeedback(attempt, true)
+          )
         }
       })
     },
@@ -204,9 +306,88 @@ export function createQuizService(db: Database, graders: Graders = localGraders)
       return db.transaction(() => submit(requireOpenRound(roundId), submitted))
     },
 
+    async submitFreeAnswer(roundId, { questionId, answer }, signal) {
+      const grader = requireFreeAnswerGrader()
+      const round = requireOpenRound(roundId)
+      const question = requireQuestionInPlay(round, questionId)
+      if (question.type !== 'free_answer') {
+        throw new Error(`Question ${questionId} is not a free-answer question.`)
+      }
+      requireUnanswered(round, questionId)
+      const { text } = normalizeFreeAnswer(answer)
+      return withGradingLock(round, questionId, async () => {
+        const request = gradingRequestFor(round, question)
+        const graded = await grader.grade({ ...request, answer: text }, signal)
+        return db.transaction(() => {
+          // The round may have changed while the Generation ran.
+          requireUnanswered(requireOpenRound(roundId), questionId)
+          const record: FreeAnswerGradingRecord = { ...graded, contest: null, history: [] }
+          recordAttempt(db, {
+            questionId,
+            roundId,
+            answer: { text },
+            ...recordGradingResult(record)
+          })
+          return freeAnswerFeedback(question, text, record, { contestable: true })
+        })
+      })
+    },
+
+    async contestGrade(roundId, questionId, rawJustification, signal) {
+      const grader = requireFreeAnswerGrader()
+      const round = requireOpenRound(roundId)
+      const question = requireQuestionInPlay(round, questionId)
+      const justification = rawJustification.trim()
+      if (justification.length === 0) throw new InvalidAnswerError('Explain why you contest.')
+      if (justification.length > CONTEST_JUSTIFICATION_MAX_LENGTH) {
+        throw new InvalidAnswerError(
+          `A justification is at most ${CONTEST_JUSTIFICATION_MAX_LENGTH} characters.`
+        )
+      }
+      /** The attempt and its record, checked again after the Generation. */
+      const contestable = (current: Round) => {
+        const attempt = roundAttempts(current).get(questionId)
+        if (!attempt || attempt.questionType !== 'free_answer') {
+          throw new Error(`Question ${questionId} has no graded free answer in this round.`)
+        }
+        const record = parseGradingRecord(attempt.feedback)
+        if (record.contest !== null) throw new Error('This grade was already contested.')
+        if (record.grading.verdict === 'correct') {
+          throw new Error('A correct answer cannot be contested.')
+        }
+        return { attempt, record }
+      }
+      const { attempt } = contestable(round)
+      const { text } = attempt.answer as { text: string }
+      return withGradingLock(round, questionId, async () => {
+        const first = contestable(round).record
+        const request = gradingRequestFor(round, question)
+        const graded = await grader.grade(
+          { ...request, answer: text, contest: { justification, previous: first.grading } },
+          signal
+        )
+        return db.transaction(() => {
+          const { record } = contestable(requireOpenRound(roundId))
+          const contested: FreeAnswerGradingRecord = {
+            ...graded,
+            contest: { justification, contestedAt: new Date().toISOString() },
+            history: [
+              ...record.history,
+              { promptVersion: record.promptVersion, grading: record.grading }
+            ]
+          }
+          updateAttemptGrading(db, attempt.id, recordGradingResult(contested))
+          return freeAnswerFeedback(question, text, contested, { contestable: false })
+        })
+      })
+    },
+
     completeRound(roundId, answers = []) {
       return db.transaction(() => {
         const round = requireOpenRound(roundId)
+        if ([...gradingInProgress].some((key) => key.startsWith(`${round.id}:`))) {
+          throw new Error(`Round ${round.number} has an answer being graded.`)
+        }
         for (const answer of answers) submit(round, answer)
         const attempts = roundAttempts(round)
         const toGrade = listQuestions(db, round.quizId).filter(gradable)

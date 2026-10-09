@@ -9,7 +9,7 @@ issue: 6
 The single service in the Electron main process that performs every [[Generation]]: [[Lesson|lessons]], [[Remediation Lesson|remediation lessons]], [[Quiz|quizzes]], free-answer grading and [[Design Feedback]]. It drives the Claude Code CLI as a subprocess, streams the output to the renderer over IPC, validates structured output, and reads and writes the [[Content Cache]]. Code: `src/main/generation/`. How the CLI is invoked comes from the [[cli-latency|CLI latency spike]].
 
 > [!note] Prompts
-> The content prompts and output schemas (Notion Outline, lesson, quiz, remediation lesson) are in `src/main/generation/prompts/`, with the pipelines that load and persist their data in `src/main/generation/pipelines.ts`: see [[Prompts]]. `src/main/generation/placeholderPrompts.ts` only serves the generic `generation:start` IPC round trip of the dev panel, and the kinds whose prompts are still to come (free-answer grading #10, design feedback #14).
+> The content prompts and output schemas (Notion Outline, lesson, quiz, remediation lesson) are in `src/main/generation/prompts/`, with the pipelines that load and persist their data in `src/main/generation/pipelines.ts`: see [[Prompts]]. Free-answer grading (#10) is in `src/main/generation/prompts/freeAnswerGrading.ts`, run by the [[Quiz Engine]]. `src/main/generation/placeholderPrompts.ts` only serves the generic `generation:start` IPC round trip of the dev panel, and the kinds whose prompts are still to come (design feedback #14).
 
 ## Flow
 
@@ -109,7 +109,7 @@ The `result` event is the completion: the service does not wait for the process 
 
 A GUI-launched Electron app gets a minimal PATH (`/usr/bin:/bin:...`), so `spawn('claude')` fails even when it works in a terminal. The path is resolved once (again after a failure), in this order:
 
-1. The configured path (`cli.path`; in the app the `CLAUDE_CLI_PATH` environment variable until a settings screen exposes it). If set and missing, the error says so; no silent fallback.
+1. The configured path (`cli.path`; in the app the Claude Code CLI path of the Settings screen, setting `claude_cli_path`, else the `CLAUDE_CLI_PATH` environment variable). If set and missing, the error says so; no silent fallback. Changing the setting calls `resetCliPath()`, so it applies without restart; the Settings screen's "Test" button resolves the path the same way and runs `claude --version`.
 2. Each directory of `PATH`.
 3. Common install locations: `~/.claude/local`, `~/.local/bin`, `/opt/homebrew/bin`, `/usr/local/bin`, `~/.npm-global/bin`, `$npm_config_prefix/bin`.
 4. `$SHELL -lc 'command -v claude'` (login shell, 5 s timeout). Only an absolute, executable path is accepted (an alias prints its definition).

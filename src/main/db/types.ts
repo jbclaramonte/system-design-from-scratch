@@ -1,6 +1,8 @@
 /** Row types returned by the repositories. Timestamps are ISO 8601 strings. */
 
 import type { Json } from '../../shared/json'
+import type { RoundLimitChoice } from '../../shared/mastery'
+import type { AppSettings } from '../../shared/settings'
 import { questionTypes, type AttemptResult, type QuestionType } from '../../shared/quiz'
 
 export type { Json }
@@ -150,8 +152,11 @@ export interface ContentCacheEntry extends Timestamps, Grounded {
   content: Json
 }
 
-export interface Settings {
-  /** Percent, 0 to 100. */
-  masteryThreshold: number
-  roundLimit: number
+/** Values of the `settings` table (see `src/shared/settings.ts`). */
+export type Settings = AppSettings
+
+/** The learner's choice on a failed round that reached the Round Limit. */
+export interface RoundLimitChoiceRow extends Timestamps {
+  roundId: number
+  choice: RoundLimitChoice
 }

@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import type { QuestionView } from '../../../shared/quiz'
-import { allGradableAnswered, formatPercent, nextQuestionIndex, toggleChoice } from './progress'
+import {
+  allGradableAnswered,
+  formatPercent,
+  nextQuestionIndex,
+  postponedQuestions,
+  toggleChoice
+} from './progress'
 
 const question = (id: number, gradable = true): QuestionView => ({
   id,
@@ -28,6 +34,16 @@ describe('allGradableAnswered', () => {
   it('ignores questions without a grader', () => {
     expect(allGradableAnswered(questions, new Set([1]))).toBe(false)
     expect(allGradableAnswered(questions, new Set([1, 3]))).toBe(true)
+  })
+})
+
+describe('postponedQuestions', () => {
+  it('lists the skipped gradable questions not answered yet', () => {
+    const free = { ...question(4), type: 'free_answer' as const }
+    const all = [...questions, free]
+
+    expect(postponedQuestions(all, new Set([1]), new Set([2, 4])).map((q) => q.id)).toEqual([4])
+    expect(postponedQuestions(all, new Set([1, 4]), new Set([2, 4]))).toEqual([])
   })
 })
 

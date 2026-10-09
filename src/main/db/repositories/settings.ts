@@ -5,7 +5,9 @@ import { NOW } from './mapping'
 /** Settings field to its key in the `settings` table. Defaults are seeded by the migrations. */
 const settingKeys = {
   masteryThreshold: 'mastery_threshold',
-  roundLimit: 'round_limit'
+  roundLimit: 'round_limit',
+  questionsPerQuiz: 'questions_per_quiz',
+  claudeCliPath: 'claude_cli_path'
 } as const satisfies Record<keyof Settings, string>
 
 export function getSettings(db: Database): Settings {
