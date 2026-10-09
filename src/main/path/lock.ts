@@ -1,7 +1,8 @@
 // The Learning Path lock, enforced in the main process: outside dev builds, a locked topic
-// cannot start a Round or a Remediation Lesson, whatever the renderer sends.
+// cannot start a Round or a Remediation Lesson, and a locked Design Exercise cannot be opened or
+// played, whatever the renderer sends.
 import { GenerationError } from '../generation/errors'
-import type { TopicStep } from '../../shared/learningPath'
+import type { DesignExerciseStep, TopicStep } from '../../shared/learningPath'
 import { getLearningPath, type LearningPathDeps } from './pathIpc'
 
 /** Throws a `topic_locked` error for a locked topic; does nothing for any other topic. */
@@ -36,5 +37,49 @@ export function createTopicLockGuard(
     if (allowLockedTopics) return
     const step = lockedTopicStep(deps, topicId)
     if (step) throw topicLockedError(step)
+  }
+}
+
+/** Throws for a Design Exercise that is locked or coming soon; does nothing for any other. */
+export type ExerciseLockGuard = (designExerciseId: number) => void
+
+/** The exercise's step when it cannot be played; undefined when playable or outside the path. */
+export function lockedExerciseStep(
+  deps: LearningPathDeps,
+  designExerciseId: number
+): DesignExerciseStep | undefined {
+  return getLearningPath(deps).steps.find(
+    (step): step is DesignExerciseStep =>
+      step.kind === 'design_exercise' &&
+      step.designExerciseId === designExerciseId &&
+      (step.status === 'locked' || step.status === 'coming_soon')
+  )
+}
+
+export function exerciseLockedError(step: DesignExerciseStep): Error {
+  const blockers = [
+    ...step.missingPrerequisites.map((ref) => `master ${ref.title}`),
+    ...(step.lockedByExercise ? [`complete ${step.lockedByExercise.title}`] : [])
+  ]
+  const reason =
+    step.status === 'coming_soon'
+      ? 'is not available yet.'
+      : `is locked. First ${blockers.join(', ') || 'unlock it'}, then come back from the Learning Path.`
+  return new Error(`${step.title} ${reason}`)
+}
+
+/**
+ * The guard of every Interview Protocol entry of an exercise. `allowLockedExercises` (dev
+ * builds) turns it off. Exercises outside the path (dev fixtures) are never locked, and a
+ * started exercise never is (see `buildLearningPath`).
+ */
+export function createExerciseLockGuard(
+  deps: LearningPathDeps,
+  { allowLockedExercises }: { allowLockedExercises: boolean }
+): ExerciseLockGuard {
+  return (designExerciseId) => {
+    if (allowLockedExercises) return
+    const step = lockedExerciseStep(deps, designExerciseId)
+    if (step) throw exerciseLockedError(step)
   }
 }

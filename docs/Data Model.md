@@ -219,7 +219,7 @@ Generated rows carry `grounded` and `source_sections` ([[Grounding]]) and an opt
 
 ### Design practice
 
-- `design_exercises`: [[Design Exercise]] catalogue in path order. A grounded exercise must have a `reference_solution_section` ([[Reference Solution]]).
+- `design_exercises`: [[Design Exercise]] catalogue in path order. A grounded exercise must have a `reference_solution_section` ([[Reference Solution]]). Rows of the shipped exercises are inserted at startup, never updated (`seedDesignExercises`, see [[Design Exercises]]); dev fixtures (`dev-...` slugs) are separate rows.
 - `design_scenes`: the [[Design Canvas]] tldraw snapshot of an exercise, one per exercise, overwritten on save.
 - `design_exercises.problem_statement`: what the learner is asked to design; null falls back on the [[Reference Solution]] title.
 - `design_feedback`: LLM output on a design exercise. `kind` is `step_feedback` or `hint` (both with a [[Protocol Step]]: `functional_requirements`, `non_functional_requirements`, `estimations`, `api`, `data_model`, `high_level_design`, `deep_dive`) or `final_review` (no step). `content` is `{ submissionId, promptVersion, feedback }`, `{ level, promptVersion, hint }` (the Hint log: the next level is the count + 1, at most 3 per step and exercise) or `{ submissionIds, promptVersion, review }`. `grounded` is true when the exercise has a Reference Solution. See [[Hint]] and [[Interview Protocol Implementation]].

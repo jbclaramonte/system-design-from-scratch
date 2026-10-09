@@ -8,7 +8,7 @@ import { stepTitle } from './protocolText'
 /**
  * Dev-only entry: opens the fixture Design Exercise (the primer's Pastebin solution) playing
  * exercise 1 to 5 of the Learning Path, so every stage of the unlock plan can be tried. The real
- * catalogue (#15) and its Learning Path entry (#17) replace it.
+ * Design Exercises open from the Learning Path.
  */
 export function ProtocolDevScreen({ onClose }: { onClose: () => void }) {
   const [exercise, setExercise] = useState<DesignExerciseRef | null>(null)

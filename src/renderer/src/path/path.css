@@ -123,3 +123,8 @@ div.path-step-row {
   margin: 0;
   color: #1e5631;
 }
+
+.path-completed {
+  background: #e6f4ea;
+  color: #1e5631;
+}

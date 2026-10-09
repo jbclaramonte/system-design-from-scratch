@@ -42,6 +42,7 @@ import type {
 } from './protocol'
 import type { AboutInfo } from './about'
 import type { LearningPath } from './learningPath'
+import type { Dashboard, DashboardRequest } from './dashboard'
 import type {
   FreeAnswerGradingOutcome,
   QuestionFeedback,
@@ -131,6 +132,8 @@ export interface IpcChannels {
   'mastery:choose': { request: MasteryChooseRequest; response: MasteryState }
   /** The Learning Path computed from the database: steps, recommended step, progress. */
   'path:get': { request: void; response: LearningPath }
+  /** Mastery per topic, Notion Map, weak points and attempt history (filtered by topic). */
+  'dashboard:get': { request: DashboardRequest; response: Dashboard }
   'settings:get': { request: void; response: AppSettings }
   /** Validated, applied at once (no restart). */
   'settings:update': { request: Partial<AppSettings>; response: AppSettings }
@@ -237,6 +240,7 @@ export const apiChannels = {
   cancelMastery: 'mastery:cancel',
   chooseAtRoundLimit: 'mastery:choose',
   getLearningPath: 'path:get',
+  getDashboard: 'dashboard:get',
   getSettings: 'settings:get',
   updateSettings: 'settings:update',
   testCli: 'settings:testCli',

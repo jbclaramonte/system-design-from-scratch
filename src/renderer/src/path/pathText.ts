@@ -22,6 +22,7 @@ export const stepStatusLabels: Record<LearningPathStepStatus, string> = {
   mastered: 'Mastered',
   skipped: 'Skipped',
   limit_reached: 'Round Limit reached',
+  completed: 'Completed',
   coming_soon: 'Coming soon'
 }
 
@@ -62,15 +63,30 @@ const listTitles = (refs: readonly LearningPathTopicRef[]): string => {
     : `${titles.slice(0, -1).join(', ')} and ${titles.at(-1)}`
 }
 
-/** Why a locked step is locked ("Master X first"), or null when it is not locked. */
+/**
+ * Why a locked step is locked ("Master X first", "Complete exercise Y first"), or null when it
+ * is not locked. A Design Exercise coming soon still lists its missing prerequisites.
+ */
 export function lockMessage(step: TopicStep | DesignExerciseStep): string | null {
   if (step.kind === 'topic') {
     if (step.status !== 'locked' || !step.lockedBy) return null
     return `Master ${step.lockedBy.title} first.${blockerNote(step.lockedBy)}`
   }
-  if (step.missingPrerequisites.length === 0) return null
-  return `Master ${listTitles(step.missingPrerequisites)} first.`
+  if (step.status !== 'locked' && step.status !== 'coming_soon') return null
+  const reasons = [
+    step.missingPrerequisites.length > 0 &&
+      `Master ${listTitles(step.missingPrerequisites)} first.`,
+    step.status === 'locked' &&
+      step.lockedByExercise &&
+      `Complete ${step.lockedByExercise.title} first.`
+  ].filter((reason): reason is string => Boolean(reason))
+  return reasons.length > 0 ? reasons.join(' ') : null
 }
+
+/** A Design Exercise the learner can open from the path (to play it, or to read its review). */
+export const canOpenExercise = (step: DesignExerciseStep): boolean =>
+  step.designExerciseId !== null &&
+  (step.status === 'available' || step.status === 'in_progress' || step.status === 'completed')
 
 export function progressText({ masteredTopics, totalTopics, percent }: LearningPathProgress) {
   return `${masteredTopics} of ${totalTopics} topics mastered (${percent}%)`
@@ -88,7 +104,7 @@ export const topicStepBySlug = (path: LearningPath, slug: string): TopicStep | u
 export function noNextStepText(path: LearningPath): string {
   if (path.progress.totalTopics === 0) return 'No topics yet.'
   if (path.progress.masteredTopics === path.progress.totalTopics) {
-    return 'Every topic is mastered. Design Exercises are coming soon.'
+    return 'Every topic is mastered and every available Design Exercise completed. More Design Exercises are coming soon.'
   }
   return 'Nothing to start right now.'
 }

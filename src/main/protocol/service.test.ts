@@ -10,12 +10,14 @@ import { getCachedContent } from '../db/repositories/contentCache'
 import {
   createDesignExercise,
   createProtocolStepSubmission,
+  listDesignExercises,
   listDesignFeedback,
   listProtocolStepSubmissions
 } from '../db/repositories/designPractice'
 import { buildCliArgs, buildCliInput } from '../generation/cliRunner'
 import { GenerationService } from '../generation/service'
 import { installFakeCli, type FakeCli } from '../generation/testing/fakeCli'
+import { DESIGN_EXERCISES, seedDesignExercises } from './designExercises'
 import {
   DEV_PROTOCOL_PROBLEM_STATEMENT,
   exerciseIndexOf,
@@ -210,7 +212,7 @@ describe('step feedback', () => {
       protocolStep: 'functional_requirements',
       grounded: true
     })
-    expect(row!.content).toMatchObject({ promptVersion: 'design-step-feedback-2' })
+    expect(row!.content).toMatchObject({ promptVersion: 'design-step-feedback-4' })
     const [call] = fake.calls()
     expect(call!.images).toBe(0)
     expect(call!.stdin).toContain('Design Pastebin.com (or Bit.ly)')
@@ -365,6 +367,134 @@ describe('final review', () => {
       kind: 'final_review',
       protocolStep: null
     })
+  })
+})
+
+describe('the catalogued Design Exercises', () => {
+  const idOf = (slug: string) => {
+    seedDesignExercises(db, corpus)
+    return listDesignExercises(db).find((e) => e.slug === slug)!.id
+  }
+  const pastebin = corpus.getReferenceSolution('pastebin')!
+
+  it('shows the curated statement and the active steps of the order index', () => {
+    const exercise = protocol.getExercise(idOf('twitter'))
+    expect(exercise.exerciseIndex).toBe(2)
+    expect(exercise.problemStatement).toBe(DESIGN_EXERCISES[1]!.problemStatement)
+    expect(exercise.steps.filter((s) => s.active).map((s) => s.step)).toEqual([
+      'functional_requirements',
+      'estimations',
+      'high_level_design'
+    ])
+    expect(exercise.referenceSolution?.url).toMatch(/solutions\/system_design\/twitter/)
+  })
+
+  it('judges exercise 1 on its two steps only: no numbers in any prompt', async () => {
+    const id = idOf('pastebin')
+    await protocol.requestHint(id, 'functional_requirements', {
+      type: 'text',
+      text: 'scenario:design'
+    })
+    await protocol.submitStep(id, 'functional_requirements', {
+      type: 'text',
+      text: 'create and read pastes scenario:design'
+    })
+    await protocol.submitStep(id, 'high_level_design', {
+      type: 'canvas',
+      designExport: designExport(id, 'DB', false),
+      notes: ''
+    })
+    const review = await protocol.requestFinalReview(id)
+    expect(review.status).toBe('done')
+    const [hint, fr, hld, final] = fake.calls().map((call) => call.stdin)
+    for (const prompt of [hint!, fr!, hld!, final!]) {
+      expect(prompt).toContain(DESIGN_EXERCISES[0]!.problemStatement)
+      expect(prompt).toContain(
+        'Protocol Steps of this exercise: Functional requirements, High-level design.'
+      )
+      expect(prompt).toContain('#### Out of scope')
+      expect(prompt).not.toContain('Calculate usage')
+      expect(prompt).not.toContain('10 million paste writes per month')
+    }
+    // The functional requirements are judged on the use cases only, the design on its parts too.
+    expect(fr).not.toContain('## Core components')
+    expect(hld).toContain('## Core components')
+    expect(final).toContain('## Core components')
+    expect(final).not.toContain(pastebin.steps.find((s) => s.id.startsWith('step-4-'))!.markdown)
+  })
+
+  it('retries once a step feedback that names reference items the learner did not write', async () => {
+    const id = idOf('pastebin')
+    const outcome = await protocol.submitStep(id, 'functional_requirements', {
+      type: 'text',
+      text: 'create and read pastes scenario:design-leak-once'
+    })
+    expect(outcome.status).toBe('done')
+    if (outcome.status !== 'done') return
+    const calls = fake.calls()
+    expect(calls).toHaveLength(2)
+    expect(calls[1]!.stdin).toContain(
+      'Your previous feedback named items of the hidden Reference Solution that the learner did not write (expiration, high availability)'
+    )
+    expect(outcome.value.feedback?.gaps).toEqual([
+      'Tu ne précises pas les cas limites de tes cas d’usage.'
+    ])
+    expect(listDesignFeedback(db, id)[0]!.content).toMatchObject({
+      leakCheck: { firstLeaked: ['expiration', 'high availability'], retried: true, remaining: [] }
+    })
+  })
+
+  it('drops the entries still leaking after the retry, and allows what the learner wrote', async () => {
+    const id = idOf('pastebin')
+    const outcome = await protocol.submitStep(id, 'functional_requirements', {
+      type: 'text',
+      text: 'a paste can expire scenario:design-leak-always'
+    })
+    if (outcome.status !== 'done') throw new Error('feedback failed')
+    expect(fake.calls()).toHaveLength(2)
+    // "expire" is the learner's own item: kept. Availability is not: its trade-off is dropped.
+    expect(outcome.value.feedback?.gaps).toEqual([
+      'Tu ne dis pas ce qui se passe quand un lien expire.',
+      'Tu ne précises pas le hors périmètre.'
+    ])
+    expect(outcome.value.feedback?.forgottenTradeOffs).toEqual([])
+    expect(listDesignFeedback(db, id)[0]!.content).toMatchObject({
+      leakCheck: {
+        firstLeaked: ['high availability'],
+        retried: true,
+        remaining: ['high availability']
+      }
+    })
+  })
+
+  it('does not check steps without curated terms', async () => {
+    const id = idOf('pastebin')
+    await protocol.submitStep(id, 'high_level_design', {
+      type: 'canvas',
+      designExport: designExport(id, 'DB scenario:design-leak-always', false),
+      notes: ''
+    })
+    expect(fake.calls()).toHaveLength(1)
+    expect(listDesignFeedback(db, id)[0]!.content).not.toHaveProperty('leakCheck')
+  })
+
+  it('gives the estimations of exercise 2 the back-of-the-envelope reference', async () => {
+    const id = idOf('twitter')
+    await protocol.submitStep(id, 'functional_requirements', {
+      type: 'text',
+      text: 'post, timelines, search scenario:design'
+    })
+    const outcome = await protocol.submitStep(id, 'estimations', {
+      type: 'text',
+      text: '100 million users, 10 tweets a day scenario:design'
+    })
+    expect(outcome.status).toBe('done')
+    const prompt = fake.calls()[1]!.stdin
+    expect(prompt).toContain('#### Calculate usage')
+    expect(prompt).toContain('6,000 tweets per second')
+    expect(prompt).toMatch(/they state their own assumptions/)
+    expect(prompt).toContain('<learner_previous_step step="functional_requirements">')
+    expect(prompt).not.toContain('## Core components')
   })
 })
 

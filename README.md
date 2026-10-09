@@ -53,6 +53,7 @@ src/
     content/         Topic seeding from the corpus, lesson flow over IPC (docs/Lesson View.md)
     mastery/         Mastery Loop state machine, service and IPC (docs/Mastery Loop Implementation.md)
     path/            Learning Path: unlock rules, Design Exercise prerequisites, IPC
+    dashboard/       Dashboard read model: Notion Map, weak points, attempt history (docs/Dashboard Implementation.md)
     protocol/        Interview Protocol: steps, feedback, Hints, final review (docs/Interview Protocol Implementation.md)
     settings/        Settings over IPC, Claude CLI path test
   preload/           Exposes the typed window.api bridge to the renderer
@@ -63,6 +64,7 @@ src/
                      src/lesson/: Lesson view (topic list, streamed Markdown, source chips)
                      src/mastery/: topic screen driving the Mastery Loop
                      src/path/: Learning Path home screen (docs/Learning Path Implementation.md)
+                     src/dashboard/: Dashboard screen with the Notion Map heat grid
                      src/settings/: Settings screen
   shared/            Code shared by both sides, including the IPC contract (ipc.ts)
 resources/corpus/    Generated primer corpus (CC BY 4.0), see docs/Corpus.md

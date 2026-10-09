@@ -128,9 +128,10 @@ const validGrading = {
 
 /**
  * Design Feedback, by the `--json-schema` it gets: step feedback (one checklist verdict per item),
- * a Hint, or a final review.
+ * a Hint, or a final review. `leak`: step feedback that names reference items (expiration,
+ * availability), unless the prompt carries the leak guard's retry note and `leak` is `once`.
  */
-function designFeedback() {
+function designFeedback(leak: 'none' | 'once' | 'always' = 'none') {
   const schemaArg = process.argv[process.argv.indexOf('--json-schema') + 1] ?? '{}'
   const schema = JSON.parse(schemaArg) as {
     properties?: { checklist?: { minItems?: number }; hint?: object; strengths?: object }
@@ -146,15 +147,22 @@ function designFeedback() {
     }
   }
   const items = schema.properties?.checklist?.minItems ?? 1
+  const leaking =
+    leak === 'always' || (leak === 'once' && !stdin.includes('previous feedback named'))
   return {
     checklist: Array.from({ length: items }, (_, i) => ({
       verdict: i === 0 ? 'met' : 'partial',
       comment: `Point ${i + 1} : à préciser.`
     })),
     summary: 'Un bon début, mais il manque des cas limites.',
-    gaps: ['Tu ne dis pas ce qui se passe quand un lien expire.'],
+    gaps: leaking
+      ? [
+          'Tu ne dis pas ce qui se passe quand un lien expire.',
+          'Tu ne précises pas le hors périmètre.'
+        ]
+      : ['Tu ne précises pas les cas limites de tes cas d’usage.'],
     errors: [],
-    forgottenTradeOffs: ['Disponibilité contre cohérence pour les lectures.'],
+    forgottenTradeOffs: leaking ? ['Disponibilité contre cohérence pour les lectures.'] : [],
     nextStep: 'Précise les cas limites avant de passer au schéma.'
   }
 }
@@ -225,8 +233,12 @@ switch (scenario) {
     structured(validGrading)
     end('', { structured_output: validGrading })
     break
-  case 'design': {
-    const output = designFeedback()
+  case 'design':
+  case 'design-leak-once':
+  case 'design-leak-always': {
+    const output = designFeedback(
+      scenario === 'design' ? 'none' : scenario === 'design-leak-once' ? 'once' : 'always'
+    )
     init()
     structured(output)
     end('', { structured_output: output })

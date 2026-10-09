@@ -11,6 +11,7 @@ import { OutsidePrimerBadge } from '../lesson/OutsidePrimerBadge'
 import { errorMessage } from '../quiz/errorMessage'
 import './path.css'
 import {
+  canOpenExercise,
   continueLabel,
   lockMessage,
   noNextStepText,
@@ -23,6 +24,8 @@ import {
 } from './pathText'
 
 type OpenTopic = (topic: TopicMasterySummary) => void
+/** Opens a Design Exercise (`design_exercises.id`). */
+type OpenExercise = (designExerciseId: number) => void
 
 function StatusBadge({ step }: { step: LearningPathStep }) {
   return (
@@ -82,15 +85,39 @@ function TopicStepItem({
   )
 }
 
-function ExerciseStepItem({ step }: { step: DesignExerciseStep }) {
+function ExerciseStepItem({
+  step,
+  recommended,
+  onOpenExercise
+}: {
+  step: DesignExerciseStep
+  recommended: boolean
+  onOpenExercise: OpenExercise
+}) {
   const lock = lockMessage(step)
+  const id = canOpenExercise(step) ? step.designExerciseId : null
+  const title = (
+    <>
+      <span className="path-step-title">{step.title}</span>
+      <StatusBadge step={step} />
+    </>
+  )
   return (
-    <li className={`path-step path-step-${step.status}`} data-step={step.key}>
-      <div className="path-step-row" aria-disabled="true">
-        <span className="path-step-title">{step.title}</span>
-        <StatusBadge step={step} />
-      </div>
-      <p className="path-step-note">
+    <li
+      className={`path-step path-step-${step.status}`}
+      data-step={step.key}
+      aria-current={recommended ? 'step' : undefined}
+    >
+      {id !== null ? (
+        <button type="button" className="path-step-row" onClick={() => onOpenExercise(id)}>
+          {title}
+        </button>
+      ) : (
+        <div className="path-step-row" aria-disabled="true">
+          {title}
+        </div>
+      )}
+      <p className="path-step-note" data-testid={lock ? 'path-lock-message' : undefined}>
         {lock ?? 'Prerequisites mastered.'} <span className="path-rationale">{step.rationale}</span>
       </p>
     </li>
@@ -101,7 +128,13 @@ function ExerciseStepItem({ step }: { step: DesignExerciseStep }) {
  * The home screen: the Learning Path with its sections, the status of each step, the
  * recommended step and the progress. Reloaded on mount and on every `path:changed` push.
  */
-export function LearningPathScreen({ onOpenTopic }: { onOpenTopic: OpenTopic }) {
+export function LearningPathScreen({
+  onOpenTopic,
+  onOpenExercise
+}: {
+  onOpenTopic: OpenTopic
+  onOpenExercise: OpenExercise
+}) {
   const [path, setPath] = useState<LearningPath | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -132,12 +165,16 @@ export function LearningPathScreen({ onOpenTopic }: { onOpenTopic: OpenTopic }) 
         >
           <div className="path-progress-fill" style={{ width: `${path.progress.percent}%` }} />
         </div>
-        {next && next.kind === 'topic' ? (
+        {next && (next.kind === 'topic' || next.designExerciseId !== null) ? (
           <button
             type="button"
             className="path-continue"
             data-testid="path-continue"
-            onClick={() => onOpenTopic(next.topic)}
+            onClick={() =>
+              next.kind === 'topic'
+                ? onOpenTopic(next.topic)
+                : onOpenExercise(next.designExerciseId!)
+            }
           >
             {continueLabel(next)}
           </button>
@@ -162,7 +199,12 @@ export function LearningPathScreen({ onOpenTopic }: { onOpenTopic: OpenTopic }) 
                     onOpenTopic={onOpenTopic}
                   />
                 ) : (
-                  <ExerciseStepItem key={step.key} step={step} />
+                  <ExerciseStepItem
+                    key={step.key}
+                    step={step}
+                    recommended={step.key === path.nextStepKey}
+                    onOpenExercise={onOpenExercise}
+                  />
                 )
               )}
             </ol>

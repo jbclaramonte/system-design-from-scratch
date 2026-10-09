@@ -78,13 +78,23 @@ export interface ProtocolIpc {
   cancel(request: ProtocolCancelRequest): void
 }
 
-/** `allowDevFixture` is false in a packaged app. */
+/**
+ * `allowDevFixture` is false in a packaged app. `assertExerciseUnlocked` (the Learning Path lock,
+ * `createExerciseLockGuard`) runs before every entry of an exercise.
+ */
 export function createProtocolIpc(
   deps: { db: Database; corpus: Corpus; service: Pick<GenerationService, 'generate'> },
   protocol: ProtocolService,
-  { allowDevFixture }: { allowDevFixture: boolean }
+  {
+    allowDevFixture,
+    assertExerciseUnlocked = () => {}
+  }: { allowDevFixture: boolean; assertExerciseUnlocked?: (designExerciseId: number) => void }
 ): ProtocolIpc {
   const runs = new Map<string, AbortController>()
+  const unlocked = <T extends { designExerciseId: number }>(parsed: T): T => {
+    assertExerciseUnlocked(parsed.designExerciseId)
+    return parsed
+  }
 
   /** Runs `body` with an AbortSignal tied to `protocol:cancel` and to the window. */
   async function cancellable<T>(
@@ -116,15 +126,16 @@ export function createProtocolIpc(
       return { id: exercise.id, slug: exercise.slug, title: exercise.title }
     },
 
-    getExercise: (request) => protocol.getExercise(exerciseRequest.parse(request).designExerciseId),
+    getExercise: (request) =>
+      protocol.getExercise(unlocked(exerciseRequest.parse(request)).designExerciseId),
 
     saveDraft(request) {
-      const { designExerciseId, step: s, text } = draftRequest.parse(request)
+      const { designExerciseId, step: s, text } = unlocked(draftRequest.parse(request))
       protocol.saveDraft(designExerciseId, s, text)
     },
 
     markLessonSeen(request) {
-      const { designExerciseId, step: s } = lessonSeenRequest.parse(request)
+      const { designExerciseId, step: s } = unlocked(lessonSeenRequest.parse(request))
       return protocol.markLessonSeen(designExerciseId, s)
     },
 
@@ -146,21 +157,21 @@ export function createProtocolIpc(
     },
 
     async submitStep(request, client) {
-      const parsed = submitRequest.parse(request)
+      const parsed = unlocked(submitRequest.parse(request))
       return cancellable(parsed.requestId, client, (signal) =>
         protocol.submitStep(parsed.designExerciseId, parsed.step, parsed.submission, signal)
       )
     },
 
     async requestHint(request, client) {
-      const parsed = hintRequest.parse(request)
+      const parsed = unlocked(hintRequest.parse(request))
       return cancellable(parsed.requestId, client, (signal) =>
         protocol.requestHint(parsed.designExerciseId, parsed.step, parsed.current, signal)
       )
     },
 
     async requestFinalReview(request, client) {
-      const parsed = finalReviewRequest.parse(request)
+      const parsed = unlocked(finalReviewRequest.parse(request))
       return cancellable(parsed.requestId, client, (signal) =>
         protocol.requestFinalReview(parsed.designExerciseId, signal)
       )

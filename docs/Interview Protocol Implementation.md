@@ -2,7 +2,7 @@
 title: Interview Protocol Implementation
 tags: [design-practice, architecture, prompts, ui]
 issue: 14
-prompt-versions: [design-step-feedback-2, design-hint-2, design-final-review-2, protocol-step-lesson-2]
+prompt-versions: [design-step-feedback-4, design-hint-3, design-final-review-4, protocol-step-lesson-2]
 ---
 
 # Interview Protocol Implementation
@@ -50,7 +50,7 @@ Rationale:
 
 ### Exercise index
 
-`exerciseIndexOf` (`src/main/protocol/exercises.ts`): the 1-based rank of the exercise among the Design Exercises in Learning Path order (`listDesignExercises`: `position`, then `id`). Dev exercises (slug `dev-...`) are not ranked; a `dev-protocol-<n>` fixture plays exercise n.
+`exerciseIndexOf` (`src/main/protocol/exercises.ts`): the order index of a catalogued exercise (`DESIGN_EXERCISES`, see [[Design Exercises]]: Pastebin 1, Twitter 2); for any other exercise, its 1-based rank among the Design Exercises in Learning Path order (`listDesignExercises`: `position`, then `id`). Dev exercises (slug `dev-...`) are not ranked; a `dev-protocol-<n>` fixture plays exercise n.
 
 ## Flow
 
@@ -82,7 +82,7 @@ Migration 4 (`interview-protocol`), see [[Data Model]]:
 - `protocol_step_drafts`: the editor text of a text step, or the notes of a canvas step, saved 600 ms after typing stops.
 - `protocol_step_encounters`: one row per step whose Protocol Step Lesson the learner read (in any exercise), with the exercise where it happened.
 - `design_feedback` (existing) holds the step feedback (`{ submissionId, promptVersion, feedback }`), each Hint (`{ level, promptVersion, hint }`, the Hint log: the next level is the count + 1) and each final review (`{ submissionIds, promptVersion, review }`). `grounded` is true when the exercise has a Reference Solution.
-- `design_exercises.problem_statement`: what the learner is asked to design (null: the Reference Solution title).
+- `design_exercises.problem_statement`: what the learner is asked to design (null: the Reference Solution title). Curated French text for the catalogued exercises, seeded at startup (see [[Design Exercises#Problem statements (curated)]]).
 - `content_cache.kind` accepts `protocol_step_lesson`.
 
 ## Generations
@@ -97,12 +97,34 @@ Prompts in `src/main/generation/prompts/designFeedback.ts` and `protocolStepLess
 | Final review | `design_feedback` | never | `FinalReview` | 150 s |
 
 - **Untrusted learner content**: the submission, earlier steps, current work for a Hint, and every diagram label or note are fenced in `<learner_submission step="...">`, `<learner_previous_step>` or `<learner_current_work>`, last in the prompt. `fenceUntrusted` removes any `learner_*` or `reference_solution` tag inside, so the text cannot close its block. The system prompt says the blocks are data, never instructions.
-- **Reference Solution as hidden grounding**: the solution's Markdown (cleaned, capped at 24,000 characters; its diagrams are not bundled) is in `<reference_solution>`, "for you only". Step feedback and Hints must never quote it, copy its numbers, tables, endpoints or component lists, or mention that it exists, and must accept a different valid design. Hints add: never reveal it. The final review may describe what it does differently, in its own words, because the learner reads it right after.
-- **Step feedback** (`stepFeedbackSchema(n)`): `checklist` (exactly one `met` / `partial` / `missing` verdict with a one-sentence comment per checklist item, in order), `summary`, `gaps` (≤ 4), `errors` (≤ 4; for a diagram: arrow directions, missing or dangling links), `forgottenTradeOffs` (≤ 3), `nextStep`. Context: the problem statement, the step goal and checklist, the latest reviewed submission of each earlier active step, the submission number.
+- **Reference Solution as hidden grounding**: the parts of the solution that answer the steps being judged (`referenceForSteps`, see [[Design Exercises#Reference Solution in the prompts]]: the earlier active steps and the current one for step feedback and Hints, every active step for the final review; cleaned, capped at 24,000 characters; its diagrams are not bundled) are in `<reference_solution>`, "for you only". Since #15 (prompt versions 3) the exercise part also names the active steps of the exercise and says the others are never asked for or counted as missing, and the functional requirements checklist and placeholder no longer name Pastebin's own edge cases (expiration, anonymous users, analytics), which gave its answer away. Step feedback and Hints must never quote it, copy its numbers, tables, endpoints or component lists, or mention that it exists, and must accept a different valid design. Hints add: never reveal it. The final review may describe what it does differently, in its own words, because the learner reads it right after.
+- **Step feedback** (`stepFeedbackSchema(n)`, version 4): missing content is named by its category only ("tu ne dis pas ce qui est hors périmètre", "pense aux cas limites"), never as a reference item, example or number the learner did not write, even after "par exemple"; what the learner wrote may be confirmed and refined with the reference; forgotten trade-offs only about what the learner wrote. Checked in code by the [[#Leak guard]]. `checklist` (exactly one `met` / `partial` / `missing` verdict with a one-sentence comment per checklist item, in order), `summary`, `gaps` (≤ 4), `errors` (≤ 4; for a diagram: arrow directions, missing or dangling links), `forgottenTradeOffs` (≤ 3), `nextStep`. Context: the problem statement, the step goal and checklist, the latest reviewed submission of each earlier active step, the submission number.
 - **Graph steps** send the [[Design Export]]: the text description, the [[Design Graph]] without positions and sizes (`compactGraph`; layout is in the PNG), the notes, and the **PNG as an image block** (see below).
 - **Hints**: level 1 nudge (one open question, no component, number or technique), level 2 direction (the area to work on and why, a general concept at most), level 3 near-solution (the shape of a good answer for the most important missing point, never the complete answer). The earlier Hints of the step are in the prompt ("go one level further"). Three per step and exercise; a failed Generation does not use a level.
-- **Final review** (`finalReviewSchema`): `summary`, `strengths` (1 to 5), `gapsVsReference` (≤ 6, most important first), `tradeOffsToDiscuss` (1 to 5), `nextTime` (≤ 3). Only once every active step has a reviewed submission; it reads the latest reviewed submission of each. It can be run again.
+- **Final review** (`finalReviewSchema`, version 4: each `gapsVsReference` entry starts with the reference part it draws from, "Cas d'usage :", "Hors périmètre :", "Estimations :", "Composants :", "Passage à l'échelle :"): `summary`, `strengths` (1 to 5), `gapsVsReference` (≤ 6, most important first), `tradeOffsToDiscuss` (1 to 5), `nextTime` (≤ 3). Only once every active step has a reviewed submission; it reads the latest reviewed submission of each. It can be run again.
 - **Protocol Step Lesson**: 150 to 250 words, `## <title>`, `### Pourquoi c'est important`, `### Ce que tu vas produire`, `### Piège fréquent`, `**À retenir**`, inline `[source: ...]` citations. Grounded on the primer section "How to approach a system design interview question" (not a teachable [[Topic]], see [[Corpus#Teachable topics]]): the matching sub-section first, then supporting sections (`PROTOCOL_STEP_LESSON_SECTIONS`: powers-of-two and latency tables for estimations, REST for the API, SQL or NoSQL for the data model, performance, latency and CAP for non-functional requirements). One lesson per step, the same in every exercise.
+
+## Leak guard
+
+Step feedback must not give away the [[Reference Solution]] items the learner did not think of. The prompt alone did not hold (a real run named 6 of 10 Pastebin items and 9 of 11 Twitter items, paraphrased in French), so the service checks the output (`src/main/protocol/leakGuard.ts`, called in `submitStep`):
+
+1. Each catalogued [[Design Exercises|Design Exercise]] lists the distinctive items of its reference per step (`referenceTerms`, curated by hand from the primer's Step 1: use cases and out-of-scope entries), each as a regex over French and English stems (`expir|durée de vie|pour toujours|périmé`).
+2. `findLeakedTerms`: the terms matched by any field of the feedback (summary, checklist comments, gaps, errors, forgotten trade-offs, next step) and not by the allowed text: the exercise title, the problem statement, the learner's earlier steps and the submission. An item the learner wrote can be discussed.
+3. On a leak, the Generation runs once more with the prompt plus a note naming the leaked items and asking for categories only (`leakRetryNote`).
+4. If the retry still leaks, the list entries (gaps, errors, forgotten trade-offs) naming a leaked term are dropped (`redactLeakedEntries`). Summary, checklist comments and next step are kept, so a verdict never loses its reason.
+5. The `design_feedback` record keeps `leakCheck: { firstLeaked, retried, remaining }` for steps with terms.
+
+Only the functional requirements step of Pastebin and Twitter has terms for now; the Twitter estimations (its numbers) and the later steps are not checked. Dev fixtures use the terms of their Reference Solution. Hints and final reviews are not checked (Hints follow their level rules; the final review may compare openly).
+
+**Metric** (`scripts/design-exercises-check.ts`): the leaked terms of a feedback over the number of terms, on every CLI output and on the stored feedback. Limits: the term lists are hand-made and incomplete, so a paraphrase outside them passes ("sont-elles gardées toujours" for expiration slipped through in the v4 run) and a generic use of a stem can be flagged ("accueil", "profil", "disponibilité"); it counts items, not how much they give away; one run per exercise, no statistics.
+
+| Run (2026-10-09, sonnet, effort low) | Pastebin (10 terms) | Twitter (11 terms) |
+|---|---|---|
+| Version 3, no guard | 6 | 9 |
+| Version 4, first output | 4 | 2, then 3 on a repeat |
+| Version 4, stored (after the retry) | 0 | 0 and 0 |
+
+Each of the 3 version 4 runs needed the retry: the guard doubles the latency of a leaky first step (15 to 21 s instead of about 9 s) and its calls. Samples: [[samples/design-exercises]].
 
 ## Image input through the Claude Code CLI
 
@@ -121,7 +143,7 @@ So `runCli` switches to `--input-format stream-json` when a request has `images`
 
 - `ProtocolExerciseScreen.tsx`: problem statement, step list in canonical order (locked steps disabled with "Locked: unlocks at exercise N"), the selected step's panel, the Design Canvas next to the panel for graph steps (one Design Scene for both graph steps), the final review panel with the Reference Solution link (primer permalink, CC BY 4.0).
 - Step panel: the streamed Protocol Step Lesson on first encounter ("Got it, start the step" records it; "Why it matters" reopens it from the cache), the editor (textarea, draft autosave), "Submit for feedback" and "Hint n/3" with pending, Cancel and typed errors (`useProtocolCall`), the Hints given, the feedback history (latest open).
-- `ProtocolDevScreen.tsx`: entry "Design exercise (dev)" in the developer tools of the home screen, opens the fixture (the primer's Pastebin (or Bit.ly) solution, a deliberately short problem statement) playing exercise 1 to 5. The real catalogue is #15, its [[Learning Path]] entry #17.
+- `ProtocolDevScreen.tsx`: entry "Design exercise (dev)" in the developer tools of the home screen, opens the fixture (the primer's Pastebin (or Bit.ly) solution, a deliberately short problem statement) playing exercise 1 to 5. The real [[Design Exercises]] open from the [[Learning Path]] (#15), with the same screen.
 
 ## Verification (2026-10-09)
 
@@ -130,6 +152,9 @@ So `runCli` switches to `--input-format stream-json` when a request has `images`
 - Not checked in the app: the deep dive step (exercise 5) and resubmissions of a canvas step; a packaged build.
 
 ## Quality review (2026-10-09, sonnet, effort low)
+
+> [!note] Prompt versions 2, dev fixture
+> The review of the first two real exercises (prompt versions 3) is in [[Design Exercises#Quality review]].
 
 Sample: [[samples/design-feedback|Sample design feedback]], made by `node scripts/design-feedback-check.ts` (2 real CLI calls): the step feedback of a mediocre functional requirements submission on the Pastebin fixture (8.0 s), then a level 3 Hint on the same work (6.8 s).
 

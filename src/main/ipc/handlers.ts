@@ -1,6 +1,7 @@
 import { app } from 'electron'
 import type { AboutIpc } from '../about'
 import type { LessonIpc } from '../content/lessonIpc'
+import type { DashboardIpc } from '../dashboard/dashboardIpc'
 import type { GenerationIpc } from '../generation/ipc'
 import type { MasteryIpc } from '../mastery/masteryIpc'
 import type { LearningPathIpc } from '../path/pathIpc'
@@ -18,6 +19,7 @@ export interface HandlerDependencies {
   quiz: QuizIpc
   mastery: MasteryIpc
   path: LearningPathIpc
+  dashboard: DashboardIpc
   protocol: ProtocolIpc
   settings: SettingsIpc
 }
@@ -30,6 +32,7 @@ export function createHandlers({
   quiz,
   mastery,
   path,
+  dashboard,
   protocol,
   settings
 }: HandlerDependencies): IpcHandlers {
@@ -61,6 +64,7 @@ export function createHandlers({
       return state
     },
     'path:get': () => path.get(),
+    'dashboard:get': (request) => dashboard.get(request),
     'settings:get': () => settings.get(),
     'settings:update': (request) => settings.update(request),
     'settings:testCli': (request) => settings.testCli(request),

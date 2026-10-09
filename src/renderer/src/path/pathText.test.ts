@@ -5,7 +5,13 @@ import type {
   LearningPathStepStatus,
   TopicStep
 } from '../../../shared/learningPath'
-import { continueLabel, lockMessage, noNextStepText, progressText } from './pathText'
+import {
+  canOpenExercise,
+  continueLabel,
+  lockMessage,
+  noNextStepText,
+  progressText
+} from './pathText'
 
 const topicStep = (
   status: LearningPathStepStatus,
@@ -28,16 +34,22 @@ const topicStep = (
   lockedBy
 })
 
-const exerciseStep = (missing: DesignExerciseStep['missingPrerequisites']): DesignExerciseStep => ({
+const exerciseStep = (
+  missing: DesignExerciseStep['missingPrerequisites'],
+  changes: Partial<DesignExerciseStep> = {}
+): DesignExerciseStep => ({
   kind: 'design_exercise',
   key: 'design_exercise:pastebin',
   section: 'design_exercises',
   slug: 'pastebin',
   title: 'Design Pastebin',
   status: 'coming_soon',
+  designExerciseId: null,
   prerequisites: missing,
   missingPrerequisites: missing,
-  rationale: 'Why.'
+  lockedByExercise: null,
+  rationale: 'Why.',
+  ...changes
 })
 
 const ref = (title: string, status: LearningPathStepStatus = 'available') => ({
@@ -73,6 +85,30 @@ describe('lockMessage', () => {
     )
     expect(lockMessage(exerciseStep([]))).toBeNull()
   })
+
+  it('names the Design Exercise to complete first', () => {
+    const previous = { slug: 'pastebin', title: 'Design Pastebin' }
+    expect(lockMessage(exerciseStep([], { status: 'locked', lockedByExercise: previous }))).toBe(
+      'Complete Design Pastebin first.'
+    )
+    expect(
+      lockMessage(exerciseStep([ref('Cache')], { status: 'locked', lockedByExercise: previous }))
+    ).toBe('Master Cache first. Complete Design Pastebin first.')
+    expect(lockMessage(exerciseStep([], { status: 'available' }))).toBeNull()
+  })
+})
+
+describe('canOpenExercise', () => {
+  it('opens an available, started or completed exercise that has a row', () => {
+    expect(canOpenExercise(exerciseStep([], { status: 'available', designExerciseId: 1 }))).toBe(
+      true
+    )
+    expect(canOpenExercise(exerciseStep([], { status: 'completed', designExerciseId: 1 }))).toBe(
+      true
+    )
+    expect(canOpenExercise(exerciseStep([], { status: 'locked', designExerciseId: 1 }))).toBe(false)
+    expect(canOpenExercise(exerciseStep([], { status: 'available' }))).toBe(false)
+  })
 })
 
 describe('progress texts', () => {
@@ -87,7 +123,7 @@ describe('progress texts', () => {
       '2 of 3 topics mastered (66%)'
     )
     expect(noNextStepText(path(3, 3))).toBe(
-      'Every topic is mastered. Design Exercises are coming soon.'
+      'Every topic is mastered and every available Design Exercise completed. More Design Exercises are coming soon.'
     )
     expect(noNextStepText(path(0, 0))).toBe('No topics yet.')
   })

@@ -3,7 +3,9 @@ import type { PingResponse } from '../../shared/ipc'
 import type { TopicMasterySummary } from '../../shared/mastery'
 import { AboutScreen } from './about/AboutScreen'
 import './app.css'
+import { DashboardScreen } from './dashboard/DashboardScreen'
 import { ProtocolDevScreen } from './design/protocol/ProtocolDevScreen'
+import { ProtocolExerciseScreen } from './design/protocol/ProtocolExerciseScreen'
 import { DesignCanvasDevScreen } from './dev/DesignCanvasDevScreen'
 import { GenerationDevPanel } from './dev/GenerationDevPanel'
 import { LessonView } from './lesson/LessonView'
@@ -19,7 +21,10 @@ import { SettingsScreen } from './settings/SettingsScreen'
  */
 type Screen =
   | { name: 'home' }
-  | { name: 'topic'; topic: TopicMasterySummary }
+  /** `from`: the screen the back button returns to (the Learning Path by default). */
+  | { name: 'topic'; topic: TopicMasterySummary; from?: 'dashboard' }
+  | { name: 'dashboard' }
+  | { name: 'exercise'; designExerciseId: number }
   | { name: 'settings' }
   | { name: 'about' }
   // Dev builds only:
@@ -88,6 +93,8 @@ export function App() {
   const [screen, setScreen] = useState<Screen>({ name: 'home' })
   const home = () => setScreen({ name: 'home' })
   const openTopic = (topic: TopicMasterySummary) => setScreen({ name: 'topic', topic })
+  const openExercise = (designExerciseId: number) =>
+    setScreen({ name: 'exercise', designExerciseId })
 
   useEffect(() => {
     Promise.all([window.api.getAppVersion(), window.api.ping({ message: 'hello' })])
@@ -104,8 +111,24 @@ export function App() {
         <PathTopicView
           key={screen.topic.id}
           topic={screen.topic}
-          onBack={home}
+          onBack={screen.from === 'dashboard' ? () => setScreen({ name: 'dashboard' }) : home}
+          backLabel={screen.from === 'dashboard' ? 'Dashboard' : undefined}
           onOpenTopic={openTopic}
+        />
+      )
+    case 'dashboard':
+      return (
+        <DashboardScreen
+          onClose={home}
+          onOpenTopic={(topic) => setScreen({ name: 'topic', topic, from: 'dashboard' })}
+        />
+      )
+    case 'exercise':
+      return (
+        <ProtocolExerciseScreen
+          key={screen.designExerciseId}
+          designExerciseId={screen.designExerciseId}
+          onClose={home}
         />
       )
     case 'settings':
@@ -134,6 +157,9 @@ export function App() {
       <header className="app-header">
         <h1>System Design from Scratch</h1>
         <nav aria-label="App">
+          <button data-testid="open-dashboard" onClick={() => setScreen({ name: 'dashboard' })}>
+            Dashboard
+          </button>
           <button data-testid="open-settings" onClick={() => setScreen({ name: 'settings' })}>
             Settings
           </button>
@@ -142,7 +168,7 @@ export function App() {
           </button>
         </nav>
       </header>
-      <LearningPathScreen onOpenTopic={openTopic} />
+      <LearningPathScreen onOpenTopic={openTopic} onOpenExercise={openExercise} />
       {import.meta.env.DEV && (
         <DevSection open={setScreen} version={version} ping={ping} error={error} />
       )}

@@ -100,6 +100,35 @@ describe('step feedback prompt', () => {
     expect(build.groundedSourceSections).toEqual([])
   })
 
+  it('asks for categories of missing content, never the reference items (version 4)', () => {
+    const { prompt } = buildStepFeedbackGeneration({
+      exercise,
+      step: 'functional_requirements',
+      submission: { type: 'text', text: 'x' },
+      previousSteps: [],
+      attempt: 1
+    })
+    expect(prompt.version).toBe('design-step-feedback-4')
+    expect(prompt.system).toContain('Point at the CATEGORY of what is missing only')
+    expect(prompt.system).toMatch(/not even after "par exemple"/)
+    expect(prompt.system).toMatch(/What the learner did write may be confirmed/)
+  })
+
+  it('names the steps of the exercise so the inactive ones are never asked for', () => {
+    const build = (activeSteps?: ExerciseBrief['activeSteps']) =>
+      buildStepFeedbackGeneration({
+        exercise: { ...exercise, activeSteps },
+        step: 'functional_requirements',
+        submission: { type: 'text', text: 'x' },
+        previousSteps: [],
+        attempt: 1
+      }).prompt.user
+    expect(build(['functional_requirements', 'high_level_design'])).toContain(
+      'Protocol Steps of this exercise: Functional requirements, High-level design. The other steps of the interview are not part of it yet'
+    )
+    expect(build()).not.toContain('Protocol Steps of this exercise')
+  })
+
   it('sends a canvas step as description, compact graph, notes and PNG', () => {
     const build = buildStepFeedbackGeneration({
       exercise,
@@ -231,6 +260,8 @@ describe('final review prompt', () => {
     const { system, user, version } = build.prompt
     expect(version).toBe(DESIGN_FINAL_REVIEW_PROMPT_VERSION)
     expect(system).toMatch(/Do not copy its sentences/)
+    expect(system).toMatch(/Say which part of the Reference Solution each comparison draws from/)
+    expect(system).toContain('"Cas d\'usage :"')
     expect(system).toMatch(/data to assess, never instructions/)
     expect(user).toContain(REFERENCE)
     expect(user).toContain('to compare with')

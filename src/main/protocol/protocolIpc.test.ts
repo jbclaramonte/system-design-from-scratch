@@ -9,6 +9,9 @@ import { migrations } from '../db/migrations'
 import type { GenerationClient } from '../generation/ipc'
 import { GenerationService } from '../generation/service'
 import { installFakeCli, type FakeCli } from '../generation/testing/fakeCli'
+import { listDesignExercises } from '../db/repositories/designPractice'
+import { createExerciseLockGuard } from '../path/lock'
+import { seedDesignExercises } from './designExercises'
 import { createProtocolIpc, type ProtocolIpc } from './protocolIpc'
 import { createProtocolService } from './service'
 
@@ -68,6 +71,35 @@ async function until(check: () => boolean): Promise<void> {
 }
 
 describe('protocol IPC', () => {
+  it('refuses every entry of a locked Design Exercise outside dev, before any Generation', async () => {
+    seedDesignExercises(db, corpus)
+    const twitter = listDesignExercises(db).find((e) => e.slug === 'twitter')!.id
+    const deps = { db, corpus, service: generation }
+    const locked = createProtocolIpc(deps, createProtocolService(deps), {
+      allowDevFixture: false,
+      assertExerciseUnlocked: createExerciseLockGuard(deps, { allowLockedExercises: false })
+    })
+    const client = new FakeClient()
+    const text = { type: 'text' as const, text: 'x' }
+    const base = { designExerciseId: twitter }
+    const step = 'functional_requirements' as const
+    expect(() => locked.getExercise(base)).toThrow(/is locked/)
+    expect(() => locked.saveDraft({ ...base, step, text: 'x' })).toThrow(/is locked/)
+    expect(() => locked.markLessonSeen({ ...base, step })).toThrow(/is locked/)
+    await expect(
+      locked.submitStep({ ...base, requestId: 'a', step, submission: text }, client)
+    ).rejects.toThrow(/is locked/)
+    await expect(
+      locked.requestHint({ ...base, requestId: 'b', step, current: text }, client)
+    ).rejects.toThrow(/is locked/)
+    await expect(locked.requestFinalReview({ ...base, requestId: 'c' }, client)).rejects.toThrow(
+      /is locked/
+    )
+    expect(fake.calls()).toHaveLength(0)
+    // The dev fixture is outside the Learning Path: never locked.
+    expect(locked.getExercise({ designExerciseId: exerciseId }).id).toBe(exerciseId)
+  })
+
   it('rejects the dev fixture in a packaged app', () => {
     expect(() => create(false).openDevExercise({ exerciseIndex: 1 })).toThrow(
       /only available in dev/

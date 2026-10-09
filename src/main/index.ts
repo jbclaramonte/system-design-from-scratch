@@ -3,13 +3,14 @@ import { app, BrowserWindow, ipcMain, session, shell } from 'electron'
 import { createAboutIpc, licensesPath } from './about'
 import { createLessonIpc, FOUNDATIONS_TOPICS, seedTopics } from './content'
 import { corpusPath, loadCorpus } from './corpus'
+import { createDashboardIpc } from './dashboard'
 import { openAppDatabase, type Database } from './db'
 import { createGenerationIpc, GenerationService } from './generation'
 import { createDesignIpc } from './ipc/design'
 import { createHandlers } from './ipc/handlers'
 import { createMasteryIpc, createMasteryService } from './mastery'
-import { createLearningPathIpc, createTopicLockGuard } from './path'
-import { createProtocolIpc, createProtocolService } from './protocol'
+import { createExerciseLockGuard, createLearningPathIpc, createTopicLockGuard } from './path'
+import { createProtocolIpc, createProtocolService, seedDesignExercises } from './protocol'
 import { createSettingsIpc } from './settings/settingsIpc'
 import { getSettings } from './db/repositories/settings'
 import { resolveCliPath } from './generation/resolveCli'
@@ -87,6 +88,8 @@ void app.whenReady().then(() => {
   const corpus = loadCorpus(corpusPath(app.getAppPath()))
   const seeded = seedTopics(db, corpus, FOUNDATIONS_TOPICS)
   if (seeded > 0) console.log(`Seeded ${seeded} topics from the Source Corpus`)
+  const seededExercises = seedDesignExercises(db, corpus)
+  if (seededExercises > 0) console.log(`Seeded ${seededExercises} Design Exercises`)
 
   session.defaultSession.setPermissionRequestHandler((_contents, _permission, callback) =>
     callback(false)
@@ -121,8 +124,13 @@ void app.whenReady().then(() => {
         { assertTopicUnlocked }
       ),
       path: createLearningPathIpc({ db, corpus }),
+      dashboard: createDashboardIpc({ db, corpus }),
       protocol: createProtocolIpc(masteryDeps, createProtocolService(masteryDeps), {
-        allowDevFixture: !app.isPackaged
+        allowDevFixture: !app.isPackaged,
+        assertExerciseUnlocked: createExerciseLockGuard(
+          { db, corpus },
+          { allowLockedExercises: !app.isPackaged }
+        )
       }),
       settings: createSettingsIpc(db, {
         onCliPathChange: () => generationService.resetCliPath(),

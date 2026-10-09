@@ -14,4 +14,4 @@ The linear sequence: [[Foundations Module]], then [[Topic]]s, then [[Design Exer
 
 ## In code
 
-`src/main/path/`: pure `buildLearningPath` (`model.ts`), Design Exercise prerequisites (`designExercisePrerequisites.ts`), `path:get` and the `path:changed` push (`pathIpc.ts`); types in `src/shared/learningPath.ts`. Home screen in `src/renderer/src/path/`. See [[Learning Path Implementation]].
+`src/main/path/`: pure `buildLearningPath` (`model.ts`), Design Exercise prerequisites (`designExercisePrerequisites.ts`), `path:get` and the `path:changed` push (`pathIpc.ts`), topic and exercise locks (`lock.ts`); types in `src/shared/learningPath.ts`. Home screen in `src/renderer/src/path/`; an available Design Exercise opens the protocol screen. See [[Learning Path Implementation]] and [[Design Exercises]].

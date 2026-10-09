@@ -18,13 +18,22 @@ export interface PathTopic extends TopicMasterySummary {
   everMastered: boolean
 }
 
+/** Where the learner is in a Design Exercise. */
+export type DesignExerciseProgress = 'not_started' | 'in_progress' | 'completed'
+
 export interface DesignExerciseSlot {
   slug: string
   title: string
   /** Topic slugs to master first. */
   prerequisites: readonly string[]
+  /** Slug of the exercise to complete first (the previous one), null for none. */
+  previousExercise?: string | null
   rationale: string
   implemented: boolean
+  /** `design_exercises.id`; null when the exercise has no row (not implemented). */
+  designExerciseId?: number | null
+  /** `in_progress` once a step was submitted, `completed` once a final review is recorded. */
+  progress?: DesignExerciseProgress
 }
 
 export interface LearningPathInput {
@@ -92,20 +101,29 @@ function topicSteps(input: LearningPathInput): TopicStep[] {
 }
 
 /**
- * Design Exercise steps: unlocked when every prerequisite topic is mastered (a prerequisite
- * missing from the path never counts as mastered); `coming_soon` while not implemented.
+ * Design Exercise steps: `coming_soon` while not implemented; then `completed` or `in_progress`
+ * from the learner's progress (a started exercise is never locked again); else unlocked when
+ * every prerequisite topic is mastered and the previous exercise is completed (a prerequisite or
+ * an exercise missing from the path never counts).
  */
 function exerciseSteps(
   input: LearningPathInput,
   topics: readonly TopicStep[]
 ): DesignExerciseStep[] {
   const bySlug = new Map(topics.map((step) => [step.topic.slug, step]))
-  return input.exercises.map((exercise) => {
+  const slots = new Map(input.exercises.map((exercise) => [exercise.slug, exercise]))
+  return input.exercises.map((exercise): DesignExerciseStep => {
     const prerequisites = exercise.prerequisites.map((slug): LearningPathTopicRef => {
       const step = bySlug.get(slug)
       return step ? refOf(step) : { slug, title: slug, status: 'locked' }
     })
     const missingPrerequisites = prerequisites.filter((ref) => ref.status !== 'mastered')
+    const previous = exercise.previousExercise ? slots.get(exercise.previousExercise) : undefined
+    const lockedByExercise =
+      exercise.previousExercise && previous?.progress !== 'completed'
+        ? { slug: exercise.previousExercise, title: previous?.title ?? exercise.previousExercise }
+        : null
+    const progress = exercise.progress ?? 'not_started'
     return {
       kind: 'design_exercise',
       key: `design_exercise:${exercise.slug}`,
@@ -114,11 +132,15 @@ function exerciseSteps(
       title: exercise.title,
       status: !exercise.implemented
         ? 'coming_soon'
-        : missingPrerequisites.length > 0
-          ? 'locked'
-          : 'available',
+        : progress !== 'not_started'
+          ? progress
+          : missingPrerequisites.length > 0 || lockedByExercise
+            ? 'locked'
+            : 'available',
+      designExerciseId: exercise.implemented ? (exercise.designExerciseId ?? null) : null,
       prerequisites,
       missingPrerequisites,
+      lockedByExercise,
       rationale: exercise.rationale
     }
   })
@@ -126,17 +148,17 @@ function exerciseSteps(
 
 /** Statuses of a step the learner can open now. */
 const actionable = (status: LearningPathStepStatus): boolean =>
-  status !== 'locked' && status !== 'mastered' && status !== 'coming_soon'
+  status !== 'locked' && status !== 'mastered' && status !== 'completed' && status !== 'coming_soon'
 
 /**
  * The recommended step: the first topic not mastered that can be opened (a skipped or
- * limit_reached topic included, so the way forward is always shown), else the first available
- * Design Exercise, else none.
+ * limit_reached topic included, so the way forward is always shown), else the first Design
+ * Exercise available or in progress, else none.
  */
 export function nextStep(steps: readonly LearningPathStep[]): LearningPathStep | null {
   return (
     steps.find((step) => step.kind === 'topic' && actionable(step.status)) ??
-    steps.find((step) => step.kind === 'design_exercise' && step.status === 'available') ??
+    steps.find((step) => step.kind === 'design_exercise' && actionable(step.status)) ??
     null
   )
 }

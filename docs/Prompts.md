@@ -31,11 +31,13 @@ Bump the constant with any change to the prompt text or schema: it is part of th
 | `REMEDIATION_LESSON_PROMPT_VERSION` | `remediation-lesson-4` | `prompts/remediationLesson.ts` |
 | `FREE_ANSWER_GRADING_PROMPT_VERSION` | `free-answer-grading-2` | `prompts/freeAnswerGrading.ts` |
 | `PROTOCOL_STEP_LESSON_PROMPT_VERSION` | `protocol-step-lesson-2` | `prompts/protocolStepLesson.ts` |
-| `DESIGN_STEP_FEEDBACK_PROMPT_VERSION` | `design-step-feedback-2` | `prompts/designFeedback.ts` |
-| `DESIGN_HINT_PROMPT_VERSION` | `design-hint-2` | `prompts/designFeedback.ts` |
-| `DESIGN_FINAL_REVIEW_PROMPT_VERSION` | `design-final-review-2` | `prompts/designFeedback.ts` |
+| `DESIGN_STEP_FEEDBACK_PROMPT_VERSION` | `design-step-feedback-4` | `prompts/designFeedback.ts` |
+| `DESIGN_HINT_PROMPT_VERSION` | `design-hint-3` | `prompts/designFeedback.ts` |
+| `DESIGN_FINAL_REVIEW_PROMPT_VERSION` | `design-final-review-4` | `prompts/designFeedback.ts` |
 
 Free-answer grading is never cached; its version is stored in each Attempt's grading record instead, so a grade can be traced to the prompt that gave it. Design Feedback is never cached either; its version is stored in each `design_feedback` row (`promptVersion`).
+
+Design Feedback history: version 3 (#15) names the exercise's active steps and gets only the Reference Solution parts of the steps judged; step feedback 4 and final review 4 (#15, leak iteration) point at the category of missing content, never at a reference item the learner did not write, and the final review prefixes each gap with the reference part it draws from. Step feedback is also checked by a leak guard in code, see [[Interview Protocol Implementation#Leak guard]].
 
 ## Notion Outline
 

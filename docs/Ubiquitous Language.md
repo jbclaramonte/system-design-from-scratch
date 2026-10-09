@@ -35,6 +35,7 @@ Single source of truth for domain terms. Use these exact terms in code, schema, 
 | [[Round Limit]] | Max rounds before the app offers another angle or a skip. | retry cap, guard rail |
 | [[Notion Map]] | View of mastery per notion. | skill tree |
 | [[Dashboard]] | Screen with mastery, attempts and weak points. | stats page |
+| [[Weak Point]] | A notion tested in a completed round whose latest score is below the current Mastery Threshold; listed on the Dashboard with why. | weakness, gap, struggle |
 
 ## Design practice
 

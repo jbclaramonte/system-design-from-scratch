@@ -2,7 +2,7 @@
 // exercise state from the database, records submissions, drafts, Protocol Step Lessons read,
 // Hints, step feedback and final reviews, and prepares their Generations (Design Feedback is
 // never cached; Protocol Step Lessons are, through the Content Cache).
-import type { Corpus } from '../corpus'
+import type { Corpus, ReferenceSolution } from '../corpus'
 import type { Database } from '../db'
 import {
   addDesignFeedback,
@@ -54,7 +54,10 @@ import {
   type StoredSubmission,
   type SubmissionView
 } from '../../shared/protocol'
+import { referenceTermsFor } from './designExercises'
 import { exerciseIndexOf } from './exercises'
+import { findLeakedTerms, leakRetryNote, redactLeakedEntries, stepFeedbackTexts } from './leakGuard'
+import { referenceForSteps } from './reference'
 
 export interface ProtocolServiceDeps {
   db: Database
@@ -105,6 +108,11 @@ interface StepFeedbackRecord {
   submissionId: number
   promptVersion: string
   feedback: StepFeedback
+  /**
+   * Leak guard: reference terms of the first output, whether it was retried, and the terms still
+   * named after the retry (list entries naming them were dropped).
+   */
+  leakCheck?: { firstLeaked: string[]; retried: boolean; remaining: string[] }
 }
 interface HintRecord {
   level: HintLevel
@@ -120,9 +128,21 @@ interface FinalReviewRecord {
 interface ExerciseContext {
   exercise: DesignExercise
   index: number
-  brief: ExerciseBrief
+  problemStatement: string
+  solution: ReferenceSolution | undefined
   referenceSolution: { title: string; url: string } | null
 }
+
+/**
+ * The exercise as a prompt sees it when judging `steps`: the Reference Solution is cut to the
+ * parts that answer them, so a step that is not part of the exercise is never expected.
+ */
+const briefFor = (ctx: ExerciseContext, steps: readonly ProtocolStep[]): ExerciseBrief => ({
+  title: ctx.exercise.title,
+  problemStatement: ctx.problemStatement,
+  referenceSolution: ctx.solution ? referenceForSteps(ctx.solution, steps) : null,
+  activeSteps: activeStepsFor(ctx.index)
+})
 
 const toBrief = (stored: StoredSubmission): SubmissionBrief =>
   stored.type === 'text'
@@ -182,11 +202,8 @@ export function createProtocolService(deps: ProtocolServiceDeps): ProtocolServic
     return {
       exercise,
       index,
-      brief: {
-        title: exercise.title,
-        problemStatement: exercise.problemStatement ?? solution?.title ?? exercise.title,
-        referenceSolution: solution?.markdown ?? null
-      },
+      problemStatement: exercise.problemStatement ?? solution?.title ?? exercise.title,
+      solution,
       referenceSolution: solution ? { title: solution.title, url: solution.source.url } : null
     }
   }
@@ -260,7 +277,7 @@ export function createProtocolService(deps: ProtocolServiceDeps): ProtocolServic
     return {
       id: ctx.exercise.id,
       title: ctx.exercise.title,
-      problemStatement: ctx.brief.problemStatement,
+      problemStatement: ctx.problemStatement,
       exerciseIndex: ctx.index,
       referenceSolution: ctx.referenceSolution,
       steps,
@@ -359,7 +376,8 @@ export function createProtocolService(deps: ProtocolServiceDeps): ProtocolServic
               notes: input.notes,
               withPng: png !== null
             }
-      const previous = latestReviewed(designExerciseId, previousActiveSteps(ctx.index, step))
+      const earlierSteps = previousActiveSteps(ctx.index, step)
+      const previous = latestReviewed(designExerciseId, earlierSteps)
       const reviewedBefore = listProtocolStepSubmissions(db, designExerciseId).filter(
         (s) => s.protocolStep === step && s.status === 'reviewed'
       ).length
@@ -369,7 +387,7 @@ export function createProtocolService(deps: ProtocolServiceDeps): ProtocolServic
         content: stored as unknown as Json
       })
       const build = buildStepFeedbackGeneration({
-        exercise: ctx.brief,
+        exercise: briefFor(ctx, [...earlierSteps, step]),
         step,
         submission: inputBrief(input),
         previousSteps: briefs(previous),
@@ -379,16 +397,38 @@ export function createProtocolService(deps: ProtocolServiceDeps): ProtocolServic
       return outcome(
         designExerciseId,
         async () => {
-          const { content } = await service.generate({
-            ...build,
-            priority: 'foreground',
-            signal,
-            timeoutMs: DESIGN_FEEDBACK_TIMEOUT_MS
-          }).result
+          const run = (user: string) =>
+            service.generate({
+              ...build,
+              prompt: { ...build.prompt, user },
+              priority: 'foreground',
+              signal,
+              timeoutMs: DESIGN_FEEDBACK_TIMEOUT_MS
+            }).result
+          // Reference items the feedback names but the learner did not write: one retry with
+          // the violation, then the list entries that still name one are dropped.
+          const terms = referenceTermsFor(ctx.exercise.referenceSolutionSection, step)
+          const allowed = [
+            ctx.exercise.title,
+            ctx.problemStatement,
+            ...briefs(previous).map((brief) => JSON.stringify(brief.submission)),
+            JSON.stringify(inputBrief(input))
+          ].join('\n')
+          let { content } = await run(build.prompt.user)
+          const firstLeaked = findLeakedTerms(stepFeedbackTexts(content), allowed, terms)
+          let leaked = firstLeaked
+          if (leaked.length > 0) {
+            content = (await run(`${build.prompt.user}\n\n${leakRetryNote(leaked)}`)).content
+            leaked = findLeakedTerms(stepFeedbackTexts(content), allowed, terms)
+            if (leaked.length > 0) content = redactLeakedEntries(content, leaked, terms)
+          }
           const record: StepFeedbackRecord = {
             submissionId: submission.id,
             promptVersion: build.prompt.version,
-            feedback: content
+            feedback: content,
+            ...(terms.length > 0 && {
+              leakCheck: { firstLeaked, retried: firstLeaked.length > 0, remaining: leaked }
+            })
           }
           const settled = db.transaction(() => {
             const row = addDesignFeedback(db, {
@@ -396,7 +436,7 @@ export function createProtocolService(deps: ProtocolServiceDeps): ProtocolServic
               kind: 'step_feedback',
               protocolStep: step,
               content: record as unknown as Json,
-              grounded: ctx.brief.referenceSolution !== null
+              grounded: ctx.solution !== undefined
             })
             return settleProtocolStepSubmission(db, submission.id, {
               status: 'reviewed',
@@ -418,14 +458,13 @@ export function createProtocolService(deps: ProtocolServiceDeps): ProtocolServic
         .map(hintView)
       const level = nextHintLevel(given.length)
       if (level === null) throw new Error('The three Hints of this step were already given.')
+      const earlierSteps = previousActiveSteps(ctx.index, step)
       const build = buildHintGeneration({
-        exercise: ctx.brief,
+        exercise: briefFor(ctx, [...earlierSteps, step]),
         step,
         level,
         current: inputBrief(current),
-        previousSteps: briefs(
-          latestReviewed(designExerciseId, previousActiveSteps(ctx.index, step))
-        ),
+        previousSteps: briefs(latestReviewed(designExerciseId, earlierSteps)),
         previousHints: given.map((hint) => hint.hint)
       })
       return outcome(designExerciseId, async () => {
@@ -446,7 +485,7 @@ export function createProtocolService(deps: ProtocolServiceDeps): ProtocolServic
             kind: 'hint',
             protocolStep: step,
             content: record as unknown as Json,
-            grounded: ctx.brief.referenceSolution !== null
+            grounded: ctx.solution !== undefined
           })
         )
       })
@@ -459,7 +498,10 @@ export function createProtocolService(deps: ProtocolServiceDeps): ProtocolServic
       if (latest.length < active.length) {
         throw new Error('Submit every active step and get its feedback before the final review.')
       }
-      const build = buildFinalReviewGeneration({ exercise: ctx.brief, steps: briefs(latest) })
+      const build = buildFinalReviewGeneration({
+        exercise: briefFor(ctx, active),
+        steps: briefs(latest)
+      })
       return outcome(designExerciseId, async () => {
         const { content } = await service.generate<FinalReview>({
           ...build,
@@ -478,7 +520,7 @@ export function createProtocolService(deps: ProtocolServiceDeps): ProtocolServic
             kind: 'final_review',
             protocolStep: null,
             content: record as unknown as Json,
-            grounded: ctx.brief.referenceSolution !== null
+            grounded: ctx.solution !== undefined
           })
         )
       })

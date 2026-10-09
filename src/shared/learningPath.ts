@@ -11,10 +11,13 @@ export type LearningPathSection = (typeof learningPathSections)[number]
 
 /**
  * Status of a step:
- * - `locked`: the previous topic (or a prerequisite topic of a Design Exercise) is not mastered.
+ * - `locked`: the previous topic (or, for a Design Exercise, a prerequisite topic or the previous
+ *   exercise) is not mastered (completed).
  * - `available`: unlocked, not started.
- * - `in_progress`, `skipped`, `limit_reached`: the topic's mastery, see the Mastery Loop.
+ * - `in_progress`, `skipped`, `limit_reached`: the topic's mastery, see the Mastery Loop. A
+ *   Design Exercise is `in_progress` once a step was submitted.
  * - `mastered`: the topic met the Mastery Threshold once; it stays mastered.
+ * - `completed`: a Design Exercise whose final review is recorded; it stays completed.
  * - `coming_soon`: a Design Exercise that is not implemented yet; never startable.
  */
 export const learningPathStepStatuses = [
@@ -24,6 +27,7 @@ export const learningPathStepStatuses = [
   'mastered',
   'skipped',
   'limit_reached',
+  'completed',
   'coming_soon'
 ] as const
 export type LearningPathStepStatus = (typeof learningPathStepStatuses)[number]
@@ -48,6 +52,12 @@ export interface TopicStep {
   lockedBy: LearningPathTopicRef | null
 }
 
+/** A Design Exercise named in a lock reason. */
+export interface LearningPathExerciseRef {
+  slug: string
+  title: string
+}
+
 /** A Design Exercise slot (one per primer Reference Solution). */
 export interface DesignExerciseStep {
   kind: 'design_exercise'
@@ -57,11 +67,18 @@ export interface DesignExerciseStep {
   /** Reference Solution id, for example `pastebin`. */
   slug: string
   title: string
-  status: Extract<LearningPathStepStatus, 'locked' | 'available' | 'coming_soon'>
+  status: Extract<
+    LearningPathStepStatus,
+    'locked' | 'available' | 'in_progress' | 'completed' | 'coming_soon'
+  >
+  /** `design_exercises.id`, to open the exercise; null while not implemented. */
+  designExerciseId: number | null
   /** Topics to master before the exercise unlocks, with why. */
   prerequisites: LearningPathTopicRef[]
   /** The prerequisites not mastered yet (empty once unlocked). */
   missingPrerequisites: LearningPathTopicRef[]
+  /** The previous Design Exercise, when it must be completed first and is not yet. */
+  lockedByExercise: LearningPathExerciseRef | null
   rationale: string
 }
 

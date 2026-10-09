@@ -252,6 +252,74 @@ describe('buildLearningPath: Design Exercises', () => {
   })
 })
 
+describe('buildLearningPath: Design Exercise progress and order', () => {
+  const slot = (slug: string, changes: Partial<DesignExerciseSlot> = {}): DesignExerciseSlot => ({
+    ...exercise(slug, ['dns'], true),
+    designExerciseId: slug.length,
+    ...changes
+  })
+  const mastered = [topic('dns', 'mastered')]
+
+  it('locks an exercise until the previous one is completed', () => {
+    const steps = exerciseSteps({
+      topics: mastered,
+      exercises: [slot('one'), slot('two', { previousExercise: 'one' })]
+    })
+    expect(steps.map((step) => step.status)).toEqual(['available', 'locked'])
+    expect(steps[1]!.lockedByExercise).toEqual({ slug: 'one', title: 'one' })
+    expect(steps[1]!.missingPrerequisites).toEqual([])
+  })
+
+  it('shows in_progress once a step was submitted, completed once reviewed, and unlocks the next', () => {
+    const steps = (progress: DesignExerciseSlot['progress']) =>
+      exerciseSteps({
+        topics: mastered,
+        exercises: [slot('one', { progress }), slot('two', { previousExercise: 'one' })]
+      }).map((step) => step.status)
+    expect(steps('in_progress')).toEqual(['in_progress', 'locked'])
+    expect(steps('completed')).toEqual(['completed', 'available'])
+  })
+
+  it('never locks a started or completed exercise again', () => {
+    const steps = exerciseSteps({
+      topics: [topic('dns')],
+      exercises: [
+        slot('one', { progress: 'completed' }),
+        slot('two', { previousExercise: 'missing', progress: 'in_progress' })
+      ]
+    })
+    expect(steps.map((step) => step.status)).toEqual(['completed', 'in_progress'])
+  })
+
+  it('counts a previous exercise missing from the path as not completed', () => {
+    const [step] = exerciseSteps({
+      topics: mastered,
+      exercises: [slot('two', { previousExercise: 'one' })]
+    })
+    expect(step!.status).toBe('locked')
+    expect(step!.lockedByExercise).toEqual({ slug: 'one', title: 'one' })
+  })
+
+  it('gives no id to an exercise that is not implemented', () => {
+    const [step] = exerciseSteps({
+      topics: mastered,
+      exercises: [slot('one', { implemented: false, progress: 'completed' })]
+    })
+    expect(step).toMatchObject({ status: 'coming_soon', designExerciseId: null })
+  })
+
+  it('recommends a topic first, then the first exercise available or in progress', () => {
+    const path = (topics: PathTopic[], progress: DesignExerciseSlot['progress']) =>
+      build(topics, {
+        exercises: [slot('one', { progress }), slot('two', { previousExercise: 'one' })]
+      }).nextStepKey
+    expect(path([topic('dns', 'mastered'), topic('cache')], undefined)).toBe('topic:cache')
+    expect(path(mastered, undefined)).toBe('design_exercise:one')
+    expect(path(mastered, 'in_progress')).toBe('design_exercise:one')
+    expect(path(mastered, 'completed')).toBe('design_exercise:two')
+  })
+})
+
 describe('buildLearningPath: progress', () => {
   it('counts mastered topics and unlocked exercises', () => {
     const path = build(

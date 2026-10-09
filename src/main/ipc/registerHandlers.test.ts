@@ -61,6 +61,9 @@ const handlers: IpcHandlers = {
       totalExercises: 0
     }
   }),
+  'dashboard:get': () => {
+    throw new Error('no database')
+  },
   'settings:get': () => ({
     masteryThreshold: 100,
     roundLimit: 3,
@@ -123,6 +126,7 @@ describe('registerHandlers', () => {
     expect([...ipc.listeners.keys()].sort()).toEqual([
       'app:getAbout',
       'app:getVersion',
+      'dashboard:get',
       'design:exportScene',
       'design:loadScene',
       'design:openScratchExercise',

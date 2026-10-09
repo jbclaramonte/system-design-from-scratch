@@ -1,9 +1,10 @@
-// Which exercise index a Design Exercise has (it decides its active Protocol Steps), and the dev
-// fixture exercises used until the real catalogue exists (#15).
+// Which exercise index a Design Exercise has (it decides its active Protocol Steps), and the
+// dev-only fixture exercises (the catalogue of real exercises is designExercises.ts).
 import type { Corpus } from '../corpus'
 import type { Database } from '../db'
 import { createDesignExercise, listDesignExercises } from '../db/repositories/designPractice'
 import type { DesignExercise } from '../db/types'
+import { designExerciseBySlug } from './designExercises'
 
 /** Slug prefix of dev-only exercises: they never count in the Learning Path rank. */
 export const DEV_EXERCISE_SLUG_PREFIX = 'dev-'
@@ -17,9 +18,10 @@ export const DEV_PROTOCOL_PROBLEM_STATEMENT =
   'Design a service like Pastebin.com (or Bit.ly): anyone can paste a block of text and get a short random link to share it; whoever opens the link sees the text.'
 
 /**
- * 1-based index of an exercise among the Design Exercises of the Learning Path (`exercises` in
- * path order, as `listDesignExercises` returns them). Dev exercises are not ranked: a
- * `dev-protocol-<n>` fixture plays exercise n, any other dev exercise plays exercise 1.
+ * 1-based index of an exercise: its order index for a catalogued exercise (`DESIGN_EXERCISES`),
+ * else its rank among the Design Exercises of the Learning Path (`exercises` in path order, as
+ * `listDesignExercises` returns them). Dev exercises are not ranked: a `dev-protocol-<n>` fixture
+ * plays exercise n, any other dev exercise plays exercise 1.
  */
 export function exerciseIndexOf(
   exercises: readonly Pick<DesignExercise, 'id' | 'slug'>[],
@@ -28,6 +30,8 @@ export function exerciseIndexOf(
   const dev = DEV_PROTOCOL_SLUG.exec(exercise.slug)
   if (dev) return Math.max(1, Number(dev[1]))
   if (exercise.slug.startsWith(DEV_EXERCISE_SLUG_PREFIX)) return 1
+  const catalogued = designExerciseBySlug(exercise.slug)
+  if (catalogued) return catalogued.orderIndex
   const ranked = exercises.filter(({ slug }) => !slug.startsWith(DEV_EXERCISE_SLUG_PREFIX))
   const index = ranked.findIndex(({ id }) => id === exercise.id)
   if (index < 0) throw new Error(`Design exercise ${exercise.id} is not in the list.`)

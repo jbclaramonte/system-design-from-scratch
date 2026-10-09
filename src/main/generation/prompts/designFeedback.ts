@@ -24,11 +24,11 @@ import {
 } from './common'
 
 /** Bump with any change to the prompt or schema of step feedback. */
-export const DESIGN_STEP_FEEDBACK_PROMPT_VERSION = 'design-step-feedback-2'
+export const DESIGN_STEP_FEEDBACK_PROMPT_VERSION = 'design-step-feedback-4'
 /** Bump with any change to the prompt or schema of Hints. */
-export const DESIGN_HINT_PROMPT_VERSION = 'design-hint-2'
+export const DESIGN_HINT_PROMPT_VERSION = 'design-hint-3'
 /** Bump with any change to the prompt or schema of the final review. */
-export const DESIGN_FINAL_REVIEW_PROMPT_VERSION = 'design-final-review-2'
+export const DESIGN_FINAL_REVIEW_PROMPT_VERSION = 'design-final-review-4'
 
 /** Step feedback and final reviews read a whole design: allow more than the default. */
 export const DESIGN_FEEDBACK_TIMEOUT_MS = 150_000
@@ -44,8 +44,13 @@ export interface ExerciseBrief {
   title: string
   /** What the learner was asked to design. */
   problemStatement: string
-  /** Markdown of the primer's solution; null for an ungrounded exercise. */
+  /**
+   * Markdown of the primer's solution (the parts that answer the steps judged, see
+   * `referenceForSteps`); null for an ungrounded exercise.
+   */
   referenceSolution: string | null
+  /** Protocol Steps of this exercise, when known: the others are never asked for. */
+  activeSteps?: readonly ProtocolStep[]
 }
 
 /** A step's content as written or drawn by the learner. Untrusted. */
@@ -176,7 +181,11 @@ function referencePart(
 }
 
 function exercisePart(exercise: ExerciseBrief): string {
-  return `Design Exercise: ${exercise.title}\nProblem statement given to the learner:\n${exercise.problemStatement}`
+  return joinParts(
+    `Design Exercise: ${exercise.title}\nProblem statement given to the learner:\n${exercise.problemStatement}`,
+    exercise.activeSteps &&
+      `Protocol Steps of this exercise: ${exercise.activeSteps.map((step) => PROTOCOL_STEP_DEFINITIONS[step].title).join(', ')}. The other steps of the interview are not part of it yet: never ask for their content and never count it as missing.`
+  )
 }
 
 function stepPart(step: ProtocolStep): string {
@@ -228,7 +237,11 @@ Feedback:
 - errors: wrong statements or wrong connections (at most 4); empty when there is none. For a diagram, check the arrows (direction, missing or dangling links) and components that do not fit.
 - forgottenTradeOffs: trade-offs the learner should have mentioned at this step (at most 3); empty when none is relevant.
 - nextStep: one actionable suggestion for improving this step or for the next step.
-- Name what is missing as a direction or a question when it would otherwise give the full answer away; a resubmission may then be compared with this feedback.
+
+Missing content (applies to every field: checklist comments, summary, gaps, errors, forgottenTradeOffs, nextStep):
+- Point at the CATEGORY of what is missing only: "tu ne dis pas ce qui est hors périmètre", "pense aux cas limites de tes cas d'usage", "qui d'autre que l'utilisateur agit sur le système ?". Never name a specific item, example, number or out-of-scope entry of the Reference Solution that the learner did not write, not even after "par exemple" or inside a question.
+- What the learner did write may be confirmed, praised and refined with the reference (a sharper wording, an edge case of that very item).
+- forgottenTradeOffs: only trade-offs of what the learner wrote; empty otherwise.
 
 ${LANGUAGE_RULES}
 
@@ -333,6 +346,7 @@ ${SECURITY}
 
 Comparison rules:
 - The learner reads the Reference Solution right after your review, so you may now say what it does differently, in your own words. Do not copy its sentences, tables or code; summarize.
+- Say which part of the Reference Solution each comparison draws from: start each gapsVsReference entry with the part in French ("Cas d'usage :", "Hors périmètre :", "Estimations :", "Composants :", "Passage à l'échelle :").
 - It is one good answer, not the only one: when the learner made a different but defensible choice, say so and name the trade-off instead of counting it as a gap.
 - Judge only the steps the learner had to do (listed below); do not blame them for steps that were not part of this exercise.
 

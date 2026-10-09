@@ -1,3 +1,6 @@
+export * from './designExercises'
 export * from './exercises'
+export * from './leakGuard'
 export * from './protocolIpc'
+export * from './reference'
 export * from './service'

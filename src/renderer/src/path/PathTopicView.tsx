@@ -13,11 +13,14 @@ import { recommendedStep } from './pathText'
 export function PathTopicView({
   topic,
   onBack,
-  onOpenTopic
+  onOpenTopic,
+  backLabel = 'Learning Path'
 }: {
   topic: TopicMasterySummary
   onBack: () => void
   onOpenTopic: (topic: TopicMasterySummary) => void
+  /** The screen the back button returns to. */
+  backLabel?: string
 }) {
   const [unlocked, setUnlocked] = useState<TopicStep | null>(null)
 
@@ -39,7 +42,7 @@ export function PathTopicView({
     <main className="lesson-view" data-testid="path-topic-view">
       <nav className="lesson-nav">
         <button type="button" onClick={onBack} data-testid="path-back">
-          Learning Path
+          {backLabel}
         </button>
         <h1>{topic.title}</h1>
         {unlocked && (

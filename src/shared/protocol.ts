@@ -66,11 +66,11 @@ export const PROTOCOL_STEP_DEFINITIONS: Record<ProtocolStep, ProtocolStepDefinit
       },
       {
         id: 'clarifying-questions',
-        item: 'Asks or records the clarifying questions and assumptions an interviewer would expect (edge cases such as expiration, anonymous users, analytics).'
+        item: 'Asks or records the clarifying questions and assumptions an interviewer would expect (edge cases, who may do what, what happens to the data over time).'
       }
     ],
     placeholder:
-      'One item per line, for example:\n- User creates a paste and gets a short link\n- Out of scope: user accounts'
+      'One item per line, for example:\n- <who> does <what> and gets <what>\n- Out of scope: ...\n- Question: ...'
   },
   non_functional_requirements: {
     step: 'non_functional_requirements',
