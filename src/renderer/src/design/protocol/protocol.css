@@ -1,0 +1,173 @@
+.protocol-screen {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+}
+
+.protocol-header {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 6px 12px;
+  border-bottom: 1px solid #ddd;
+}
+
+.protocol-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.protocol-nav {
+  width: 260px;
+  padding: 12px;
+  overflow-y: auto;
+  border-right: 1px solid #ddd;
+}
+
+.protocol-statement {
+  margin-top: 0;
+  white-space: pre-wrap;
+  line-height: 1.4;
+}
+
+.protocol-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.protocol-steps button {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 6px 8px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.protocol-steps button[aria-current='true'] {
+  outline: 2px solid #4a6ee0;
+}
+
+.protocol-steps button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.protocol-steps small {
+  color: #555;
+}
+
+.protocol-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+}
+
+.protocol-canvas {
+  flex: 1;
+  min-width: 0;
+}
+
+.protocol-panel {
+  flex: 1;
+  min-width: 0;
+  padding: 12px 16px;
+  overflow-y: auto;
+}
+
+.protocol-main-canvas .protocol-panel {
+  flex: 0 0 420px;
+  border-left: 1px solid #ddd;
+}
+
+.protocol-goal {
+  color: #444;
+}
+
+.protocol-new {
+  font-size: 0.6em;
+  vertical-align: middle;
+}
+
+.protocol-lesson {
+  margin: 0.5rem 0 1rem;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  background: #f7f8fc;
+}
+
+.protocol-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 0.75rem;
+}
+
+.protocol-editor textarea {
+  width: 100%;
+  box-sizing: border-box;
+  font: inherit;
+}
+
+.protocol-hint-text {
+  color: #555;
+  font-size: 0.9em;
+}
+
+.protocol-submission {
+  margin: 0.5rem 0;
+  padding: 0.5rem;
+  border: 1px solid #e3e3e3;
+  border-radius: 6px;
+}
+
+.protocol-submitted {
+  white-space: pre-wrap;
+  font-size: 0.85em;
+  background: #f5f5f5;
+  padding: 0.5rem;
+}
+
+.protocol-checklist {
+  padding-left: 1.2rem;
+}
+
+.protocol-verdict {
+  display: inline-block;
+  min-width: 4.5em;
+  font-weight: bold;
+}
+
+.protocol-verdict-met .protocol-verdict {
+  color: #1b6e2c;
+}
+
+.protocol-verdict-partial .protocol-verdict {
+  color: #8a5a00;
+}
+
+.protocol-verdict-missing .protocol-verdict {
+  color: #a11d1d;
+}
+
+.protocol-checklist-item {
+  color: #555;
+}
+
+.protocol-link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: #2a4dbf;
+  text-decoration: underline;
+  cursor: pointer;
+}

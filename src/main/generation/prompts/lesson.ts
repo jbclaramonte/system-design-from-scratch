@@ -15,7 +15,7 @@ import {
 } from './common'
 
 /** Bump with any change to the prompt below. */
-export const LESSON_PROMPT_VERSION = 'lesson-1'
+export const LESSON_PROMPT_VERSION = 'lesson-3'
 
 export const LESSON_EXCERPT_TOKENS = 8000
 

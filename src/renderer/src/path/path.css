@@ -1,0 +1,125 @@
+.path-screen {
+  max-width: 48rem;
+  padding-bottom: 2rem;
+}
+
+.path-summary {
+  margin-bottom: 1rem;
+}
+
+.path-progress {
+  height: 0.5rem;
+  max-width: 30rem;
+  border-radius: 999px;
+  background: #eee;
+  overflow: hidden;
+}
+
+.path-progress-fill {
+  height: 100%;
+  background: #2e7d32;
+}
+
+.path-continue {
+  margin-top: 0.75rem;
+  padding: 0.5rem 1rem;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.path-section h2 {
+  font-size: 1.1rem;
+  margin: 1.25rem 0 0.5rem;
+}
+
+.path-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 1rem;
+  border-left: 2px solid #ddd;
+}
+
+.path-step {
+  margin-bottom: 0.4rem;
+}
+
+.path-step[aria-current='step'] > .path-step-row {
+  border-color: #2e7d32;
+  font-weight: bold;
+}
+
+.path-step-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #fff;
+  font: inherit;
+  text-align: left;
+}
+
+button.path-step-row {
+  cursor: pointer;
+}
+
+div.path-step-row {
+  color: #777;
+  background: #fafafa;
+}
+
+.path-step-title {
+  flex: 1;
+}
+
+.path-step-note {
+  margin: 0.25rem 0 0.5rem 0.75rem;
+  color: #555;
+  font-size: 0.9em;
+}
+
+.path-rationale {
+  color: #777;
+}
+
+.path-badge {
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: #eee;
+  color: #333;
+  font-size: 0.8em;
+  font-weight: normal;
+}
+
+.path-available {
+  background: #e8f0fe;
+  color: #174ea6;
+}
+
+.path-in_progress {
+  background: #eef;
+  color: #335;
+}
+
+.path-mastered {
+  background: #e6f4ea;
+  color: #1e5631;
+}
+
+.path-limit_reached {
+  background: #fdecea;
+  color: #611a15;
+}
+
+.path-skipped {
+  background: #fff4e5;
+  color: #8a4b00;
+}
+
+.path-unlocked {
+  margin: 0;
+  color: #1e5631;
+}

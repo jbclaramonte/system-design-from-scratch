@@ -22,6 +22,7 @@ import type { GenerationClient } from '../generation/ipc'
 import { QUIZ_PROMPT_VERSION, type QuizContent, type QuizQuestion } from '../generation/prompts'
 import { GenerationService, type CliRunner } from '../generation/service'
 import { cacheOutline, fixtureCorpus } from '../generation/testing/contentFixtures'
+import { createTopicLockGuard } from '../path/lock'
 import { createQuizService, type QuizService } from '../quiz/service'
 import { createMasteryIpc } from './masteryIpc'
 import { getTopicMastery, latestNotionScores } from './queries'
@@ -404,10 +405,73 @@ describe('mastery IPC', () => {
   const ended = (client: FakeClient, requestId: string) =>
     eventsOf(client, requestId).some((e) => ['round_ready', 'error', 'done'].includes(e.type))
 
+  /** The packaged app's guard (`allowLockedTopics: false`), or the dev build's. */
+  const guard =
+    (allowLockedTopics = false) =>
+    (topicId: number) =>
+      createTopicLockGuard({ db, corpus }, { allowLockedTopics })(topicId)
+  const assertTopicUnlocked = guard()
+
+  /** A Foundations Module topic before `cache`, not mastered: `cache` is locked until it is. */
+  const lockCache = () =>
+    createTopic(db, { slug: 'http', title: 'HTTP', position: 0, inFoundationsModule: true })
+
+  const lastEvent = async (ipc: ReturnType<typeof createMasteryIpc>, requestId: string) => {
+    const client = new FakeClient()
+    ipc.startRound({ requestId, topicId: topic.id }, client)
+    await vi.waitFor(() => expect(ended(client, requestId)).toBe(true))
+    return eventsOf(client, requestId).at(-1)
+  }
+
+  it('refuses a Round on a locked topic outside dev builds, with a typed error', async () => {
+    lockCache()
+    const ipc = createMasteryIpc({ db, corpus, service: generation }, mastery, {
+      assertTopicUnlocked
+    })
+
+    expect(await lastEvent(ipc, 'r1')).toMatchObject({
+      type: 'error',
+      error: { code: 'topic_locked', message: expect.stringMatching(/Master HTTP first/) }
+    })
+    const client = new FakeClient()
+    ipc.startRemediation(
+      { requestId: 'm1', topicId: topic.id, notionId: slugOf('cache-aside').id },
+      client
+    )
+    await vi.waitFor(() => expect(ended(client, 'm1')).toBe(true))
+    expect(eventsOf(client, 'm1')).toMatchObject([
+      { type: 'error', error: { code: 'topic_locked' } }
+    ])
+    expect(calls).toEqual([])
+  })
+
+  it('lets a dev build start a locked topic', async () => {
+    lockCache()
+    const ipc = createMasteryIpc({ db, corpus, service: generation }, mastery, {
+      assertTopicUnlocked: guard(true)
+    })
+    // Past the lock, the Mastery Loop's own rule applies (the lesson comes first).
+    expect(await lastEvent(ipc, 'r1')).toMatchObject({
+      type: 'error',
+      error: { code: 'unknown', message: 'Read the lesson before the first quiz.' }
+    })
+  })
+
+  it('never locks a topic that already has progress', async () => {
+    lockCache()
+    readLesson()
+    const ipc = createMasteryIpc({ db, corpus, service: generation }, mastery, {
+      assertTopicUnlocked
+    })
+    expect(await lastEvent(ipc, 'r1')).toMatchObject({ type: 'round_ready' })
+  })
+
   it('starts a round without sending the quiz content, then streams a Remediation Lesson', async () => {
     readLesson()
     const client = new FakeClient()
-    const ipc = createMasteryIpc({ db, corpus, service: generation }, mastery)
+    const ipc = createMasteryIpc({ db, corpus, service: generation }, mastery, {
+      assertTopicUnlocked
+    })
 
     ipc.startRound({ requestId: 'r1', topicId: topic.id }, client)
     await vi.waitFor(() => expect(ended(client, 'r1')).toBe(true))
@@ -452,7 +516,9 @@ describe('mastery IPC', () => {
     readLesson()
     loggedOut = true
     const client = new FakeClient()
-    const ipc = createMasteryIpc({ db, corpus, service: generation }, mastery)
+    const ipc = createMasteryIpc({ db, corpus, service: generation }, mastery, {
+      assertTopicUnlocked
+    })
 
     ipc.startRound({ requestId: 'r1', topicId: topic.id }, client)
     await vi.waitFor(() => expect(ended(client, 'r1')).toBe(true))
@@ -464,7 +530,9 @@ describe('mastery IPC', () => {
   })
 
   it('validates requests and refuses unknown topics', () => {
-    const ipc = createMasteryIpc({ db, corpus, service: generation }, mastery)
+    const ipc = createMasteryIpc({ db, corpus, service: generation }, mastery, {
+      assertTopicUnlocked
+    })
     expect(() => ipc.getState({ topicId: -1 })).toThrow()
     expect(() => ipc.getState({ topicId: 999 })).toThrow(/does not exist/)
     expect(() =>

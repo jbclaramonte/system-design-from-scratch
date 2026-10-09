@@ -15,7 +15,7 @@ import {
 } from './common'
 
 /** Bump with any change to the prompt below. */
-export const REMEDIATION_LESSON_PROMPT_VERSION = 'remediation-lesson-2'
+export const REMEDIATION_LESSON_PROMPT_VERSION = 'remediation-lesson-4'
 
 export const REMEDIATION_EXCERPT_TOKENS = 3000
 

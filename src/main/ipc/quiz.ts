@@ -2,6 +2,8 @@ import { z } from 'zod'
 import type { Database } from '../db'
 import { GenerationError } from '../generation/errors'
 import type { GenerationClient } from '../generation/ipc'
+import { getQuiz } from '../db/repositories/assessment'
+import type { TopicLockGuard } from '../path/lock'
 import { createDevQuiz } from '../quiz/devFixture'
 import type { QuizService } from '../quiz/service'
 import type { IpcRequest, IpcResponse } from '../../shared/ipc'
@@ -49,11 +51,17 @@ export interface QuizIpc {
   cancelGrading(request: IpcRequest<'quiz:cancelGrading'>): void
 }
 
-/** Quiz and Round calls over IPC. `allowDevFixture` is false in a packaged app. */
+/**
+ * Quiz and Round calls over IPC. `allowDevFixture` is false in a packaged app. A Round of a
+ * topic locked on the Learning Path is refused (`assertTopicUnlocked`, see `createTopicLockGuard`).
+ */
 export function createQuizIpc(
   db: Database,
   service: QuizService,
-  { allowDevFixture }: { allowDevFixture: boolean }
+  {
+    allowDevFixture,
+    assertTopicUnlocked = () => {}
+  }: { allowDevFixture: boolean; assertTopicUnlocked?: TopicLockGuard }
 ): QuizIpc {
   /** Free-answer gradings in progress, by `roundId:questionId`, for `quiz:cancelGrading`. */
   const gradings = new Map<string, AbortController>()
@@ -90,7 +98,12 @@ export function createQuizIpc(
     listTopics: () => service.listTopics(),
     listQuizzes: (request) => service.listQuizzes(topicRequest.parse(request).topicId),
     loadQuiz: (request) => service.loadQuiz(quizRequest.parse(request).quizId),
-    startRound: (request) => service.startRound(quizRequest.parse(request).quizId),
+    startRound(request) {
+      const { quizId } = quizRequest.parse(request)
+      const quiz = getQuiz(db, quizId)
+      if (quiz) assertTopicUnlocked(quiz.topicId)
+      return service.startRound(quizId)
+    },
     submitAnswer(request) {
       const { roundId, questionId, answer } = submitRequest.parse(request)
       return service.submitAnswer(roundId, { questionId, answer })

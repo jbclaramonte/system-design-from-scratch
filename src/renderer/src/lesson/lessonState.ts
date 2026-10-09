@@ -90,6 +90,7 @@ const errorTitles: Record<GenerationErrorCode, string> = {
   timeout: 'The lesson took too long',
   invalid_output: 'The generated lesson was invalid',
   cancelled: 'Lesson cancelled',
+  topic_locked: 'This topic is locked on the Learning Path',
   unknown: 'The lesson could not be generated'
 }
 

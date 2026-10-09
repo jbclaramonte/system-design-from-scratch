@@ -22,6 +22,10 @@ export interface TopicBrief {
   title: string
   /** Foundations Module topics are generated ungrounded. */
   inFoundationsModule: boolean
+  /** Foundations Module: what the topic covers, which steers its Notion Outline. */
+  scope?: string
+  /** Foundations Module: what it leaves to the grounded primer topics. */
+  leftToPrimer?: string
 }
 
 /** A notion as passed to the prompts (a row of the topic's Notion Outline). */
@@ -41,9 +45,15 @@ export interface GroundingInput {
   corpusVersion: string
 }
 
+/**
+ * French course, system design jargon in English, everyday computing words in French. Every
+ * prompt includes it verbatim (tested), so changing it means bumping every prompt version.
+ */
 export const LANGUAGE_RULES = `Language:
 - Write everything the learner reads in French, natural and simple, addressing the learner as "tu".
-- Keep system design technical terms in English, exactly as they are said in interviews (cache, load balancer, sharding, cache-aside, write-through, latency, throughput, TTL, database...). Never translate them; the first time one appears you may add a short French gloss in parentheses.
+- Keep only system design jargon in English, exactly as it is said in interviews (load balancer, sharding, cache, cache-aside, write-through, replication, throughput, latency, TTL...). Never translate it; the first time a term appears you may add a short French gloss in parentheses.
+- Write everyday computing words in French, as a French developer says them: serveur, client, requête, réponse, mémoire, disque, réseau, base de données, octet (Ko, Mo, Go, To), fichier, machine, panne.
+- Examples. Good: "le serveur renvoie une réponse", "la mémoire est plus rapide que le disque", "un load balancer répartit les requêtes", "10 Go par jour". Bad: "le server renvoie une response", "la memory est plus rapide que le disk", "un répartiteur de charge", "10 GB par jour".
 - Do not mix in English sentences.`
 
 export const AUDIENCE_RULES = `Audience: a complete beginner in system design who knows basic programming. Define every technical term the first time it appears, prefer short sentences, and give one concrete example for each abstract idea.`
@@ -66,10 +76,18 @@ export function unknownCitations(markdown: string, allowed: readonly string[]): 
   return findCitations(markdown).filter((id) => !known.has(id))
 }
 
+/**
+ * Ungrounded content (Foundations Module) has no excerpt to check it against: keep it to
+ * textbook basics, numbers as definitions or rough orders of magnitude, no references.
+ */
+export const UNGROUNDED_RULES = `Grounding: this content belongs to the Foundations Module, outside the System Design Primer. There are no source excerpts and nobody checks your facts before the learner reads them, so be conservative:
+- Write from well-established general knowledge only: the standard basics that any introductory course on networks, operating systems or databases teaches the same way. Leave out what you are not sure of, vendor-specific details, recent changes and disputed claims.
+- Numbers: give exact values only for definitions and fixed conventions (1 octet = 8 bits, 2^10 = 1024, a day has 86,400 seconds, status code 404, port 443 for HTTPS). Give measured quantities (latencies, throughputs, failure rates, sizes of real systems) only as rough orders of magnitude, with "environ" or "de l'ordre de", and say they depend on the hardware and change over time. Never invent a precise figure, statistic or benchmark.
+- When you simplify, say so ("en simplifiant"). When the right choice depends on the situation, say what it depends on instead of stating one universal rule.
+- No references of any kind: do not write any [source: ...] citation, and do not cite books, articles, studies, RFC numbers, URLs or quotes.`
+
 export function groundingRules(sectionIds: readonly string[]): string {
-  if (sectionIds.length === 0) {
-    return `Grounding: this content belongs to the Foundations Module, outside the System Design Primer. There are no source excerpts: write from well-established general knowledge only, stay at the level of widely taught basics, and do not write any [source: ...] citation.`
-  }
+  if (sectionIds.length === 0) return UNGROUNDED_RULES
   return `Grounding:
 - Use only the facts stated in the excerpts below. If an idea would help but is not in the excerpts, leave it out rather than inventing it. You may add everyday analogies and simple examples that illustrate a fact of the excerpts, but no new technical claims (numbers, product names, guarantees, extra strategies).
 - Cite the excerpt a statement comes from inline, right after the sentence or paragraph, as ${citation('<excerpt id>')}, for example ${citation(sectionIds[0]!)}. One id per bracket, copied exactly from the excerpt list. Never cite anything else (no URLs, no other ids).`

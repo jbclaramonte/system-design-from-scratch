@@ -16,4 +16,4 @@ The LLM's assessment of the user's design: gaps, errors and forgotten trade-offs
 
 ## In code
 
-Table `design_feedback`, see [[Data Model]].
+Table `design_feedback` (`step_feedback`, `hint`, `final_review`), linked from `protocol_step_submissions.design_feedback_id`, see [[Data Model]]. Prompts and schemas `buildStepFeedbackGeneration` / `stepFeedbackSchema` and `buildFinalReviewGeneration` / `finalReviewSchema` (`src/main/generation/prompts/designFeedback.ts`, kind `design_feedback`, never cached); graph steps send the PNG of the [[Design Export]] as an image. Run by `createProtocolService` (`src/main/protocol/service.ts`), shown by `src/renderer/src/design/protocol/FeedbackViews.tsx`. See [[Interview Protocol Implementation]].

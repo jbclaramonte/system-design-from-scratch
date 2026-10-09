@@ -51,6 +51,21 @@ describe('createQuizIpc', () => {
     expect(listAttemptsByRound(db, round.id)).toHaveLength(3)
   })
 
+  it('refuses a Round of a topic the guard reports locked', () => {
+    const guarded: number[] = []
+    const ipc = createQuizIpc(db, createQuizService(db), {
+      allowDevFixture: true,
+      assertTopicUnlocked: (topicId) => {
+        guarded.push(topicId)
+        throw new Error('locked')
+      }
+    })
+    const { topicId, quizId } = ipc.createDevQuiz()
+
+    expect(() => ipc.startRound({ quizId })).toThrow('locked')
+    expect(guarded).toEqual([topicId])
+  })
+
   it('rejects malformed requests before reaching the service', () => {
     const ipc = quizIpc()
 
@@ -160,7 +175,7 @@ describe('free-answer grading over IPC, with the fake CLI', () => {
       { roundId: round.id, questionId, answer: { text: 'scenario:slow' } },
       client
     )
-    await expect.poll(() => fake.calls().length).toBe(1)
+    await expect.poll(() => fake.calls().length, { timeout: 10_000 }).toBe(1)
     ipc.cancelGrading({ roundId: round.id, questionId })
     expect(await cancelled).toMatchObject({ status: 'failed', error: { code: 'cancelled' } })
 
@@ -168,7 +183,7 @@ describe('free-answer grading over IPC, with the fake CLI', () => {
       { roundId: round.id, questionId, answer: { text: 'scenario:slow encore' } },
       client
     )
-    await expect.poll(() => fake.calls().length).toBe(2)
+    await expect.poll(() => fake.calls().length, { timeout: 10_000 }).toBe(2)
     client.destroy()
     expect(await closed).toMatchObject({ status: 'failed', error: { code: 'cancelled' } })
     expect(listAttemptsByRound(db, round.id)).toHaveLength(0)

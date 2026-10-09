@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { TopicMasterySummary } from '../../../shared/mastery'
 import '../lesson/lesson.css'
+import { OutsidePrimerBadge } from '../lesson/OutsidePrimerBadge'
 import { errorMessage } from '../quiz/errorMessage'
 import './mastery.css'
 import { masteryLabels } from './masteryText'
@@ -25,9 +26,7 @@ function TopicList({ onOpen }: { onOpen: (topic: TopicMasterySummary) => void })
         <li key={topic.id}>
           <button type="button" onClick={() => onOpen(topic)} data-topic={topic.slug}>
             <span className="lesson-topic-title">{topic.title}</span>
-            {topic.inFoundationsModule && (
-              <span className="lesson-badge lesson-badge-ungrounded">Outside the primer</span>
-            )}
+            {!topic.grounded && <OutsidePrimerBadge />}
             <span className={`mastery-badge mastery-${topic.mastery}`}>
               {masteryLabels[topic.mastery]}
             </span>

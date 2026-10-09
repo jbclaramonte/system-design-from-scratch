@@ -9,7 +9,7 @@ issue: 6
 The single service in the Electron main process that performs every [[Generation]]: [[Lesson|lessons]], [[Remediation Lesson|remediation lessons]], [[Quiz|quizzes]], free-answer grading and [[Design Feedback]]. It drives the Claude Code CLI as a subprocess, streams the output to the renderer over IPC, validates structured output, and reads and writes the [[Content Cache]]. Code: `src/main/generation/`. How the CLI is invoked comes from the [[cli-latency|CLI latency spike]].
 
 > [!note] Prompts
-> The content prompts and output schemas (Notion Outline, lesson, quiz, remediation lesson) are in `src/main/generation/prompts/`, with the pipelines that load and persist their data in `src/main/generation/pipelines.ts`: see [[Prompts]]. Free-answer grading (#10) is in `src/main/generation/prompts/freeAnswerGrading.ts`, run by the [[Quiz Engine]]. `src/main/generation/placeholderPrompts.ts` only serves the generic `generation:start` IPC round trip of the dev panel, and the kinds whose prompts are still to come (design feedback #14).
+> The content prompts and output schemas (Notion Outline, lesson, quiz, remediation lesson) are in `src/main/generation/prompts/`, with the pipelines that load and persist their data in `src/main/generation/pipelines.ts`: see [[Prompts]]. Free-answer grading (#10) is in `src/main/generation/prompts/freeAnswerGrading.ts`, run by the [[Quiz Engine]]. `src/main/generation/placeholderPrompts.ts` only serves the generic `generation:start` IPC round trip of the dev panel, (design feedback has its own prompts since #14, see [[Interview Protocol Implementation]]).
 
 ## Flow
 
@@ -44,7 +44,7 @@ sequenceDiagram
     end
     CLI-->>S: result (structured_output for --json-schema)
     S->>S: validate (Zod), one retry on invalid output
-    S->>C: putCachedContent (lesson, remediation_lesson, quiz only)
+    S->>C: putCachedContent (lesson, remediation_lesson, quiz, protocol_step_lesson only)
     S-->>I: done
   end
   I-->>P: send generation:event { requestId, event }
@@ -61,7 +61,8 @@ sequenceDiagram
 
 - `events`: async iterable of `GenerationEvent` (`queued`, `started`, `text_delta`, `retry`, then `done` or `error`). Types in `src/shared/generation.ts`, shared with the renderer.
 - `result`: promise of the `GenerationOutput` (`content`, `fromCache`, `grounded`, `sourceSections`, `cacheKey`, `usage`), rejected with a `GenerationError`.
-- `kind`: `lesson`, `remediation_lesson`, `quiz`, `notion_outline`, `free_answer_grading`, `design_feedback`.
+- `kind`: `lesson`, `remediation_lesson`, `quiz`, `notion_outline`, `free_answer_grading`, `design_feedback` (step feedback, [[Hint]]s, final review), `protocol_step_lesson` ([[Protocol Step Lesson]]).
+- `images`: PNG images sent before the prompt text (the [[Design Export]] capture of a graph step). The CLI then gets `--input-format stream-json` and one stream-json user message on stdin (`buildCliInput`); see [[Interview Protocol Implementation#Image input through the Claude Code CLI]]. Not part of the cache key: only for uncached kinds.
 - `prompt`: `{ version, system, user }`. `version` is part of the cache key: bump it with every prompt change.
 - `schema`: a Zod schema. When set, the Generation is structured: the schema is converted to JSON schema (draft-07, without `$schema`, which the CLI rejects) and passed as `--json-schema`; the CLI returns `structured_output`, which is validated again with Zod. Structured Generations send no `text_delta` (the CLI streams partial JSON fragments, not worth rendering).
 - `groundedSourceSections`: [[Source Corpus]] section ids such as `cache/when-to-update-the-cache`. Non-empty means [[Grounding|grounded]].
@@ -71,7 +72,7 @@ sequenceDiagram
 ## Content Cache
 
 - Key: `contentCacheKey(kind, input, prompt.version)` from `src/main/db/repositories/contentCache.ts`.
-- Only `lesson`, `remediation_lesson` and `quiz` are cached (the kinds of the `content_cache` table, see [[Data Model]]). Grading and design feedback depend on the learner's answer and are generated every time.
+- Only `lesson`, `remediation_lesson`, `quiz` and `protocol_step_lesson` are cached (the kinds of the `content_cache` table, see [[Data Model]]). Grading and design feedback depend on the learner's answer and are generated every time.
 - A hit returns at once with `fromCache: true` and `usage: null`. A cached structured entry that no longer matches its schema is regenerated.
 - Successful results are stored with `grounded` and `source_sections`. Failed and cancelled runs are never stored.
 - Identical in-flight requests (same key) share one CLI call; late joiners get the events so far replayed. A request that cancels leaves the shared call running for the others; the call is killed when the last one leaves.
@@ -100,7 +101,7 @@ claude -p --output-format stream-json --include-partial-messages --verbose \
 | `--model sonnet --effort low` | Fastest measured setup for lessons and quizzes (first token about 1.6 s). Configurable (`cli.model`, `cli.effort`, `null` omits `--effort`). |
 | `--system-prompt` | Replaces the CLI's default system prompt. |
 | `--json-schema` | Structured Generations: the CLI enforces the shape and returns `structured_output`. |
-| Prompt on stdin | No argv size limit for large [[Excerpt|excerpts]]. |
+| Prompt on stdin | No argv size limit for large [[Excerpt|excerpts]]. With images: `--input-format stream-json` and one user message with image blocks then the text. |
 | Empty temp cwd | No `CLAUDE.md` or project settings discovered. |
 
 The `result` event is the completion: the service does not wait for the process exit (about 0.45 s later); a process that lingers 5 s after its result is killed. Unknown events and non-JSON lines are ignored.
@@ -127,6 +128,7 @@ Every failure ends the stream with `{ type: 'error', error: { code, message } }`
 | `timeout` | No result within `timeoutMs` (default 120 s) | Retry |
 | `invalid_output` | Output still invalid after the automatic retry (empty text, no JSON, schema mismatch) | Retry |
 | `cancelled` | The request's signal aborted, its window closed, or the app quit | None |
+| `topic_locked` | Not from the CLI: a Round or Remediation Lesson refused before any Generation because the topic is locked on the [[Learning Path]] (packaged app only, see [[Learning Path Implementation#Lock enforcement]]) | Master the previous step |
 | `unknown` | Anything else (non-zero exit, no `result` event) | Retry |
 
 A run fails when the `result` event has `is_error: true`, even if `subtype` is `"success"` (observed in the spike), or when the process exits without a successful result. Only the `bad_model` shape was observed for real; the login and quota patterns are best-effort.

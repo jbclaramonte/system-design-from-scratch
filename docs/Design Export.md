@@ -98,7 +98,7 @@ The zod schema also checks that ids are unique, that every edge, dangling arrow 
 
 ## IPC: `design:exportScene`
 
-`window.api.exportDesignScene(designExport)` sends `{ designExerciseId, graph, description, png }` to the main process. The main process does not trust the renderer: it parses the whole payload with `designExportSchema` (graph checks above, description up to 100,000 characters, PNG must be base64 starting with the PNG signature, at most 1568 px per side, 20 MB of base64). For now it only answers a `DesignExportSummary` (counts of nodes, edges, annotations, dangling arrows, groups, and decoded PNG bytes). Nothing is stored. Issue #14 will build the evaluation prompt from it.
+`window.api.exportDesignScene(designExport)` sends `{ designExerciseId, graph, description, png }` to the main process. The main process does not trust the renderer: it parses the whole payload with `designExportSchema` (graph checks above, description up to 100,000 characters, PNG must be base64 starting with the PNG signature, at most 1568 px per side, 20 MB of base64). It only answers a `DesignExportSummary` (counts of nodes, edges, annotations, dangling arrows, groups, and decoded PNG bytes); nothing is stored. The evaluation receives the export with a step submission instead (`protocol:submitStep`, validated with the same schema): the description, the graph without positions and sizes, and the PNG sent to the model as an image. See [[Interview Protocol Implementation]].
 
 ## Example
 
@@ -165,4 +165,4 @@ Notes:
 ## Related
 
 - [[Design Graph]], [[Design Scene]], [[Design Canvas]], [[Design Feedback]], [[Design Exercise]]
-- Evaluation prompt: issue #14
+- Evaluation prompt: [[Interview Protocol Implementation]] (#14)

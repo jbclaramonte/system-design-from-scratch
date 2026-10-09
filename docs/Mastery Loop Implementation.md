@@ -72,7 +72,7 @@ Read models for the [[Notion Map]] (#17) and the [[Dashboard]] (#18), in `querie
 
 ## Topic screen
 
-`src/renderer/src/mastery/`: the home screen's **Learn** button opens `MasteryView` (topic list with mastery badges), then `TopicScreen` for the chosen topic:
+`src/renderer/src/mastery/`: a topic opened from the [[Learning Path Implementation|Learning Path]] home screen shows `TopicScreen` (the dev-only "All topics (dev)" entry keeps `MasteryView`, the topic list with mastery badges):
 
 - Progress line: status badge, round number, "attempt k of N before the Round Limit", Mastery Threshold.
 - `lesson`: the [[Lesson View]] screen (`LessonScreen`, streamed or from cache), then "Take the quiz".

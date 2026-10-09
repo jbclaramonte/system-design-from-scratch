@@ -40,7 +40,7 @@ The primer is CC BY 4.0. Any screen or export that shows primer content must kee
 - the modification notice (`metadata.modifications`),
 - the source section of each excerpt (`citation`), when content is grounded.
 
-The About screen will show these (see [[SPEC]] section 4.1).
+The About screen shows these (see [[SPEC]] section 4.1 and [[Attribution and Licenses]]).
 
 ## In code
 
@@ -50,4 +50,4 @@ The About screen will show these (see [[SPEC]] section 4.1).
 
 ## Teachable topics
 
-Not every primer section is a [[Topic]]. These seven are neither seeded nor listed (`NON_TEACHABLE_CORPUS_TOPIC_IDS` in `src/main/content/topics.ts`): `motivation`, `study-guide`, `how-to-approach-a-system-design-interview-question`, `system-design-interview-questions-with-solutions`, `object-oriented-design-interview-questions-with-solutions`, `system-design-topics-start-here`, `appendix`. They stay in the [[Source Corpus]]; the interview-method section is meant to feed the [[Interview Protocol]] lessons instead.
+Not every primer section is a [[Topic]]. These seven are neither seeded nor listed (`NON_TEACHABLE_CORPUS_TOPIC_IDS` in `src/main/content/topics.ts`): `motivation`, `study-guide`, `how-to-approach-a-system-design-interview-question`, `system-design-interview-questions-with-solutions`, `object-oriented-design-interview-questions-with-solutions`, `system-design-topics-start-here`, `appendix`. They stay in the [[Source Corpus]]; the interview-method section grounds the [[Protocol Step Lesson]]s instead, with a few `appendix` tables (see [[Interview Protocol Implementation#Generations]]), and the `appendix` intro, powers of two and latency numbers sections ground the [[Foundations Module]] topic `orders-of-magnitude` (its seed's `groundedOn`, see [[Foundations Module Content#Grounded foundations]]). Excerpt lookup (`findExcerpts`) serves any section, teachable or not.

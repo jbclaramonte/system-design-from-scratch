@@ -10,6 +10,7 @@ const defaultMessages: Record<GenerationErrorCode, string> = {
   timeout: 'The generation took too long and was stopped. Retry.',
   invalid_output: 'The generated content was invalid twice in a row. Retry.',
   cancelled: 'The generation was cancelled.',
+  topic_locked: 'This topic is locked. Master the previous step of the Learning Path first.',
   unknown: 'The generation failed. Retry.'
 }
 

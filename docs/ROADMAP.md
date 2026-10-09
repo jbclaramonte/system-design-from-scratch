@@ -39,14 +39,14 @@ gantt
     section Design practice
     #12 Design canvas with typed shapes       :done, d1, after s2 f1, 5d
     #13 Canvas export (JSON + PNG)            :done, d2, after d1, 3d
-    #14 Protocol steps, feedback, hints       :d3, after d2 m4, 6d
+    #14 Protocol steps, feedback, hints       :done, d3, after d2 m4, 6d
     #15 First two design exercises            :d4, after d3, 4d
 
     section Product
-    #16 Foundations Module content            :p1, after m4, 4d
-    #17 Learning path and unlock rules        :p2, after m4, 3d
+    #16 Foundations Module content            :done, p1, after m4, 4d
+    #17 Learning path and unlock rules        :done, p2, after m4, 3d
     #18 Dashboard and notion map              :p3, after p2, 4d
-    #19 About and attribution screen          :p4, after c1, 1d
+    #19 About and attribution screen          :done, p4, after c1, 1d
 ```
 
 ## Dependency table

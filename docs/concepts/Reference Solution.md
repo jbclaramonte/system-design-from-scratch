@@ -14,3 +14,4 @@ The primer's solution to a [[Design Exercise]]. Used for the final comparison wi
 ## In code
 
 - `ReferenceSolution` in `src/main/corpus/types.ts`, parsed by `parseSolution` in `src/main/corpus/ingest.ts`, bundled in `resources/corpus/primer.json`. See [[Corpus]].
+- Hidden grounding of step feedback and [[Hint]]s (never quoted), compared openly in the final review: `referencePart` in `src/main/generation/prompts/designFeedback.ts`. A Design Exercise points to it with `design_exercises.reference_solution_section`. See [[Interview Protocol Implementation]].

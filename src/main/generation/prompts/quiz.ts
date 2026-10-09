@@ -19,7 +19,7 @@ import {
 import { sourceSectionsSchema } from './notionOutline'
 
 /** Bump with any change to the prompt or schema below. */
-export const QUIZ_PROMPT_VERSION = 'quiz-2'
+export const QUIZ_PROMPT_VERSION = 'quiz-4'
 
 export const DEFAULT_QUESTION_COUNT = 6
 export const QUIZ_EXCERPT_TOKENS = 8000
@@ -270,6 +270,8 @@ ${rules.types.map((type) => `- ${typeRules[type]}`).join('\n')}`,
       /Cite the excerpt[^\n]*/,
       'Give the supporting excerpt ids in `sourceSections`; do not write [source: ...] in the questions.'
     ),
+    rules.sectionIds.length === 0 &&
+      `Answer keys without excerpts: every correct choice, expected point and model answer must be a basic fact that the lesson teaches and that introductory courses agree on. Never make a question depend on a precise measured number (a latency, a throughput, a failure rate): ask about orders of magnitude the lesson gives, or about reasoning. If a choice could be argued correct in some situation, rewrite it or state the situation in the question.`,
     options.lessonMarkdown &&
       `The lesson the learner read:\n<lesson>\n${options.lessonMarkdown}\n</lesson>`,
     excerptSection(block)

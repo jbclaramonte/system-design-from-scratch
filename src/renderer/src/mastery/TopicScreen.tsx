@@ -4,11 +4,13 @@ import type { RoundResult, RoundStart } from '../../../shared/quiz'
 import type { TopicSummary } from '../../../shared/topic'
 import { LessonScreen } from '../lesson/LessonScreen'
 import { errorTitle } from '../lesson/lessonState'
+import { OutsidePrimerBadge } from '../lesson/OutsidePrimerBadge'
 import { errorMessage } from '../quiz/errorMessage'
 import { formatPercent } from '../quiz/progress'
 import { QuizPlayer } from '../quiz/QuizPlayer'
 import { QuizResults } from '../quiz/QuizResults'
 import {
+  firstRemediationIndex,
   masteryLabels,
   preparationText,
   roundPreparation,
@@ -116,6 +118,11 @@ export function TopicScreen({ topic }: { topic: TopicSummary }) {
           <span className={`mastery-badge mastery-${state.status}`} data-testid="mastery-status">
             {masteryLabels[state.status]}
           </span>{' '}
+          {!topic.grounded && (
+            <>
+              <OutsidePrimerBadge testId="mastery-ungrounded" />{' '}
+            </>
+          )}
           {roundProgress(state)}
         </p>
         {error && (
@@ -150,7 +157,7 @@ export function TopicScreen({ topic }: { topic: TopicSummary }) {
               {overlay.result.round.passed ? 'Continue' : 'Continue to the Remediation Lessons'}
             </button>
           </p>
-          <QuizResults result={overlay.result} />
+          <QuizResults result={overlay.result} outsidePrimer={!topic.grounded} />
         </div>
       )}
 
@@ -301,15 +308,27 @@ function RemediationStep({
   onRetry: () => void
   onStartRound: () => void
 }) {
-  const [index, setIndex] = useState(() =>
-    Math.max(
-      0,
-      targets.findIndex((t) => !t.ready)
-    )
-  )
-  const target = targets[index]!
+  const [index, setIndex] = useState(() => firstRemediationIndex(targets) ?? 0)
+  const target = targets[index]
   const allReady = targets.every((t) => t.ready)
   const last = state.lastRound
+
+  if (!target) {
+    return (
+      <div className="mastery-scroll" data-testid="mastery-remediation-empty">
+        <p>
+          Round {last?.number} scored {formatPercent(last?.scorePercent ?? 0)}, below the Mastery
+          Threshold ({state.masteryThreshold}%), but no missed notion was identified, so there is no
+          Remediation Lesson to read. Retry the round with fresh questions.
+        </p>
+        <footer className="mastery-footer">
+          <button type="button" data-testid="mastery-start-round" onClick={onStartRound}>
+            Retry: start round {state.roundNumber}
+          </button>
+        </footer>
+      </div>
+    )
+  }
 
   return (
     <div className="mastery-scroll" data-testid="mastery-remediation">

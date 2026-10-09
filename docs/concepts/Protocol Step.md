@@ -11,7 +11,8 @@ One step of the [[Interview Protocol]]. Unlocked progressively; on first encount
 
 - Part of the [[Interview Protocol]]
 - Helped by [[Hint]]s
+- Introduced by its [[Protocol Step Lesson]]
 
 ## In code
 
-`protocol_step` column of table `design_feedback`, `ProtocolStep` type in `src/main/db/types.ts`. See [[Data Model]].
+`ProtocolStep`, `protocolSteps` and the per-step goal and checklist (`PROTOCOL_STEP_DEFINITIONS`) in `src/shared/protocol.ts`. Submissions in table `protocol_step_submissions`, drafts in `protocol_step_drafts`, `protocol_step` column of `design_feedback`. See [[Data Model]] and [[Interview Protocol Implementation]].

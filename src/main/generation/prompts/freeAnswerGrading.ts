@@ -6,7 +6,7 @@ import type { AttemptResult, FreeAnswerGrading } from '../../../shared/quiz'
 import { joinParts, LANGUAGE_RULES, type PromptBuild } from './common'
 
 /** Bump with any change to the prompt or schema below. */
-export const FREE_ANSWER_GRADING_PROMPT_VERSION = 'free-answer-grading-1'
+export const FREE_ANSWER_GRADING_PROMPT_VERSION = 'free-answer-grading-2'
 
 /** A free answer is graded fast: past this, the learner gets a `timeout` error and can retry. */
 export const FREE_ANSWER_GRADING_TIMEOUT_MS = 90_000
@@ -111,7 +111,7 @@ Grading:
 - Judge only against the expected points and the model answer of the rubric. An expected point is covered when the answer states its idea, in any words, even briefly and without the exact terms; it is not covered when it is missing, too vague to show understanding, or wrong.
 - A misconception is a wrong statement about system design in the answer. Imprecise wording is not a misconception. List at most 3, each in one sentence.
 - Verdict: "correct" when every expected point is covered and there is no misconception; "partially_correct" when at least one expected point is covered but some are missing or there is a misconception; "incorrect" otherwise. An empty, off-topic or nonsense answer, or one that only repeats the question, is "incorrect" with no point covered.
-- Do not reward length, and do not penalize spelling or missing English terms.
+- Do not reward length, and do not penalize spelling, missing English jargon or French words used instead of it.
 
 Feedback:
 - expectedPoints: one entry per expected point, in the given order, with a one-sentence justification that refers to what the answer says (or does not say).

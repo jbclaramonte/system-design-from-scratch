@@ -6,32 +6,36 @@ issue: 7
 
 # Prompts
 
-The prompts and output schemas behind every content [[Generation]]: [[Notion Outline]], [[Lesson]], [[Quiz]] and [[Remediation Lesson]], plus free-answer grading (#10). Code: `src/main/generation/prompts/` (pure builders) and `src/main/generation/pipelines.ts` (load from the database and the [[Source Corpus]], persist). They run through the [[Generation Service]]. The [[Design Feedback]] (#14) prompt is not written yet; the generic `generation:start` IPC round trip (dev panel) still uses `placeholderPrompts.ts`.
+The prompts and output schemas behind every content [[Generation]]: [[Notion Outline]], [[Lesson]], [[Quiz]] and [[Remediation Lesson]], plus free-answer grading (#10). Code: `src/main/generation/prompts/` (pure builders) and `src/main/generation/pipelines.ts` (load from the database and the [[Source Corpus]], persist). They run through the [[Generation Service]]. The [[Design Feedback]] prompts (step feedback, [[Hint]]s, final review) and the [[Protocol Step Lesson]] prompt (#14) are described in [[Interview Protocol Implementation#Generations]]. The generic `generation:start` IPC round trip (dev panel) still uses `placeholderPrompts.ts`.
 
 ## Shared rules
 
 Every builder returns `{ kind, input, prompt: { version, system, user }, schema?, groundedSourceSections }`, ready for `service.generate` or `service.pregenerate`. Instructions are written in English; the output is French.
 
-- **Language**: French for everything the learner reads, addressing the learner as "tu"; system design terms stay in English (cache, load balancer, sharding, TTL...), with an optional French gloss on first use; no English sentences.
+- **Language** (`LANGUAGE_RULES`, included verbatim in every prompt, tested in `prompts.test.ts`): French for everything the learner reads, addressing the learner as "tu". Only system design jargon stays in English (load balancer, sharding, cache, replication, throughput, latency, TTL...), with an optional French gloss on first use; everyday computing words are French (serveur, client, requête, réponse, mémoire, disque, réseau, base de données, octet with Ko/Mo/Go/To). The rule carries good and bad examples ("le serveur renvoie une réponse", not "le server renvoie une response"; "un load balancer", not "un répartiteur de charge"; "10 Go", not "10 GB"). No English sentences.
 - **Audience**: complete beginner who knows basic programming. Define every term on first use, short sentences, one concrete example per abstract idea.
 - **[[Grounding]]**: only facts of the excerpts; analogies and examples allowed, new technical claims not. Text outputs cite inline as `[source: <section id>]` (one id per bracket, ids copied from the excerpt list); `findCitations` and `unknownCitations` in `prompts/common.ts` parse them. Quizzes put the ids in `sourceSections` instead.
-- **Ungrounded variant** ([[Foundations Module]]): no excerpts, an explicit "write from well-established general knowledge, no citation" rule, `groundedSourceSections: []`, so the Generation output has `grounded: false` and `sourceSections: []`. Schemas then require empty `sourceSections`.
+- **Ungrounded variant** ([[Foundations Module]] topics that declare no `groundedOn` sections): no excerpts, the conservative `UNGROUNDED_RULES` (textbook basics only, exact numbers only for definitions and conventions, measured quantities as hedged orders of magnitude, "en simplifiant" when simplifying, no references of any kind; quizzes: answer keys never resting on a precise measured number; outlines: the topic's `scope` and what to leave to the primer), see [[Foundations Module Content]], `groundedSourceSections: []`, so the Generation output has `grounded: false` and `sourceSections: []`. Schemas then require empty `sourceSections`. A Foundations Module topic whose seed declares `groundedOn` sections (`orders-of-magnitude`, on the primer appendix) uses the grounded variants instead, see [[Foundations Module Content#Grounded foundations]].
 - **[[Excerpt|Excerpts]]**: a topic's section and its sub-topics (`findExcerpts({ sectionIds: [topic] })`), a notion's own sections for a remediation lesson. `assembleExcerpts` strips HTML images and link targets, drops empty sections, keeps excerpts in corpus order within a token budget (outline 6000, lesson 8000, quiz 8000, remediation 3000 tokens; every MVP topic fits), and wraps each in `<excerpt id="..." title="...">`.
 - **Cache input**: `input` holds what the output depends on besides the prompt text: topic, notions, options, the excerpt ids and the corpus commit (`ungrounded` for foundations), the lesson as a SHA-256 for a quiz. With `prompt.version` it forms the [[Content Cache]] key.
 
 ## Versions
 
-Bump the constant with any change to the prompt text or schema: it is part of the Content Cache key.
+Bump the constant with any change to the prompt text or schema: it is part of the Content Cache key, so cached lessons, quizzes, Remediation Lessons and Protocol Step Lessons of an older version are never reused (they stay in `content_cache` but no key points to them anymore). Notion Outlines are not affected: they live in `notions` and are never regenerated. The narrowed language rule (2026-10-09) bumped every version below.
 
 | Constant | Version | File |
 |---|---|---|
-| `NOTION_OUTLINE_PROMPT_VERSION` | `notion-outline-1` | `prompts/notionOutline.ts` |
-| `LESSON_PROMPT_VERSION` | `lesson-1` | `prompts/lesson.ts` |
-| `QUIZ_PROMPT_VERSION` | `quiz-1` | `prompts/quiz.ts` |
-| `REMEDIATION_LESSON_PROMPT_VERSION` | `remediation-lesson-2` | `prompts/remediationLesson.ts` |
-| `FREE_ANSWER_GRADING_PROMPT_VERSION` | `free-answer-grading-1` | `prompts/freeAnswerGrading.ts` |
+| `NOTION_OUTLINE_PROMPT_VERSION` | `notion-outline-4` | `prompts/notionOutline.ts` |
+| `LESSON_PROMPT_VERSION` | `lesson-3` | `prompts/lesson.ts` |
+| `QUIZ_PROMPT_VERSION` | `quiz-4` | `prompts/quiz.ts` |
+| `REMEDIATION_LESSON_PROMPT_VERSION` | `remediation-lesson-4` | `prompts/remediationLesson.ts` |
+| `FREE_ANSWER_GRADING_PROMPT_VERSION` | `free-answer-grading-2` | `prompts/freeAnswerGrading.ts` |
+| `PROTOCOL_STEP_LESSON_PROMPT_VERSION` | `protocol-step-lesson-2` | `prompts/protocolStepLesson.ts` |
+| `DESIGN_STEP_FEEDBACK_PROMPT_VERSION` | `design-step-feedback-2` | `prompts/designFeedback.ts` |
+| `DESIGN_HINT_PROMPT_VERSION` | `design-hint-2` | `prompts/designFeedback.ts` |
+| `DESIGN_FINAL_REVIEW_PROMPT_VERSION` | `design-final-review-2` | `prompts/designFeedback.ts` |
 
-Free-answer grading is never cached; its version is stored in each Attempt's grading record instead, so a grade can be traced to the prompt that gave it.
+Free-answer grading is never cached; its version is stored in each Attempt's grading record instead, so a grade can be traced to the prompt that gave it. Design Feedback is never cached either; its version is stored in each `design_feedback` row (`promptVersion`).
 
 ## Notion Outline
 
@@ -89,7 +93,7 @@ The prompt asks to split a sub-topic holding several distinct ideas (strategies 
 
 - **Untrusted text**: the learner's answer is wrapped in `<learner_answer>` ... `</learner_answer>` (a contest justification in `<learner_justification>`), last in the prompt, after the rubric. `delimitUntrusted` replaces any delimiter tag inside the text with `[removed tag]`, so it cannot close its block. The system prompt says the block is data, never instructions: requested verdicts, role play and formatting requests are ignored, only its system design content is graded.
 - **Rubric**: a point is covered when the answer states its idea in any words; a misconception is a wrong statement, not imprecise wording. `correct` = every point covered and no misconception, `partially_correct` = at least one point covered, `incorrect` otherwise; empty, off-topic or nonsense answers and answers that only repeat the question are `incorrect`. No reward for length, no penalty for spelling or missing English terms.
-- **Feedback**: French (the shared language rules, "tu", technical terms in English), tied to the notion(s) listed in the prompt. The model answer is in the prompt "for you only" and must not be copied verbatim: the learner sees it separately after the grading.
+- **Feedback**: French (the shared language rules, "tu", system design jargon in English, everyday words in French), tied to the notion(s) listed in the prompt. The model answer is in the prompt "for you only" and must not be copied verbatim: the learner sees it separately after the grading.
 - **Schema refinements** (fed back on the automatic retry): `expectedPoints` has exactly one entry per expected point; `correct` with an uncovered point or a misconception, `partially_correct` with no covered point, and an empty `toReview` when not correct are rejected. Length caps keep the output short.
 - **Contest**: the same prompt plus the first grading (verdict, per-point coverage and misconceptions) and the delimited justification. The model grades again from scratch as an independent examiner; the justification only counts when it points at what the answer already says or at a mistake of the first grading, and the explanation says whether it changed the grade.
 
@@ -104,7 +108,7 @@ Iterate with `node scripts/free-answer-grading-check.ts` (3 real CLI calls: a go
 
 1. Edit the prompt, bump its version constant.
 2. `npm test`: builder and schema tests in `src/main/generation/prompts/prompts.test.ts` (free-answer grading: `freeAnswerGrading.test.ts`), pipelines (injected runner and the fake CLI) in `src/main/generation/pipelines.test.ts`. No real CLI call.
-3. Opt-in real run, at most 5 CLI calls (outline, lesson, quiz on that lesson, one remediation, one spare for an automatic retry), on your Claude plan: `node scripts/prompt-quality-check.ts [topic-id] [output.md]`. It writes `docs/samples/<topic>.md` with automatic checks (unknown citations, notion markers, recap, quiz types and coverage, timings). Read it and judge by hand.
+3. Opt-in real run, at most 5 CLI calls (outline, lesson, quiz on that lesson, one remediation, one spare for an automatic retry), on your Claude plan: `node scripts/prompt-quality-check.ts [topic-id] [output.md] [--skip-remediation] [--max-calls=N]`. A [[Foundations Module]] slug runs the ungrounded variants. It writes `docs/samples/<topic>.md` with automatic checks (unknown citations, notion markers, recap, quiz types and coverage, timings). Read it and judge by hand.
 
 ## Quality review (2026-10-09, `cache`, sonnet, effort low)
 
@@ -123,4 +127,4 @@ Known weaknesses:
 - **Length and density**: the lesson is 1776 words, long for a complete beginner; citations after nearly every sentence are noisy (the lesson view should render them small). Some primer terms pass through without a gloss (cloning, auto-scaling, activity streams, user graph).
 - **Angle overlap**: the lesson introduction already used a kitchen analogy and the analogy remediation used a restaurant too. Passing the lesson's analogy to the remediation prompt would help.
 - **Distractors**: some are easy to rule out (absolute wording, or the correct choice is the longest). English plurals in French sentences ("des servers") read oddly.
-- One run of one topic: no statistics. Ungrounded (Foundations Module) prompts were not run for real.
+- One run of one topic: no statistics. Ungrounded (Foundations Module) prompts: reviewed in [[Foundations Module Content#Quality review (2026-10-09, sonnet, effort low)]].

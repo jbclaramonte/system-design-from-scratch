@@ -126,14 +126,61 @@ const validGrading = {
   toReview: []
 }
 
+/**
+ * Design Feedback, by the `--json-schema` it gets: step feedback (one checklist verdict per item),
+ * a Hint, or a final review.
+ */
+function designFeedback() {
+  const schemaArg = process.argv[process.argv.indexOf('--json-schema') + 1] ?? '{}'
+  const schema = JSON.parse(schemaArg) as {
+    properties?: { checklist?: { minItems?: number }; hint?: object; strengths?: object }
+  }
+  if (schema.properties?.hint) return { hint: 'Que se passe-t-il quand un paste a expiré ?' }
+  if (schema.properties?.strengths) {
+    return {
+      summary: 'Une conception simple et cohérente.',
+      strengths: ['Les cas d’usage principaux sont couverts.'],
+      gapsVsReference: ['Le contenu des pastes n’est pas séparé des métadonnées.'],
+      tradeOffsToDiscuss: ['SQL ou NoSQL pour la table des liens.'],
+      nextTime: ['Chiffrer le trafic avant de dessiner.']
+    }
+  }
+  const items = schema.properties?.checklist?.minItems ?? 1
+  return {
+    checklist: Array.from({ length: items }, (_, i) => ({
+      verdict: i === 0 ? 'met' : 'partial',
+      comment: `Point ${i + 1} : à préciser.`
+    })),
+    summary: 'Un bon début, mais il manque des cas limites.',
+    gaps: ['Tu ne dis pas ce qui se passe quand un lien expire.'],
+    errors: [],
+    forgottenTradeOffs: ['Disponibilité contre cohérence pour les lectures.'],
+    nextStep: 'Précise les cas limites avant de passer au schéma.'
+  }
+}
+
 let stdin = ''
 process.stdin.setEncoding('utf8')
 for await (const chunk of process.stdin) stdin += chunk
 
+// `--input-format stream-json`: one user message with image and text blocks. The text is used as
+// the prompt below; the image blocks are counted in the log.
+let images = 0
+if (process.argv.includes('--input-format')) {
+  const message = JSON.parse(stdin) as {
+    message: { content: { type: string; text?: string; source?: { media_type: string } }[] }
+  }
+  images = message.message.content.filter((block) => block.type === 'image').length
+  stdin = message.message.content
+    .filter((block) => block.type === 'text')
+    .map((block) => block.text)
+    .join('\n')
+}
+
 if (process.env['FAKE_CLAUDE_LOG']) {
   appendFileSync(
     process.env['FAKE_CLAUDE_LOG'],
-    `${JSON.stringify({ argv: process.argv.slice(2), cwd: process.cwd(), cwdEntries: readdirSync(process.cwd()), stdin, pid: process.pid })}\n`
+    `${JSON.stringify({ argv: process.argv.slice(2), cwd: process.cwd(), cwdEntries: readdirSync(process.cwd()), stdin, images, pid: process.pid })}\n`
   )
 }
 
@@ -178,6 +225,13 @@ switch (scenario) {
     structured(validGrading)
     end('', { structured_output: validGrading })
     break
+  case 'design': {
+    const output = designFeedback()
+    init()
+    structured(output)
+    end('', { structured_output: output })
+    break
+  }
   case 'json-invalid-once':
     init()
     structured(isRetry ? validQuiz : { questions: 'nope' })

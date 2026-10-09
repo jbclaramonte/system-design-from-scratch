@@ -15,7 +15,7 @@ import {
   putCachedContent
 } from '../db/repositories/contentCache'
 import type { ContentCacheKind } from '../db/types'
-import { runCli, type CliCallOptions } from './cliRunner'
+import { runCli, type CliCallOptions, type CliImage } from './cliRunner'
 import { GenerationError, toGenerationError } from './errors'
 import { EventStream } from './eventStream'
 import { GenerationQueue, type QueueOptions, type QueueTask } from './queue'
@@ -38,6 +38,11 @@ export interface GenerationRequest<T extends Json = Json> {
   schema?: z.ZodType<T>
   /** Source Corpus section ids the prompt was grounded on. Empty or absent: ungrounded. */
   groundedSourceSections?: string[]
+  /**
+   * Images sent before the prompt text (the Design Export PNG). Not part of the Content Cache
+   * key: only for kinds that are not cached.
+   */
+  images?: CliImage[]
   /** Default `foreground`. */
   priority?: GenerationPriority
   signal?: AbortSignal
@@ -82,7 +87,12 @@ export interface GenerationServiceOptions {
   resolveCli?: () => Promise<string>
 }
 
-const contentCacheKinds = new Set<GenerationKind>(['lesson', 'remediation_lesson', 'quiz'])
+const contentCacheKinds = new Set<GenerationKind>([
+  'lesson',
+  'remediation_lesson',
+  'quiz',
+  'protocol_step_lesson'
+])
 const isContentCacheKind = (kind: GenerationKind): kind is ContentCacheKind =>
   contentCacheKinds.has(kind)
 
@@ -353,6 +363,7 @@ export class GenerationService {
         bin,
         prompt: feedback ? `${request.prompt.user}\n\n${retryNote(feedback)}` : request.prompt.user,
         systemPrompt: request.prompt.system,
+        images: request.images,
         model: this.cli.model,
         effort: this.cli.effort,
         jsonSchema: jsonSchema ?? undefined,

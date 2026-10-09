@@ -15,4 +15,4 @@ A hands-on system design problem solved on the [[Design Canvas]], for example a 
 
 ## In code
 
-Table `design_exercises`, repository `src/main/db/repositories/designPractice.ts`. See [[Data Model]].
+Table `design_exercises` (with `problem_statement`), repository `src/main/db/repositories/designPractice.ts`. See [[Data Model]]. Its exercise index (rank in the [[Learning Path]]) decides its active Protocol Steps: `exerciseIndexOf` in `src/main/protocol/exercises.ts`, screen `src/renderer/src/design/protocol/ProtocolExerciseScreen.tsx`. See [[Interview Protocol Implementation]].

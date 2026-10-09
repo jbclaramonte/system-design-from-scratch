@@ -1,10 +1,20 @@
 import { useEffect, useRef } from 'react'
 import type { RoundResult } from '../../../shared/quiz'
+import { OutsidePrimerBadge } from '../lesson/OutsidePrimerBadge'
 import { formatPercent } from './progress'
 import { QuestionFeedbackView } from './QuestionFeedbackView'
 
-/** Results of a completed Round: score vs the Mastery Threshold, per-notion breakdown, answers. */
-export function QuizResults({ result }: { result: RoundResult }) {
+/**
+ * Results of a completed Round: score vs the Mastery Threshold, per-notion breakdown, answers.
+ * `outsidePrimer` flags an ungrounded quiz (Foundations Module).
+ */
+export function QuizResults({
+  result,
+  outsidePrimer = false
+}: {
+  result: RoundResult
+  outsidePrimer?: boolean
+}) {
   const { round, masteryThreshold, notionScores, questions, skippedQuestionIds } = result
   const headingRef = useRef<HTMLHeadingElement>(null)
 
@@ -17,6 +27,12 @@ export function QuizResults({ result }: { result: RoundResult }) {
       <h2 ref={headingRef} tabIndex={-1}>
         Round {round.number}: {round.passed ? 'passed' : 'not passed yet'}
       </h2>
+      {outsidePrimer && (
+        <p>
+          <OutsidePrimerBadge testId="quiz-results-ungrounded" /> Questions and answer keys were
+          generated from general knowledge, not checked against the primer.
+        </p>
+      )}
       <p data-testid="round-score" data-passed={String(round.passed)}>
         Score <strong>{formatPercent(round.scorePercent ?? 0)}</strong>, Mastery Threshold{' '}
         {formatPercent(masteryThreshold)}.

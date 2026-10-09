@@ -12,7 +12,7 @@ import {
 } from './common'
 
 /** Bump with any change to the prompt or schema below. */
-export const NOTION_OUTLINE_PROMPT_VERSION = 'notion-outline-2'
+export const NOTION_OUTLINE_PROMPT_VERSION = 'notion-outline-4'
 
 export const NOTION_OUTLINE_EXCERPT_TOKENS = 6000
 export const MIN_NOTIONS = 3
@@ -85,16 +85,33 @@ export function buildNotionOutlineGeneration(
   const subTopicIds = block.sectionIds.filter((id) => id.includes('/'))
   const subTopics = grounding.excerpts.filter((excerpt) => subTopicIds.includes(excerpt.sectionId))
 
+  const scope = joinParts(
+    topic.scope && `Scope of this topic: ${topic.scope}`,
+    topic.leftToPrimer &&
+      `Leave out (taught later in grounded topics from the primer): ${topic.leftToPrimer}`
+  )
+  const topicSectionAllowed = block.sectionIds.includes(topic.slug)
+    ? ` (the topic id \`${topic.slug}\` is allowed too)`
+    : ''
   const seed =
     block.sectionIds.length > 0
-      ? `The topic comes from the System Design Primer. Its sub-topics are the seed of the outline:
-${subTopics.length ? subTopics.map((s) => `- \`${s.sectionId}\`: ${s.title}`).join('\n') : '- (none: the topic is a single section)'}
+      ? joinParts(
+          topic.inFoundationsModule
+            ? `The topic belongs to the Foundations Module: prerequisites a beginner needs before studying system design, grounded on sections of the System Design Primer. Its sub-topics are the seed of the outline:`
+            : `The topic comes from the System Design Primer. Its sub-topics are the seed of the outline:`,
+          `${subTopics.length ? subTopics.map((s) => `- \`${s.sectionId}\`: ${s.title}`).join('\n') : '- (none: the topic is a single section)'}
 
 - Start from the sub-topics. Split a sub-topic that holds several distinct ideas (for example several strategies, each with its own trade-off) into one notion per idea. Merge sub-topics that are too thin to be tested on their own with a close one.
 - Every sub-topic listed above must appear in the sourceSections of at least one notion.
-- sourceSections: the excerpt ids the notion is taught from (the topic id \`${topic.slug}\` is allowed too).
-- Only include notions that the excerpts actually explain: no idea from outside the excerpts.`
-      : `The topic belongs to the Foundations Module: prerequisites that the System Design Primer does not cover. Build the outline from well-established basics a beginner needs before studying system design. sourceSections must be empty.`
+- sourceSections: the excerpt ids the notion is taught from${topicSectionAllowed}.
+- Only include notions that the excerpts actually explain: no idea from outside the excerpts.`,
+          scope
+        )
+      : joinParts(
+          `The topic belongs to the Foundations Module: prerequisites that the System Design Primer assumes but does not teach. There are no source excerpts. Build the outline from well-established basics a beginner needs before studying system design, at the level of an introductory course. sourceSections must be empty.`,
+          scope,
+          `- Each notion must rest on standard facts that introductory courses agree on, never on a precise measured number or a vendor-specific detail.`
+        )
 
   const user = joinParts(
     `Build the Notion Outline of the topic "${topic.title}" (id \`${topic.slug}\`) for a complete beginner.`,
@@ -102,7 +119,7 @@ ${subTopics.length ? subTopics.map((s) => `- \`${s.sectionId}\`: ${s.title}`).jo
     `Rules:
 - Between 4 and ${MAX_NOTIONS} notions, in teaching order: from the simplest and most fundamental to the most advanced.
 - slug: short English kebab-case id built from the technical term (for example \`cache-aside\`, \`write-through\`, \`cache-invalidation\`). It must stay stable, so no numbering and no French.
-- title: short French title that keeps the technical terms in English (for example "Cache-aside (lazy loading)").
+- title: short French title that keeps the system design jargon in English and everyday words in French (for example "Cache-aside (lazy loading)", "Le serveur et ses requêtes").
 - description: one French sentence of at most 25 words saying what the learner must understand.
 - Notions must not overlap: each idea belongs to exactly one notion.`,
     excerptSection(block)
@@ -113,6 +130,8 @@ ${subTopics.length ? subTopics.map((s) => `- \`${s.sectionId}\`: ${s.title}`).jo
     input: {
       topic: topic.slug,
       title: topic.title,
+      scope: topic.scope ?? null,
+      leftToPrimer: topic.leftToPrimer ?? null,
       sectionIds: block.sectionIds,
       corpusVersion: grounding.corpusVersion
     },

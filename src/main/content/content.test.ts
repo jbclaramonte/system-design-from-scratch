@@ -215,6 +215,23 @@ describe('lesson channels', () => {
     expect(calls).toHaveLength(3)
   })
 
+  it('refuses to start a lesson when the Learning Path lock guard throws', () => {
+    const locked = createLessonIpc(
+      { db, corpus, service },
+      {
+        assertTopicUnlocked: () => {
+          throw new Error('locked')
+        }
+      }
+    )
+    const topicId = listTopics(db)[0]!.id
+
+    expect(() => locked.start({ requestId: 'r-locked', topicId }, client)).toThrow('locked')
+    expect(client.sent).toHaveLength(0)
+    expect(calls).toHaveLength(0)
+    expect(listLessonsByTopic(db, topicId)).toHaveLength(0)
+  })
+
   it('serves a second open from the Content Cache without any CLI call', async () => {
     const ipc = ipcFor()
     const topicId = cacheTopicId()

@@ -25,6 +25,24 @@ import type {
 } from './mastery'
 import type { AppSettings, CliCheck, CliCheckRequest } from './settings'
 import type {
+  FinalReviewView,
+  HintView,
+  ProtocolCancelRequest,
+  ProtocolDevExerciseRequest,
+  ProtocolDraftRequest,
+  ProtocolExerciseRequest,
+  ProtocolExerciseView,
+  ProtocolFinalReviewRequest,
+  ProtocolHintRequest,
+  ProtocolLessonSeenRequest,
+  ProtocolOutcome,
+  ProtocolStepLessonRequest,
+  ProtocolSubmitRequest,
+  SubmissionView
+} from './protocol'
+import type { AboutInfo } from './about'
+import type { LearningPath } from './learningPath'
+import type {
   FreeAnswerGradingOutcome,
   QuestionFeedback,
   QuizRef,
@@ -87,6 +105,8 @@ export interface GenerationStreamEvent {
 /** Channel name to request and response types. Channel names are `domain:action`. */
 export interface IpcChannels {
   'app:getVersion': { request: void; response: string }
+  /** About screen: app version, primer attribution (corpus metadata), third-party licenses. */
+  'app:getAbout': { request: void; response: AboutInfo }
   'system:ping': { request: PingRequest; response: PingResponse }
   /** Starts a Generation; its events follow on `generation:event`. */
   'generation:start': { request: GenerationStartRequest; response: void }
@@ -109,6 +129,8 @@ export interface IpcChannels {
   'mastery:cancel': { request: MasteryCancelRequest; response: void }
   /** Choice at the Round Limit: another angle, or skip and come back later. */
   'mastery:choose': { request: MasteryChooseRequest; response: MasteryState }
+  /** The Learning Path computed from the database: steps, recommended step, progress. */
+  'path:get': { request: void; response: LearningPath }
   'settings:get': { request: void; response: AppSettings }
   /** Validated, applied at once (no restart). */
   'settings:update': { request: Partial<AppSettings>; response: AppSettings }
@@ -152,6 +174,29 @@ export interface IpcChannels {
   }
   /** Cancels the free-answer grading (or contest re-grade) of a question in progress. */
   'quiz:cancelGrading': { request: { roundId: number; questionId: number }; response: void }
+  /** Dev only (rejected in a packaged app): gets or creates the fixture exercise playing index n. */
+  'protocol:openDevExercise': { request: ProtocolDevExerciseRequest; response: DesignExerciseRef }
+  /** A Design Exercise with its Protocol Steps (active or locked), submissions, Hints, review. */
+  'protocol:getExercise': { request: ProtocolExerciseRequest; response: ProtocolExerciseView }
+  'protocol:saveDraft': { request: ProtocolDraftRequest; response: void }
+  /** The learner read the step's Protocol Step Lesson: it is not shown again. */
+  'protocol:markLessonSeen': { request: ProtocolLessonSeenRequest; response: ProtocolExerciseView }
+  /** Streams (or serves from the Content Cache) a Protocol Step Lesson; events on `protocol:event`. */
+  'protocol:startStepLesson': { request: ProtocolStepLessonRequest; response: void }
+  /** Records a step submission and gets its Design Feedback. */
+  'protocol:submitStep': {
+    request: ProtocolSubmitRequest
+    response: ProtocolOutcome<SubmissionView>
+  }
+  /** The next graded Hint on a step. */
+  'protocol:requestHint': { request: ProtocolHintRequest; response: ProtocolOutcome<HintView> }
+  /** Final review against the Reference Solution, once every active step was reviewed. */
+  'protocol:requestFinalReview': {
+    request: ProtocolFinalReviewRequest
+    response: ProtocolOutcome<FinalReviewView>
+  }
+  /** Cancels a Protocol Step Lesson, step feedback, Hint or final review in progress. */
+  'protocol:cancel': { request: ProtocolCancelRequest; response: void }
 }
 
 /** Event channel (main to renderer) to payload type. */
@@ -159,6 +204,9 @@ export interface IpcEvents {
   'generation:event': GenerationStreamEvent
   'lesson:event': LessonStreamEvent
   'mastery:event': MasteryStreamEvent
+  'protocol:event': LessonStreamEvent
+  /** The recomputed Learning Path, after a completed round or a Round Limit choice. */
+  'path:changed': LearningPath
 }
 
 export type IpcEventChannel = keyof IpcEvents
@@ -170,6 +218,7 @@ export type IpcResponse<C extends IpcChannel> = IpcChannels[C]['response']
 /** `window.api` method name to channel. */
 export const apiChannels = {
   getAppVersion: 'app:getVersion',
+  getAbout: 'app:getAbout',
   ping: 'system:ping',
   startGeneration: 'generation:start',
   cancelGeneration: 'generation:cancel',
@@ -187,6 +236,7 @@ export const apiChannels = {
   startRemediation: 'mastery:startRemediation',
   cancelMastery: 'mastery:cancel',
   chooseAtRoundLimit: 'mastery:choose',
+  getLearningPath: 'path:get',
   getSettings: 'settings:get',
   updateSettings: 'settings:update',
   testCli: 'settings:testCli',
@@ -199,14 +249,25 @@ export const apiChannels = {
   createDevQuiz: 'quiz:createDevQuiz',
   submitFreeAnswer: 'quiz:submitFreeAnswer',
   contestGrade: 'quiz:contestGrade',
-  cancelGrading: 'quiz:cancelGrading'
+  cancelGrading: 'quiz:cancelGrading',
+  openDevProtocolExercise: 'protocol:openDevExercise',
+  getProtocolExercise: 'protocol:getExercise',
+  saveProtocolDraft: 'protocol:saveDraft',
+  markProtocolLessonSeen: 'protocol:markLessonSeen',
+  startProtocolStepLesson: 'protocol:startStepLesson',
+  submitProtocolStep: 'protocol:submitStep',
+  requestHint: 'protocol:requestHint',
+  requestFinalReview: 'protocol:requestFinalReview',
+  cancelProtocol: 'protocol:cancel'
 } as const satisfies Record<string, IpcChannel>
 
 /** `window.api` subscription method to event channel. */
 export const apiEvents = {
   onGenerationEvent: 'generation:event',
   onLessonEvent: 'lesson:event',
-  onMasteryEvent: 'mastery:event'
+  onMasteryEvent: 'mastery:event',
+  onProtocolEvent: 'protocol:event',
+  onLearningPathChanged: 'path:changed'
 } as const satisfies Record<string, IpcEventChannel>
 
 type ApiChannels = typeof apiChannels

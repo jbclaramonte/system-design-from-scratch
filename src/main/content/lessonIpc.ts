@@ -27,6 +27,7 @@ import type {
   LessonStartRequest
 } from '../../shared/lesson'
 import type { TopicDetail, TopicGetRequest, TopicSummary } from '../../shared/topic'
+import type { TopicLockGuard } from '../path/lock'
 import { getTopicDetail, listTopicSummaries, toNotionRef } from './topics'
 
 // The renderer is not trusted to send well-formed requests: validate before use.
@@ -75,6 +76,11 @@ export function toErrorInfo(error: unknown): GenerationErrorInfo {
 export interface LessonIpcOptions {
   /** Called when the quiz Pre-generation fails (defaults to `console.error`). */
   onPregenerationError?: (error: unknown) => void
+  /**
+   * Learning Path lock: called before a lesson starts. Reading a Lesson counts as progress, so
+   * without this guard a locked topic could be unlocked by opening its lesson first.
+   */
+  assertTopicUnlocked?: TopicLockGuard
 }
 
 /**
@@ -163,6 +169,7 @@ export function createLessonIpc(deps: PipelineDeps, options: LessonIpcOptions = 
       const { requestId, topicId } = startRequestSchema.parse(request)
       if (runs.has(requestId)) throw new Error(`Lesson request ${requestId} is already running.`)
       if (!getTopic(db, topicId)) throw new Error(`Topic ${topicId} does not exist.`)
+      options.assertTopicUnlocked?.(topicId)
 
       const controller = new AbortController()
       runs.set(requestId, controller)

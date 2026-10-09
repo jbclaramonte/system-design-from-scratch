@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { MasteryState } from '../../../shared/mastery'
-import { roundPreparation, roundProgress } from './masteryText'
+import type { MasteryState, RemediationTarget } from '../../../shared/mastery'
+import { firstRemediationIndex, roundPreparation, roundProgress } from './masteryText'
 
 const state = (changes: Partial<MasteryState>): MasteryState => ({
   topicId: 1,
@@ -51,5 +51,18 @@ describe('roundPreparation', () => {
     expect(
       roundPreparation(starting, { type: 'error', error: { code: 'cancelled', message: 'x' } })
     ).toMatchObject({ status: 'cancelled' })
+  })
+})
+
+describe('firstRemediationIndex', () => {
+  const target = (id: number, ready: boolean) => ({ notion: { id }, ready }) as RemediationTarget
+
+  it('opens the first unread Remediation Lesson, else the first one', () => {
+    expect(firstRemediationIndex([target(1, true), target(2, false)])).toBe(1)
+    expect(firstRemediationIndex([target(1, true), target(2, true)])).toBe(0)
+  })
+
+  it('is null when a failed round left no missed notion', () => {
+    expect(firstRemediationIndex([])).toBeNull()
   })
 })

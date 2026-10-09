@@ -19,7 +19,9 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
-    "corpus:build": "node scripts/build-corpus.ts"
+    "corpus:build": "node scripts/build-corpus.ts",
+    "licenses:build": "node scripts/build-licenses.ts",
+    "licenses:check": "node scripts/build-licenses.ts --check"
   },
   "dependencies": {
     "@tldraw/assets": "5.5.2",

@@ -17,6 +17,9 @@ function fakeIpcMain(): IpcMainLike & { listeners: Map<string, Listener> } {
 
 const handlers: IpcHandlers = {
   'app:getVersion': () => '1.2.3',
+  'app:getAbout': () => {
+    throw new Error('no about data')
+  },
   'system:ping': ({ message }) => ({ reply: `pong: ${message}`, receivedAt: 'now' }),
   'generation:start': () => undefined,
   'generation:cancel': () => undefined,
@@ -47,6 +50,17 @@ const handlers: IpcHandlers = {
   'mastery:choose': () => {
     throw new Error('no topic')
   },
+  'path:get': () => ({
+    steps: [],
+    nextStepKey: null,
+    progress: {
+      masteredTopics: 0,
+      totalTopics: 0,
+      percent: 0,
+      unlockedExercises: 0,
+      totalExercises: 0
+    }
+  }),
   'settings:get': () => ({
     masteryThreshold: 100,
     roundLimit: 3,
@@ -78,7 +92,26 @@ const handlers: IpcHandlers = {
   'quiz:contestGrade': async () => {
     throw new Error('no round')
   },
-  'quiz:cancelGrading': () => undefined
+  'quiz:cancelGrading': () => undefined,
+  'protocol:openDevExercise': () => ({ id: 1, slug: 'dev-protocol-1', title: 'Dev' }),
+  'protocol:getExercise': () => {
+    throw new Error('no exercise')
+  },
+  'protocol:saveDraft': () => undefined,
+  'protocol:markLessonSeen': () => {
+    throw new Error('no exercise')
+  },
+  'protocol:startStepLesson': () => undefined,
+  'protocol:submitStep': async () => {
+    throw new Error('no exercise')
+  },
+  'protocol:requestHint': async () => {
+    throw new Error('no exercise')
+  },
+  'protocol:requestFinalReview': async () => {
+    throw new Error('no exercise')
+  },
+  'protocol:cancel': () => undefined
 }
 
 describe('registerHandlers', () => {
@@ -88,6 +121,7 @@ describe('registerHandlers', () => {
     registerHandlers(ipc, handlers)
 
     expect([...ipc.listeners.keys()].sort()).toEqual([
+      'app:getAbout',
       'app:getVersion',
       'design:exportScene',
       'design:loadScene',
@@ -103,6 +137,16 @@ describe('registerHandlers', () => {
       'mastery:listTopics',
       'mastery:startRemediation',
       'mastery:startRound',
+      'path:get',
+      'protocol:cancel',
+      'protocol:getExercise',
+      'protocol:markLessonSeen',
+      'protocol:openDevExercise',
+      'protocol:requestFinalReview',
+      'protocol:requestHint',
+      'protocol:saveDraft',
+      'protocol:startStepLesson',
+      'protocol:submitStep',
       'quiz:cancelGrading',
       'quiz:completeRound',
       'quiz:contestGrade',

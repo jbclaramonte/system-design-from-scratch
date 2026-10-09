@@ -52,13 +52,17 @@ src/
     generation/      Generation service: Claude Code CLI runner, queue, Content Cache, IPC
     content/         Topic seeding from the corpus, lesson flow over IPC (docs/Lesson View.md)
     mastery/         Mastery Loop state machine, service and IPC (docs/Mastery Loop Implementation.md)
+    path/            Learning Path: unlock rules, Design Exercise prerequisites, IPC
+    protocol/        Interview Protocol: steps, feedback, Hints, final review (docs/Interview Protocol Implementation.md)
     settings/        Settings over IPC, Claude CLI path test
   preload/           Exposes the typed window.api bridge to the renderer
   renderer/          React app (index.html with the CSP, src/ for components, src/dev/ dev-only)
                      src/design/: Design Canvas (tldraw, typed shapes, Design Scene autosave,
-                     export/: Design Export, see docs/Design Export.md)
+                     export/: Design Export, see docs/Design Export.md;
+                     protocol/: Design Exercise screen with the Interview Protocol steps)
                      src/lesson/: Lesson view (topic list, streamed Markdown, source chips)
-                     src/mastery/: topic screen driving the Mastery Loop (Learn button)
+                     src/mastery/: topic screen driving the Mastery Loop
+                     src/path/: Learning Path home screen (docs/Learning Path Implementation.md)
                      src/settings/: Settings screen
   shared/            Code shared by both sides, including the IPC contract (ipc.ts)
 resources/corpus/    Generated primer corpus (CC BY 4.0), see docs/Corpus.md
@@ -106,7 +110,8 @@ on your Claude subscription. Requirements:
 The tests never call the real CLI: they use a fake `claude` script. One opt-in test makes 2 real
 calls: `RUN_CLI_INTEGRATION=1 npx vitest run src/main/generation/cli.integration.test.ts`. To check
 the content prompts on real output, `node scripts/prompt-quality-check.ts [topic-id]` makes at most 5
-real calls and writes a sample under `docs/samples/` (see [docs/Prompts.md](docs/Prompts.md)). Details,
+real calls and writes a sample under `docs/samples/` (see [docs/Prompts.md](docs/Prompts.md); a
+Foundations Module slug such as `how-the-web-works` runs the ungrounded prompts). Details,
 flags and error codes: [docs/Generation Service.md](docs/Generation%20Service.md); measurements
 behind the choices: [docs/spikes/cli-latency.md](docs/spikes/cli-latency.md).
 
@@ -131,3 +136,7 @@ renderer, as `import.meta.env.VITE_...`; they end up in the bundle, so treat the
 ## License
 
 Apache-2.0, see [LICENSE](LICENSE).
+
+Primer attribution (CC BY 4.0) and third-party licenses are shown on the in-app About screen;
+after a `package-lock.json` change run `npm run licenses:build` and commit `resources/licenses.json`
+(see [docs/Attribution and Licenses.md](docs/Attribution%20and%20Licenses.md)).

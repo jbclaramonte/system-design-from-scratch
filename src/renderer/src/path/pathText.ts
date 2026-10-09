@@ -1,0 +1,94 @@
+import type {
+  DesignExerciseStep,
+  LearningPath,
+  LearningPathProgress,
+  LearningPathSection,
+  LearningPathStep,
+  LearningPathStepStatus,
+  LearningPathTopicRef,
+  TopicStep
+} from '../../../shared/learningPath'
+
+export const sectionTitles: Record<LearningPathSection, string> = {
+  foundations: 'Foundations Module',
+  primer: 'Primer topics',
+  design_exercises: 'Design Exercises'
+}
+
+export const stepStatusLabels: Record<LearningPathStepStatus, string> = {
+  locked: 'Locked',
+  available: 'Not started',
+  in_progress: 'In progress',
+  mastered: 'Mastered',
+  skipped: 'Skipped',
+  limit_reached: 'Round Limit reached',
+  coming_soon: 'Coming soon'
+}
+
+export const stepTitle = (step: LearningPathStep): string =>
+  step.kind === 'topic' ? step.topic.title : step.title
+
+/** Label of the "Continue" call to action on the recommended step. */
+export function continueLabel(step: LearningPathStep): string {
+  const title = stepTitle(step)
+  switch (step.status) {
+    case 'in_progress':
+      return `Continue: ${title}`
+    case 'skipped':
+      return `Come back to ${title} with another angle`
+    case 'limit_reached':
+      return `Choose how to go on with ${title}`
+    default:
+      return `Start: ${title}`
+  }
+}
+
+/** Why a topic does not unlock what follows, when it is not simply unfinished. */
+function blockerNote(ref: LearningPathTopicRef): string {
+  switch (ref.status) {
+    case 'skipped':
+      return ' It was skipped: come back to it with another angle.'
+    case 'limit_reached':
+      return ' It reached the Round Limit: try another angle.'
+    default:
+      return ''
+  }
+}
+
+const listTitles = (refs: readonly LearningPathTopicRef[]): string => {
+  const titles = refs.map((ref) => ref.title)
+  return titles.length <= 1
+    ? (titles[0] ?? '')
+    : `${titles.slice(0, -1).join(', ')} and ${titles.at(-1)}`
+}
+
+/** Why a locked step is locked ("Master X first"), or null when it is not locked. */
+export function lockMessage(step: TopicStep | DesignExerciseStep): string | null {
+  if (step.kind === 'topic') {
+    if (step.status !== 'locked' || !step.lockedBy) return null
+    return `Master ${step.lockedBy.title} first.${blockerNote(step.lockedBy)}`
+  }
+  if (step.missingPrerequisites.length === 0) return null
+  return `Master ${listTitles(step.missingPrerequisites)} first.`
+}
+
+export function progressText({ masteredTopics, totalTopics, percent }: LearningPathProgress) {
+  return `${masteredTopics} of ${totalTopics} topics mastered (${percent}%)`
+}
+
+/** The recommended step, or null. */
+export const recommendedStep = (path: LearningPath): LearningPathStep | null =>
+  path.steps.find((step) => step.key === path.nextStepKey) ?? null
+
+/** The topic step of a slug, to open the topic a lock message names. */
+export const topicStepBySlug = (path: LearningPath, slug: string): TopicStep | undefined =>
+  path.steps.find((step): step is TopicStep => step.kind === 'topic' && step.topic.slug === slug)
+
+/** What to show when there is no recommended step. */
+export function noNextStepText(path: LearningPath): string {
+  if (path.progress.totalTopics === 0) return 'No topics yet.'
+  if (path.progress.masteredTopics === path.progress.totalTopics) {
+    return 'Every topic is mastered. Design Exercises are coming soon.'
+  }
+  return 'Nothing to start right now.'
+}

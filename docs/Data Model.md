@@ -22,6 +22,7 @@ Local SQLite database of the app, owned by the Electron main process. Table name
 | 1 | `initial-schema` | Every table below. |
 | 2 | `notion-sources-and-question-flags` | `notions.source_sections`; `questions.flagged_at`, `flag_reason`, `replaced_by_question_id` (#7). |
 | 3 | `mastery-loop` | Table `round_limit_choices`; settings `questions_per_quiz`, `claude_cli_path` (#11). |
+| 4 | `interview-protocol` | `content_cache` rebuilt to accept the `protocol_step_lesson` kind (the `content_cache_key` of lessons, quizzes and remediation lessons are saved and restored around the rebuild); `design_exercises.problem_statement`; tables `protocol_step_submissions`, `protocol_step_drafts`, `protocol_step_encounters` (#14). |
 
 ## Diagram
 
@@ -48,6 +49,10 @@ erDiagram
   content_cache |o--o{ quizzes : ""
   design_exercises ||--o| design_scenes : "drawn in"
   design_exercises ||--o{ design_feedback : ""
+  design_exercises ||--o{ protocol_step_submissions : ""
+  protocol_step_submissions |o--o| design_feedback : "reviewed by"
+  design_exercises ||--o{ protocol_step_drafts : ""
+  design_exercises |o--o{ protocol_step_encounters : "first met in"
 
   topics {
     int id PK
@@ -140,6 +145,7 @@ erDiagram
     int position
     int grounded
     text reference_solution_section
+    text problem_statement
   }
   design_scenes {
     int id PK
@@ -153,6 +159,24 @@ erDiagram
     text protocol_step
     text content "JSON"
     int grounded
+  }
+  protocol_step_submissions {
+    int id PK
+    int design_exercise_id FK
+    text protocol_step
+    int number "unique per exercise and step"
+    text status
+    text content "JSON"
+    int design_feedback_id FK
+  }
+  protocol_step_drafts {
+    int design_exercise_id PK
+    text protocol_step PK
+    text text
+  }
+  protocol_step_encounters {
+    text protocol_step PK
+    int design_exercise_id FK
   }
   content_cache {
     text cache_key PK
@@ -197,11 +221,15 @@ Generated rows carry `grounded` and `source_sections` ([[Grounding]]) and an opt
 
 - `design_exercises`: [[Design Exercise]] catalogue in path order. A grounded exercise must have a `reference_solution_section` ([[Reference Solution]]).
 - `design_scenes`: the [[Design Canvas]] tldraw snapshot of an exercise, one per exercise, overwritten on save.
-- `design_feedback`: LLM output on a design exercise. `kind` is `step_feedback` or `hint` (both with a [[Protocol Step]]: `functional_requirements`, `estimations`, `api`, `data_model`, `high_level_design`, `non_functional_requirements`, `deep_dive`) or `final_review` (no step). See [[Hint]] and [[Interview Protocol]].
+- `design_exercises.problem_statement`: what the learner is asked to design; null falls back on the [[Reference Solution]] title.
+- `design_feedback`: LLM output on a design exercise. `kind` is `step_feedback` or `hint` (both with a [[Protocol Step]]: `functional_requirements`, `non_functional_requirements`, `estimations`, `api`, `data_model`, `high_level_design`, `deep_dive`) or `final_review` (no step). `content` is `{ submissionId, promptVersion, feedback }`, `{ level, promptVersion, hint }` (the Hint log: the next level is the count + 1, at most 3 per step and exercise) or `{ submissionIds, promptVersion, review }`. `grounded` is true when the exercise has a Reference Solution. See [[Hint]] and [[Interview Protocol Implementation]].
+- `protocol_step_submissions`: every submission of a Protocol Step. `number` counts per exercise and step (failed ones included). `status` is `pending` (Generation running), `reviewed` (with `design_feedback_id`, the step feedback) or `failed` (Generation failed or cancelled; pending rows left by an app quit become `failed` at startup). `content` is the text, or the [[Design Graph]] with its text description, the notes and `withPng` (the PNG itself is not stored).
+- `protocol_step_drafts`: the editor text of a text step, or the notes of a canvas step, one per exercise and step, overwritten on save.
+- `protocol_step_encounters`: one row per step whose [[Protocol Step Lesson]] the learner has read (once, across exercises), with the exercise where it was read.
 
 ### Generation and data
 
-- `content_cache`: [[Content Cache]]. `cache_key` is the SHA-256 of the canonical JSON of `{ kind, inputs, promptVersion }` (object keys sorted). `kind` is `lesson`, `remediation_lesson` or `quiz` (a `notion_outline` Generation is stored in `notions` instead). Storing an entry with an existing key replaces its content.
+- `content_cache`: [[Content Cache]]. `cache_key` is the SHA-256 of the canonical JSON of `{ kind, inputs, promptVersion }` (object keys sorted). `kind` is `lesson`, `remediation_lesson`, `quiz` or `protocol_step_lesson` (one per step, see [[Protocol Step Lesson]]; a `notion_outline` Generation is stored in `notions` instead). Storing an entry with an existing key replaces its content.
 - `settings`: key/value, values as JSON. Seeded with `mastery_threshold = 100` ([[Mastery Threshold]]), `round_limit = 3` ([[Round Limit]]), `questions_per_quiz = null` (automatic) and `claude_cli_path = null` (automatic lookup). Edited on the Settings screen ([[Mastery Loop Implementation#Settings]]).
 - `schema_migrations`: applied migrations.
 

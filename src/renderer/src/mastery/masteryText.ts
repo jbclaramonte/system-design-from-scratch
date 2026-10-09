@@ -3,6 +3,7 @@ import type {
   MasteryEvent,
   MasteryState,
   RemediationAngle,
+  RemediationTarget,
   TopicMastery
 } from '../../../shared/mastery'
 
@@ -62,6 +63,19 @@ export function roundPreparation(current: RoundPreparation, event: MasteryEvent)
     default:
       return current
   }
+}
+
+/**
+ * The Remediation Lesson to open first: the first one not read yet, else the first one. Null when
+ * a failed round left no missed notion (for example only free answers that could not be graded):
+ * there is nothing to read, the learner can only retry the round.
+ */
+export function firstRemediationIndex(targets: readonly RemediationTarget[]): number | null {
+  if (targets.length === 0) return null
+  return Math.max(
+    0,
+    targets.findIndex((target) => !target.ready)
+  )
 }
 
 export const preparationText: Record<'starting' | 'queued' | 'generating', string> = {

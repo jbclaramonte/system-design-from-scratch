@@ -14,17 +14,27 @@ import {
   buildQuizGeneration,
   buildRemediationLessonGeneration,
   cleanExcerptMarkdown,
+  LANGUAGE_RULES,
   findCitations,
   findNotionMarkers,
   notionMarker,
   quizRules,
   quizSchema,
+  UNGROUNDED_RULES,
   unknownCitations,
   type GroundingInput,
   type QuizContent,
   type QuizOptions,
   type TopicBrief
 } from './index'
+import {
+  buildFinalReviewGeneration,
+  buildHintGeneration,
+  buildStepFeedbackGeneration,
+  type ExerciseBrief
+} from './designFeedback'
+import { buildFreeAnswerGradingGeneration } from './freeAnswerGrading'
+import { buildProtocolStepLessonGeneration } from './protocolStepLesson'
 
 const corpus = fixtureCorpus()
 const cache: TopicBrief = { slug: 'cache', title: 'Cache', inFoundationsModule: false }
@@ -91,7 +101,8 @@ describe('lesson prompt', () => {
     expect(build.schema).toBeUndefined()
     expect(build.groundedSourceSections).toEqual(CACHE_SECTIONS)
     expect(build.prompt.system).toMatch(/Write everything the learner reads in French/)
-    expect(build.prompt.system).toMatch(/Keep system design technical terms in English/)
+    expect(build.prompt.system).toMatch(/Keep only system design jargon in English/)
+    expect(build.prompt.system).toContain('Write everyday computing words in French')
     expect(build.prompt.system).toMatch(/complete beginner/)
     expect(build.prompt.user).toContain('[source: <excerpt id>]')
     expect(build.prompt.user).toContain('Use only the facts stated in the excerpts')
@@ -168,6 +179,31 @@ describe('notion outline', () => {
     const notions = cacheOutline.notions.map((notion) => ({ ...notion, sourceSections: [] }))
     expect(foundations.schema!.safeParse({ notions }).success).toBe(true)
     expect(foundations.schema!.safeParse(cacheOutline).success).toBe(false)
+  })
+
+  it('is steered by the Foundations Module scope when given', () => {
+    const scoped = buildNotionOutlineGeneration(
+      { ...http, scope: 'request and response', leftToPrimer: 'REST versus RPC' },
+      ungrounded
+    )
+    expect(scoped.prompt.user).toContain('Scope of this topic: request and response')
+    expect(scoped.prompt.user).toContain('Leave out (taught later in grounded topics')
+    expect(scoped.prompt.user).toContain('REST versus RPC')
+    expect(scoped.input).toMatchObject({ scope: 'request and response' })
+    expect(buildNotionOutlineGeneration(http, ungrounded).prompt.user).not.toContain('Scope of')
+  })
+
+  it('keeps a grounded Foundations Module topic on its excerpts and scope', () => {
+    const grounded = buildNotionOutlineGeneration(
+      { ...http, scope: 'cache basics', leftToPrimer: 'eviction' },
+      grounding
+    )
+    expect(grounded.groundedSourceSections).toEqual(CACHE_SECTIONS)
+    expect(grounded.prompt.user).toContain('Foundations Module')
+    expect(grounded.prompt.user).toContain('Scope of this topic: cache basics')
+    expect(grounded.prompt.user).toContain('Every sub-topic listed above must appear')
+    expect(grounded.prompt.user).not.toContain('is allowed too')
+    expect(grounded.schema!.safeParse(cacheOutline).success).toBe(true)
   })
 })
 
@@ -350,9 +386,72 @@ describe('quiz prompt and schema', () => {
     expect(build.schema!.safeParse(quiz).success).toBe(true)
   })
 
+  it('keeps ungrounded answer keys conservative, and only ungrounded ones', () => {
+    const ungroundedQuiz = buildQuizGeneration(http, cacheNotions, ungrounded).prompt.user
+    const groundedQuiz = buildQuizGeneration(cache, cacheNotions, grounding).prompt.user
+    expect(ungroundedQuiz).toContain(UNGROUNDED_RULES)
+    expect(ungroundedQuiz).toContain('Never make a question depend on a precise measured number')
+    expect(groundedQuiz).not.toContain('Answer keys without excerpts')
+    expect(groundedQuiz).not.toContain(UNGROUNDED_RULES)
+  })
+
   it('includes the lesson by hash in the cache input', () => {
     const build = buildQuizGeneration(cache, cacheNotions, grounding, { lessonMarkdown: '# Leçon' })
     expect(build.prompt.user).toContain('<lesson>\n# Leçon\n</lesson>')
     expect((build.input as { lesson: string }).lesson).toMatch(/^[0-9a-f]{64}$/)
+  })
+})
+
+describe('language rule', () => {
+  const exercise: ExerciseBrief = {
+    title: 'Pastebin',
+    problemStatement: 'Design a paste service.',
+    referenceSolution: 'Reference.'
+  }
+  const text = { type: 'text' as const, text: 'Un serveur et une base de données.' }
+  const builds = {
+    notionOutline: buildNotionOutlineGeneration(cache, grounding),
+    lesson: buildLessonGeneration(cache, cacheNotions, grounding),
+    ungroundedLesson: buildLessonGeneration(http, cacheNotions, ungrounded),
+    remediationLesson: buildRemediationLessonGeneration(cache, cacheNotions[0]!, grounding, {
+      angle: 'analogy'
+    }),
+    quiz: buildQuizGeneration(cache, cacheNotions, grounding),
+    ungroundedQuiz: buildQuizGeneration(http, cacheNotions, ungrounded),
+    freeAnswerGrading: buildFreeAnswerGradingGeneration({
+      question: { prompt: 'Pourquoi un TTL ?', expectedPoints: ['Expiration.'], modelAnswer: 'M.' },
+      notions: [{ slug: 'cache-invalidation', title: 'Invalidation', description: null }],
+      answer: 'Pour expirer.'
+    }),
+    protocolStepLesson: buildProtocolStepLessonGeneration('estimations', grounding),
+    designStepFeedback: buildStepFeedbackGeneration({
+      exercise,
+      step: 'functional_requirements',
+      submission: text,
+      previousSteps: [],
+      attempt: 1
+    }),
+    designHint: buildHintGeneration({
+      exercise,
+      step: 'functional_requirements',
+      level: 1,
+      current: text,
+      previousSteps: [],
+      previousHints: []
+    }),
+    designFinalReview: buildFinalReviewGeneration({
+      exercise,
+      steps: [{ step: 'functional_requirements', submission: text }]
+    })
+  }
+
+  it.each(Object.entries(builds))('is in the %s prompt', (_, build) => {
+    expect(`${build.prompt.system}\n${build.prompt.user}`).toContain(LANGUAGE_RULES)
+  })
+
+  it('keeps jargon in English and everyday words in French, with examples', () => {
+    expect(LANGUAGE_RULES).toMatch(/load balancer, sharding, cache/)
+    expect(LANGUAGE_RULES).toMatch(/serveur, client, requête, réponse, mémoire, disque, réseau/)
+    expect(LANGUAGE_RULES).toContain('Bad: "le server renvoie une response"')
   })
 })

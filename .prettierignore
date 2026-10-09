@@ -6,3 +6,5 @@ spikes/
 docs/
 package-lock.json
 resources/corpus/
+resources/licenses.json
+resources/licenses/

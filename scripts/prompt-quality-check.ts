@@ -2,10 +2,13 @@
 // Notion Outline, lesson, quiz (based on the lesson), one remediation lesson. At most 5 CLI calls
 // (4 plus one automatic retry on invalid output), drawn on the user's Claude plan.
 //
-//   node scripts/prompt-quality-check.ts [topic-id] [output.md]
+//   node scripts/prompt-quality-check.ts [topic-id] [output.md] [--skip-remediation] [--max-calls=N]
 //
-// Defaults: topic `cache`, output `docs/samples/<topic>.md`. Writes the outputs and automatic
-// checks (citations, notion sections, quiz shape) as an Obsidian note to read and judge by hand.
+// Defaults: topic `cache`, output `docs/samples/<topic>.md`. A Foundations Module slug (for
+// example `how-the-web-works`) runs the ungrounded variants, or the grounded ones when its seed
+// declares `groundedOn` sections (`orders-of-magnitude`). `--skip-remediation` stops after the
+// quiz; `--max-calls` lowers the budget. Writes the outputs and automatic checks (citations,
+// notion sections, quiz shape) as an Obsidian note to read and judge by hand.
 import { writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -41,6 +44,9 @@ const { GenerationService } = (await load(
 const { runCli } = (await load(
   'generation/cliRunner.ts'
 )) as typeof import('../src/main/generation/cliRunner.ts')
+const { findFoundationsTopic } = (await load(
+  'content/foundations.ts'
+)) as typeof import('../src/main/content/foundations.ts')
 const pipelines = (await load(
   'generation/pipelines.ts'
 )) as typeof import('../src/main/generation/pipelines.ts')
@@ -48,22 +54,30 @@ const prompts = (await load(
   'generation/prompts/index.ts'
 )) as typeof import('../src/main/generation/prompts/index.ts')
 
-const MAX_CALLS = 5
-const topicId = process.argv[2] ?? 'cache'
-const output = resolve(process.argv[3] ?? resolve(root, 'docs/samples', `${topicId}.md`))
+const args = process.argv.slice(2)
+const positional = args.filter((arg) => !arg.startsWith('--'))
+const skipRemediation = args.includes('--skip-remediation')
+const maxCallsArg = args.find((arg) => arg.startsWith('--max-calls='))
+const MAX_CALLS = Math.min(5, Number(maxCallsArg?.split('=')[1] ?? 5))
+const topicId = positional[0] ?? 'cache'
+const output = resolve(positional[1] ?? resolve(root, 'docs/samples', `${topicId}.md`))
 
 const corpus = loadCorpus(corpusPath(root))
-const section = corpus.getTopic(topicId)
-if (!section) throw new Error(`Unknown corpus topic "${topicId}".`)
+const foundations = findFoundationsTopic(topicId)
+const ungrounded = Boolean(foundations && !foundations.groundedOn?.length)
+const section = foundations
+  ? { id: foundations.slug, title: foundations.title }
+  : corpus.getTopic(topicId)
+if (!section) throw new Error(`Unknown corpus or Foundations Module topic "${topicId}".`)
 
 const db = openDatabase(':memory:')
 migrate(db, migrations)
-const topic = createTopic(db, {
-  slug: section.id,
-  title: section.title,
-  position: 1,
-  sourceSection: section.id
-})
+const topic = createTopic(
+  db,
+  foundations
+    ? { slug: section.id, title: section.title, position: 0, inFoundationsModule: true }
+    : { slug: section.id, title: section.title, position: 1, sourceSection: section.id }
+)
 
 let calls = 0
 const timings: string[] = []
@@ -99,15 +113,19 @@ try {
   // Remediation on the notion of the first scenario question (else the first tagged notion).
   const missed = quiz.questions.find((q) => q.type === 'scenario') ?? quiz.questions[0]!
   const notion = notions.find((n) => n.slug === missed.notions[0])!
-  console.log(`4/4 remediation lesson on ${notion.slug}`)
-  const remediationRun = service.generate(
-    pipelines.prepareRemediationLesson(deps, notion.id, {
-      angle: 'analogy',
-      missedQuestionPrompts: [missed.prompt]
-    })
-  )
-  const remediation = (await remediationRun.result).content
-  const remediationSources = (await remediationRun.result).sourceSections
+  let remediation = ''
+  let remediationSources: string[] = []
+  if (!skipRemediation) {
+    console.log(`4/4 remediation lesson on ${notion.slug}`)
+    const remediationRun = service.generate(
+      pipelines.prepareRemediationLesson(deps, notion.id, {
+        angle: 'analogy',
+        missedQuestionPrompts: [missed.prompt]
+      })
+    )
+    remediation = (await remediationRun.result).content
+    remediationSources = (await remediationRun.result).sourceSections
+  }
 
   const markers = prompts.findNotionMarkers(lesson)
   const checks = [
@@ -117,8 +135,13 @@ try {
     `Lesson words: ${lesson.split(/\s+/).length}`,
     `Quiz types: ${quiz.questions.map((q) => q.type).join(', ')}`,
     `Quiz notions covered: ${[...new Set(quiz.questions.flatMap((q) => q.notions))].length}/${notions.length}`,
-    `Remediation citations unknown: ${JSON.stringify(prompts.unknownCitations(remediation, remediationSources))}`,
-    `Remediation words: ${remediation.split(/\s+/).length}`,
+    `Grounded: ${!ungrounded} (lesson sources: ${lessonSources.length})`,
+    ...(skipRemediation
+      ? ['Remediation: skipped']
+      : [
+          `Remediation citations unknown: ${JSON.stringify(prompts.unknownCitations(remediation, remediationSources))}`,
+          `Remediation words: ${remediation.split(/\s+/).length}`
+        ]),
     `CLI calls: ${calls}`,
     ...timings
   ]
@@ -140,12 +163,12 @@ tags: [sample, prompts]
 topic: ${section.id}
 generated: ${new Date().toISOString().slice(0, 10)}
 prompt-versions: [${prompts.NOTION_OUTLINE_PROMPT_VERSION}, ${prompts.LESSON_PROMPT_VERSION}, ${prompts.QUIZ_PROMPT_VERSION}, ${prompts.REMEDIATION_LESSON_PROMPT_VERSION}]
-corpus-commit: ${corpus.data.metadata.commitSha}
+${ungrounded ? 'grounded: false' : `corpus-commit: ${corpus.data.metadata.commitSha}`}
 ---
 
 # Sample content for ${section.title}
 
-Raw output of \`scripts/prompt-quality-check.ts\` (real CLI, \`--model sonnet --effort low\`). See [[Prompts]] for the review. Primer excerpts: ${corpus.data.metadata.attribution}
+Raw output of \`scripts/prompt-quality-check.ts\` (real CLI, \`--model sonnet --effort low\`). ${ungrounded ? 'Foundations Module topic: ungrounded, no primer excerpt. See [[Foundations Module Content]] for the review.' : `See [[Prompts]] for the review. Primer excerpts: ${corpus.data.metadata.attribution}`}
 
 > [!info] Automatic checks
 ${checks.map((check) => `> - ${check}`).join('\n')}
@@ -164,10 +187,14 @@ ${lesson.replace(/^(#+) /gm, '$1## ')}
 
 ${quizMarkdown}
 
-## Remediation Lesson (\`${notion.slug}\`, angle: analogy)
+${
+  skipRemediation
+    ? ''
+    : `## Remediation Lesson (\`${notion.slug}\`, angle: analogy)
 
 ${remediation.replace(/^(#+) /gm, '$1## ')}
 `
+}`
   writeFileSync(output, note)
   console.log(`Wrote ${output}\n${checks.join('\n')}`)
 } finally {

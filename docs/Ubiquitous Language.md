@@ -19,7 +19,7 @@ Single source of truth for domain terms. Use these exact terms in code, schema, 
 | [[Notion Outline]] | The ordered list of notions of a topic, generated once from its sub-topics and then fixed. | notion list, syllabus, tag list |
 | [[Lesson]] | Generated text course on a topic. | course, article |
 | [[Remediation Lesson]] | Short generated lesson on one missed notion, from a different angle than the original lesson. | recap, targeted course, mini-course |
-| [[Foundations Module]] | Prerequisite topics outside the primer (HTTP, DNS, basic databases), generated ungrounded. | module 0, basics |
+| [[Foundations Module]] | Prerequisite topics the primer assumes but does not teach (how the web works, networking basics, data storage basics...), generated ungrounded unless grounded on primer sections that are not a topic (orders of magnitude on the appendix). | module 0, basics |
 | [[Learning Path]] | The linear, unlockable sequence: foundations, topics, design exercises. | curriculum, roadmap (roadmap is the Gantt) |
 
 ## Assessment
@@ -43,6 +43,7 @@ Single source of truth for domain terms. Use these exact terms in code, schema, 
 | [[Design Exercise]] | A hands-on system design problem solved on the canvas (for example URL shortener). | project, case study, lab |
 | [[Interview Protocol]] | The sequence of interview steps (functional requirements, estimations, API, data model, high-level, non-functional requirements, deep dive). | framework, checklist |
 | [[Protocol Step]] | One step of the interview protocol, unlocked progressively with a "why it matters" lesson. | phase, stage |
+| [[Protocol Step Lesson]] | The short generated "why it matters" lesson shown the first time the learner meets a protocol step. | step intro, tutorial |
 | [[Hint]] | Graded, spoiler-free help on a protocol step. | tip, clue |
 | [[Reference Solution]] | The primer's solution for a design exercise, used for the final comparison. | model answer, answer key |
 | [[Design Scene]] | Saved state of a design canvas for one exercise (tldraw snapshot). | drawing, board |

@@ -8,6 +8,8 @@ export interface FakeCliCall {
   cwd: string
   cwdEntries: string[]
   stdin: string
+  /** Image blocks of a stream-json input. */
+  images: number
   pid: number
 }
 

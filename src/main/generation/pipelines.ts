@@ -1,6 +1,7 @@
 // Content pipelines: load what a prompt needs from the database and the Source Corpus, build the
 // Generation request, and persist what must be persisted (Notion Outline, quizzes, replaced
 // questions). Callers choose how to run a request: `service.generate` or `service.pregenerate`.
+import { findFoundationsTopic, foundationsGroundedOn } from '../content/foundations'
 import type { Corpus } from '../corpus'
 import type { Database } from '../db'
 import {
@@ -57,15 +58,24 @@ function requireTopic(db: Database, topicId: number): Topic {
   return topic
 }
 
-const topicBrief = (topic: Topic): TopicBrief => ({
-  slug: topic.slug,
-  title: topic.title,
-  inFoundationsModule: topic.inFoundationsModule
-})
+function topicBrief(topic: Topic): TopicBrief {
+  const brief = { slug: topic.slug, title: topic.title, inFoundationsModule: false }
+  if (!topic.inFoundationsModule) return brief
+  const seed = findFoundationsTopic(topic.slug)
+  return {
+    ...brief,
+    inFoundationsModule: true,
+    scope: seed?.scope,
+    leftToPrimer: seed?.leftToPrimer
+  }
+}
 
-/** The topic's section and its sub-topics; none in the Foundations Module (ungrounded). */
+/**
+ * The topic's section and its sub-topics. A Foundations Module topic gets exactly the sections
+ * its seed declares (`groundedOn`), or none (ungrounded).
+ */
 export function topicGrounding(corpus: Corpus, topic: Topic): GroundingInput {
-  if (topic.inFoundationsModule) return { excerpts: [], corpusVersion: UNGROUNDED }
+  if (topic.inFoundationsModule) return foundationsGrounding(corpus, topic)
   if (!topic.sourceSection || !corpus.getSection(topic.sourceSection)) {
     throw new Error(`Topic ${topic.slug} has no Source Corpus section to be grounded on.`)
   }
@@ -75,16 +85,31 @@ export function topicGrounding(corpus: Corpus, topic: Topic): GroundingInput {
   }
 }
 
-/** Exactly the sections a notion was outlined from (a topic id does not pull its sub-topics). */
-export function notionGrounding(corpus: Corpus, notion: NotionBrief): GroundingInput {
-  if (notion.sourceSections.length === 0) return { excerpts: [], corpusVersion: UNGROUNDED }
-  const ids = new Set(notion.sourceSections)
+function foundationsGrounding(corpus: Corpus, topic: Topic): GroundingInput {
+  const ids = foundationsGroundedOn(topic.slug)
+  if (ids.length === 0) return { excerpts: [], corpusVersion: UNGROUNDED }
+  const missing = ids.filter((id) => !corpus.getSection(id))
+  if (missing.length > 0) {
+    throw new Error(`Topic ${topic.slug} is grounded on unknown sections: ${missing.join(', ')}.`)
+  }
+  return exactGrounding(corpus, ids)
+}
+
+/** Exactly the given sections (a topic id does not pull its sub-topics). */
+function exactGrounding(corpus: Corpus, sectionIds: readonly string[]): GroundingInput {
+  const ids = new Set(sectionIds)
   return {
     excerpts: corpus
       .findExcerpts({ sectionIds: [...ids], limit: MAX_EXCERPTS })
       .filter((excerpt) => ids.has(excerpt.sectionId)),
     corpusVersion: corpus.data.metadata.commitSha
   }
+}
+
+/** Exactly the sections a notion was outlined from (a topic id does not pull its sub-topics). */
+export function notionGrounding(corpus: Corpus, notion: NotionBrief): GroundingInput {
+  if (notion.sourceSections.length === 0) return { excerpts: [], corpusVersion: UNGROUNDED }
+  return exactGrounding(corpus, notion.sourceSections)
 }
 
 const toRequest = <T extends Json>(

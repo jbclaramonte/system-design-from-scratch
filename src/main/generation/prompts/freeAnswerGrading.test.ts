@@ -66,12 +66,12 @@ describe('buildFreeAnswerGradingGeneration', () => {
     expect(prompt.user).toContain('Invalidation du cache (`cache-invalidation`)')
   })
 
-  it('asks for French feedback addressed as "tu", technical terms in English', () => {
+  it('asks for French feedback addressed as "tu", system design jargon in English', () => {
     const { prompt } = buildFreeAnswerGradingGeneration(request)
 
     expect(prompt.system).toContain('in French')
     expect(prompt.system).toContain('addressing the learner as "tu"')
-    expect(prompt.system).toContain('Keep system design technical terms in English')
+    expect(prompt.system).toContain('Keep only system design jargon in English')
   })
 
   it('adds the first grading and the delimited justification for a contest', () => {

@@ -1,21 +1,93 @@
 import { useEffect, useState } from 'react'
 import type { PingResponse } from '../../shared/ipc'
+import type { TopicMasterySummary } from '../../shared/mastery'
+import { AboutScreen } from './about/AboutScreen'
+import './app.css'
+import { ProtocolDevScreen } from './design/protocol/ProtocolDevScreen'
 import { DesignCanvasDevScreen } from './dev/DesignCanvasDevScreen'
 import { GenerationDevPanel } from './dev/GenerationDevPanel'
 import { LessonView } from './lesson/LessonView'
 import { MasteryView } from './mastery/MasteryView'
+import { LearningPathScreen } from './path/LearningPathScreen'
+import { PathTopicView } from './path/PathTopicView'
 import { QuizScreen } from './quiz/QuizScreen'
 import { SettingsScreen } from './settings/SettingsScreen'
+
+/**
+ * The screens of the app. The Learning Path (`home`) is the main screen; every other screen
+ * returns to it. To add a screen: add it here, render it in `App`, open it from the header nav.
+ */
+type Screen =
+  | { name: 'home' }
+  | { name: 'topic'; topic: TopicMasterySummary }
+  | { name: 'settings' }
+  | { name: 'about' }
+  // Dev builds only:
+  | { name: 'dev-topics' }
+  | { name: 'dev-lessons' }
+  | { name: 'dev-quiz' }
+  | { name: 'dev-design-canvas' }
+  | { name: 'dev-design-exercise' }
+
+/** Dev-only tools, in a compact section under the Learning Path. */
+function DevSection({
+  open,
+  version,
+  ping,
+  error
+}: {
+  open: (screen: Screen) => void
+  version: string | null
+  ping: PingResponse | null
+  error: string | null
+}) {
+  return (
+    <section className="app-dev" aria-label="Developer tools">
+      <details>
+        <summary>Developer tools</summary>
+        <div className="app-dev-tools">
+          <button data-testid="open-topics-dev" onClick={() => open({ name: 'dev-topics' })}>
+            All topics (dev)
+          </button>
+          <button data-testid="open-lessons" onClick={() => open({ name: 'dev-lessons' })}>
+            Lessons (dev)
+          </button>
+          <button data-testid="open-quiz" onClick={() => open({ name: 'dev-quiz' })}>
+            Quiz (dev)
+          </button>
+          <button
+            data-testid="open-design-canvas-dev"
+            onClick={() => open({ name: 'dev-design-canvas' })}
+          >
+            Design canvas (dev)
+          </button>
+          <button
+            data-testid="open-design-exercise-dev"
+            onClick={() => open({ name: 'dev-design-exercise' })}
+          >
+            Design exercise (dev)
+          </button>
+        </div>
+        {error ? (
+          <p role="alert">IPC error: {error}</p>
+        ) : (
+          <p data-testid="ping">
+            Version {version ?? '...'} · ping {ping ? `${ping.reply} (${ping.receivedAt})` : '...'}
+          </p>
+        )}
+        <GenerationDevPanel />
+      </details>
+    </section>
+  )
+}
 
 export function App() {
   const [version, setVersion] = useState<string | null>(null)
   const [ping, setPing] = useState<PingResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [designCanvasOpen, setDesignCanvasOpen] = useState(false)
-  const [quizOpen, setQuizOpen] = useState(false)
-  const [lessonsOpen, setLessonsOpen] = useState(false)
-  const [learnOpen, setLearnOpen] = useState(false)
-  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [screen, setScreen] = useState<Screen>({ name: 'home' })
+  const home = () => setScreen({ name: 'home' })
+  const openTopic = (topic: TopicMasterySummary) => setScreen({ name: 'topic', topic })
 
   useEffect(() => {
     Promise.all([window.api.getAppVersion(), window.api.ping({ message: 'hello' })])
@@ -26,67 +98,57 @@ export function App() {
       .catch((reason: unknown) => setError(String(reason)))
   }, [])
 
-  if (import.meta.env.DEV && designCanvasOpen) {
-    return <DesignCanvasDevScreen onClose={() => setDesignCanvasOpen(false)} />
-  }
-
-  if (learnOpen) {
-    return <MasteryView onClose={() => setLearnOpen(false)} />
-  }
-
-  if (settingsOpen) {
-    return <SettingsScreen onClose={() => setSettingsOpen(false)} />
-  }
-
-  if (import.meta.env.DEV && quizOpen) {
-    return <QuizScreen onClose={() => setQuizOpen(false)} />
-  }
-
-  if (import.meta.env.DEV && lessonsOpen) {
-    return <LessonView onClose={() => setLessonsOpen(false)} />
+  switch (screen.name) {
+    case 'topic':
+      return (
+        <PathTopicView
+          key={screen.topic.id}
+          topic={screen.topic}
+          onBack={home}
+          onOpenTopic={openTopic}
+        />
+      )
+    case 'settings':
+      return <SettingsScreen onClose={home} />
+    case 'about':
+      return <AboutScreen onClose={home} />
+    case 'dev-topics':
+      if (import.meta.env.DEV) return <MasteryView onClose={home} />
+      break
+    case 'dev-lessons':
+      if (import.meta.env.DEV) return <LessonView onClose={home} />
+      break
+    case 'dev-quiz':
+      if (import.meta.env.DEV) return <QuizScreen onClose={home} />
+      break
+    case 'dev-design-canvas':
+      if (import.meta.env.DEV) return <DesignCanvasDevScreen onClose={home} />
+      break
+    case 'dev-design-exercise':
+      if (import.meta.env.DEV) return <ProtocolDevScreen onClose={home} />
+      break
   }
 
   return (
-    <main>
-      <h1>System Design from Scratch</h1>
-      {error ? (
-        <p role="alert">IPC error: {error}</p>
-      ) : (
-        <dl>
-          <dt>App version</dt>
-          <dd data-testid="app-version">{version ?? '...'}</dd>
-          <dt>Ping</dt>
-          <dd data-testid="ping">{ping ? `${ping.reply} (${ping.receivedAt})` : '...'}</dd>
-        </dl>
-      )}
-      <p>
-        <button data-testid="open-learn" onClick={() => setLearnOpen(true)}>
-          Learn
-        </button>
-      </p>
-      <p>
-        <button data-testid="open-settings" onClick={() => setSettingsOpen(true)}>
-          Settings
-        </button>
-      </p>
-      {import.meta.env.DEV && (
-        <p>
-          <button data-testid="open-lessons" onClick={() => setLessonsOpen(true)}>
-            Lessons (dev)
-          </button>{' '}
-          <button data-testid="open-quiz" onClick={() => setQuizOpen(true)}>
-            Quiz (dev)
+    <main className="app-home">
+      <header className="app-header">
+        <h1>System Design from Scratch</h1>
+        <nav aria-label="App">
+          <button data-testid="open-settings" onClick={() => setScreen({ name: 'settings' })}>
+            Settings
           </button>
-        </p>
-      )}
-      {import.meta.env.DEV && (
-        <p>
-          <button data-testid="open-design-canvas-dev" onClick={() => setDesignCanvasOpen(true)}>
-            Design canvas (dev)
+          <button data-testid="open-about" onClick={() => setScreen({ name: 'about' })}>
+            About
           </button>
-        </p>
+        </nav>
+      </header>
+      <LearningPathScreen onOpenTopic={openTopic} />
+      {import.meta.env.DEV && (
+        <DevSection open={setScreen} version={version} ping={ping} error={error} />
       )}
-      {import.meta.env.DEV && <GenerationDevPanel />}
+      <footer className="app-footer" data-testid="app-version">
+        Version {version ?? '...'}
+      </footer>
     </main>
   )
 }

@@ -1,12 +1,15 @@
 import { join } from 'node:path'
 import { app, BrowserWindow, ipcMain, session, shell } from 'electron'
-import { createLessonIpc, seedTopics } from './content'
+import { createAboutIpc, licensesPath } from './about'
+import { createLessonIpc, FOUNDATIONS_TOPICS, seedTopics } from './content'
 import { corpusPath, loadCorpus } from './corpus'
 import { openAppDatabase, type Database } from './db'
 import { createGenerationIpc, GenerationService } from './generation'
 import { createDesignIpc } from './ipc/design'
 import { createHandlers } from './ipc/handlers'
 import { createMasteryIpc, createMasteryService } from './mastery'
+import { createLearningPathIpc, createTopicLockGuard } from './path'
+import { createProtocolIpc, createProtocolService } from './protocol'
 import { createSettingsIpc } from './settings/settingsIpc'
 import { getSettings } from './db/repositories/settings'
 import { resolveCliPath } from './generation/resolveCli'
@@ -82,8 +85,7 @@ void app.whenReady().then(() => {
   })
   const generationService = generation
   const corpus = loadCorpus(corpusPath(app.getAppPath()))
-  // Primer topics only for now: the Foundations Module topics are not defined yet.
-  const seeded = seedTopics(db, corpus)
+  const seeded = seedTopics(db, corpus, FOUNDATIONS_TOPICS)
   if (seeded > 0) console.log(`Seeded ${seeded} topics from the Source Corpus`)
 
   session.defaultSession.setPermissionRequestHandler((_contents, _permission, callback) =>
@@ -93,17 +95,35 @@ void app.whenReady().then(() => {
     freeAnswerGrader: createFreeAnswerGrader(generation)
   })
   const masteryDeps = { db, corpus, service: generation }
+  // Dev builds may open any topic (dev screens); a packaged app enforces the Learning Path lock.
+  const assertTopicUnlocked = createTopicLockGuard(
+    { db, corpus },
+    { allowLockedTopics: !app.isPackaged }
+  )
   registerHandlers(
     ipcMain,
     createHandlers({
+      about: createAboutIpc({
+        appVersion: app.getVersion(),
+        metadata: corpus.data.metadata,
+        licensesPath: licensesPath(app.getAppPath())
+      }),
       generation: createGenerationIpc(generation),
       design: createDesignIpc(db, { allowScratch: !app.isPackaged }),
-      lesson: createLessonIpc({ db, corpus, service: generation }),
-      quiz: createQuizIpc(db, quizService, { allowDevFixture: !app.isPackaged }),
+      lesson: createLessonIpc({ db, corpus, service: generation }, { assertTopicUnlocked }),
+      quiz: createQuizIpc(db, quizService, {
+        allowDevFixture: !app.isPackaged,
+        assertTopicUnlocked
+      }),
       mastery: createMasteryIpc(
         masteryDeps,
-        createMasteryService({ ...masteryDeps, quiz: quizService })
+        createMasteryService({ ...masteryDeps, quiz: quizService }),
+        { assertTopicUnlocked }
       ),
+      path: createLearningPathIpc({ db, corpus }),
+      protocol: createProtocolIpc(masteryDeps, createProtocolService(masteryDeps), {
+        allowDevFixture: !app.isPackaged
+      }),
       settings: createSettingsIpc(db, {
         onCliPathChange: () => generationService.resetCliPath(),
         fallbackCliPath: envCliPath

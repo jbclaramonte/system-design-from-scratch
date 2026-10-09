@@ -1,6 +1,7 @@
 // Topic bootstrap: seeds the `topics` table from the Source Corpus at startup, and the Topic
 // read models sent to the renderer.
 import type { Corpus } from '../corpus'
+import { foundationsGroundedOn } from './foundations'
 import type { Database } from '../db'
 import {
   createTopic,
@@ -14,12 +15,22 @@ import type { NotionRef, TopicDetail, TopicSummary } from '../../shared/topic'
 /** A Foundations Module topic: outside the primer, so not in the corpus. */
 export interface FoundationsTopicSeed {
   slug: string
+  /** French. */
   title: string
+  /** What the topic covers, for its Notion Outline (English, prompt text). */
+  scope?: string
+  /** What it leaves to the grounded primer topics (English, prompt text). */
+  leftToPrimer?: string
+  /**
+   * Source Corpus section ids the topic is grounded on (exact sections, a topic id does not pull
+   * its sub-topics). Absent or empty: the topic is generated ungrounded.
+   */
+  groundedOn?: readonly string[]
 }
 
 /**
- * Foundations Module topics come first in the Learning Path; primer topics start at this
- * position, so foundations can be added later without moving them.
+ * Foundations Module topics come first in the Learning Path (positions 0 to 999); primer topics
+ * start at this position, so foundations can be added later without moving them.
  */
 export const CORPUS_TOPIC_POSITION_OFFSET = 1000
 
@@ -64,7 +75,12 @@ export function seedTopics(
     let created = 0
     foundations.forEach((seed, index) => {
       if (existing.has(seed.slug)) return
-      createTopic(db, { ...seed, position: index, inFoundationsModule: true })
+      createTopic(db, {
+        slug: seed.slug,
+        title: seed.title,
+        position: index,
+        inFoundationsModule: true
+      })
       created++
     })
     corpusTopics.forEach((topic, index) => {
@@ -95,6 +111,7 @@ function toSummary(topic: Topic, notionCount: number): TopicSummary {
     title: topic.title,
     position: topic.position,
     inFoundationsModule: topic.inFoundationsModule,
+    grounded: !topic.inFoundationsModule || foundationsGroundedOn(topic.slug).length > 0,
     notionCount
   }
 }

@@ -29,12 +29,23 @@ export const DEFAULT_KILL_GRACE_MS = 3_000
 /** The CLI exits about 0.45 s after its `result` event; kill it if it lingers longer than this. */
 const LINGER_AFTER_RESULT_MS = 5_000
 
+/** An image content block (base64, no `data:` prefix). */
+export interface CliImage {
+  mediaType: 'image/png'
+  base64: string
+}
+
 export interface CliCallOptions {
   /** Absolute path of the `claude` binary (see resolveCliPath). */
   bin: string
   /** Sent on stdin, so there is no argv size limit for big grounding excerpts. */
   prompt: string
   systemPrompt: string
+  /**
+   * Images sent with the prompt. The prompt then goes on stdin as one stream-json user message
+   * (`--input-format stream-json`): image blocks first, then the text.
+   */
+  images?: CliImage[]
   model?: string
   /** `--effort` level; null omits the flag. */
   effort?: string | null
@@ -64,7 +75,21 @@ export function buildCliArgs(options: CliCallOptions): string[] {
   if (effort) args.push('--effort', effort)
   args.push('--system-prompt', options.systemPrompt)
   if (options.jsonSchema) args.push('--json-schema', JSON.stringify(options.jsonSchema))
+  if (options.images?.length) args.push('--input-format', 'stream-json')
   return args
+}
+
+/** What goes on stdin: the prompt text, or one stream-json user message when images are sent. */
+export function buildCliInput(options: Pick<CliCallOptions, 'prompt' | 'images'>): string {
+  if (!options.images?.length) return options.prompt
+  const content = [
+    ...options.images.map((image) => ({
+      type: 'image',
+      source: { type: 'base64', media_type: image.mediaType, data: image.base64 }
+    })),
+    { type: 'text', text: options.prompt }
+  ]
+  return `${JSON.stringify({ type: 'user', message: { role: 'user', content } })}\n`
 }
 
 function spawnFailure(error: NodeJS.ErrnoException, bin: string): GenerationError {
@@ -177,7 +202,7 @@ export function runCli(options: CliCallOptions): Promise<CliResult> {
       stderr += chunk
     })
     child.stdin!.on('error', () => {})
-    child.stdin!.end(options.prompt)
+    child.stdin!.end(buildCliInput(options))
 
     child.on('error', (error: NodeJS.ErrnoException) => {
       failure ??= spawnFailure(error, options.bin)

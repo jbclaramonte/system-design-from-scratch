@@ -16,8 +16,12 @@ export interface TopicSummary {
   slug: string
   title: string
   position: number
-  /** Foundations Module topics are generated ungrounded (outside the primer). */
   inFoundationsModule: boolean
+  /**
+   * Generated from primer excerpts. False for a Foundations Module topic that declares no
+   * grounding sections (ungrounded, shown "Outside the primer").
+   */
+  grounded: boolean
   /** Number of notions of its Notion Outline, 0 while the outline is not generated. */
   notionCount: number
 }

@@ -9,6 +9,7 @@ import {
   lessonReducer,
   type LessonState
 } from './lessonState'
+import { OutsidePrimerBadge } from './OutsidePrimerBadge'
 import { createTextBuffer, isNearBottom } from './textBuffer'
 
 /**
@@ -82,7 +83,7 @@ export function LessonScreen({
   const followRef = useRef(true)
   const running = isLessonRunning(state.status)
   const status = statusText(state)
-  const grounded = state.grounded ?? !topic.inFoundationsModule
+  const grounded = state.grounded ?? topic.grounded
 
   const done = state.status === 'done'
   useEffect(() => {
@@ -115,13 +116,7 @@ export function LessonScreen({
               System Design Primer
             </span>
           ) : (
-            <span
-              className="lesson-badge lesson-badge-ungrounded"
-              data-testid="lesson-ungrounded"
-              title="Foundations Module: generated from general knowledge, not checked against the primer"
-            >
-              Outside the primer
-            </span>
+            <OutsidePrimerBadge testId="lesson-ungrounded" />
           )}
           {state.status === 'done' && (
             <span className="lesson-badge" data-testid="lesson-origin">

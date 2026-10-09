@@ -5,6 +5,7 @@ import { lessonSources, toErrorInfo } from '../content/lessonIpc'
 import { toNotionRef } from '../content/topics'
 import type { GenerationClient } from '../generation/ipc'
 import { sendEvent } from '../ipc/sendEvent'
+import type { TopicLockGuard } from '../path/lock'
 import {
   roundLimitChoices,
   type MasteryCancelRequest,
@@ -38,11 +39,14 @@ export interface MasteryIpc {
 
 /**
  * Bridges the `mastery:*` channels to the Mastery Loop service. Events go out on
- * `mastery:event`, tagged with the request id; runs of a closed window are cancelled.
+ * `mastery:event`, tagged with the request id; runs of a closed window are cancelled. A Round or
+ * a Remediation Lesson of a topic locked on the Learning Path ends with a `topic_locked` error
+ * (`assertTopicUnlocked`, see `createTopicLockGuard`).
  */
 export function createMasteryIpc(
   deps: Pick<MasteryServiceDeps, 'db' | 'corpus' | 'service'>,
-  mastery: MasteryService
+  mastery: MasteryService,
+  { assertTopicUnlocked }: { assertTopicUnlocked: TopicLockGuard }
 ): MasteryIpc {
   const runs = new Map<string, AbortController>()
 
@@ -76,6 +80,7 @@ export function createMasteryIpc(
       const { requestId: rid, topicId } = startRoundRequest.parse(request)
       mastery.getState(topicId)
       launch(rid, client, async (signal, send) => {
+        assertTopicUnlocked(topicId)
         const start = await mastery.startRound(topicId, { signal, onEvent: send })
         send({ type: 'round_ready', start })
       })
@@ -85,6 +90,7 @@ export function createMasteryIpc(
       const { requestId: rid, topicId, notionId } = remediationRequest.parse(request)
       mastery.getState(topicId)
       launch(rid, client, async (signal, send) => {
+        assertTopicUnlocked(topicId)
         const run = mastery.prepareRemediation(topicId, notionId, { signal })
         send({
           type: 'prepared',

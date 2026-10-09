@@ -6,7 +6,9 @@ import { QuizPlayer } from './QuizPlayer'
 import { QuizResults } from './QuizResults'
 
 type Step =
-  { name: 'pick' } | { name: 'play'; start: RoundStart } | { name: 'results'; result: RoundResult }
+  | { name: 'pick' }
+  | { name: 'play'; start: RoundStart }
+  | { name: 'results'; result: RoundResult; grounded: boolean }
 
 /** Quiz flow: pick a quiz, play it as a Round, see the results. */
 export function QuizScreen({ onClose }: { onClose: () => void }) {
@@ -41,10 +43,14 @@ export function QuizScreen({ onClose }: { onClose: () => void }) {
         <QuizPlayer
           key={step.start.round.id}
           start={step.start}
-          onCompleted={(result) => setStep({ name: 'results', result })}
+          onCompleted={(result) =>
+            setStep({ name: 'results', result, grounded: step.start.quiz.grounded })
+          }
         />
       )}
-      {step.name === 'results' && <QuizResults result={step.result} />}
+      {step.name === 'results' && (
+        <QuizResults result={step.result} outsidePrimer={!step.grounded} />
+      )}
     </main>
   )
 }

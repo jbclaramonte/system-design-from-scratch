@@ -3,6 +3,7 @@
 import type { Json } from '../../shared/json'
 import type { RoundLimitChoice } from '../../shared/mastery'
 import type { AppSettings } from '../../shared/settings'
+import { protocolSteps, type ProtocolStep, type SubmissionStatus } from '../../shared/protocol'
 import { questionTypes, type AttemptResult, type QuestionType } from '../../shared/quiz'
 
 export type { Json }
@@ -110,6 +111,8 @@ export interface DesignExercise extends Timestamps {
   position: number
   grounded: boolean
   referenceSolutionSection: string | null
+  /** What the learner is asked to design (null: the Reference Solution title is used). */
+  problemStatement: string | null
 }
 
 export interface DesignScene extends Timestamps {
@@ -119,16 +122,8 @@ export interface DesignScene extends Timestamps {
   snapshot: Json
 }
 
-export const protocolSteps = [
-  'functional_requirements',
-  'estimations',
-  'api',
-  'data_model',
-  'high_level_design',
-  'non_functional_requirements',
-  'deep_dive'
-] as const
-export type ProtocolStep = (typeof protocolSteps)[number]
+export { protocolSteps }
+export type { ProtocolStep }
 
 export type DesignFeedbackKind = 'step_feedback' | 'hint' | 'final_review'
 
@@ -142,7 +137,36 @@ export interface DesignFeedback extends Timestamps {
   grounded: boolean
 }
 
-export type ContentCacheKind = 'lesson' | 'remediation_lesson' | 'quiz'
+export type { SubmissionStatus }
+
+/** One submission of a Protocol Step (`content` is a `StoredSubmission`). */
+export interface ProtocolStepSubmission extends Timestamps {
+  id: number
+  designExerciseId: number
+  protocolStep: ProtocolStep
+  /** 1, 2... per exercise and step. */
+  number: number
+  status: SubmissionStatus
+  content: Json
+  /** The step feedback, once reviewed. */
+  designFeedbackId: number | null
+}
+
+/** Saved editor text of a step (text steps) or its notes (canvas steps). */
+export interface ProtocolStepDraft extends Timestamps {
+  designExerciseId: number
+  protocolStep: ProtocolStep
+  text: string
+}
+
+/** The learner has read the Protocol Step Lesson of a step (once, ever). */
+export interface ProtocolStepEncounter extends Timestamps {
+  protocolStep: ProtocolStep
+  /** The exercise where the lesson was read; null if that exercise was deleted. */
+  designExerciseId: number | null
+}
+
+export type ContentCacheKind = 'lesson' | 'remediation_lesson' | 'quiz' | 'protocol_step_lesson'
 
 export interface ContentCacheEntry extends Timestamps, Grounded {
   cacheKey: string
