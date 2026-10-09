@@ -1,9 +1,13 @@
 import { join } from 'node:path'
 import { app, BrowserWindow, ipcMain, session, shell } from 'electron'
+import { createLessonIpc, seedTopics } from './content'
+import { corpusPath, loadCorpus } from './corpus'
 import { openAppDatabase, type Database } from './db'
 import { createGenerationIpc, GenerationService } from './generation'
 import { createDesignIpc } from './ipc/design'
 import { createHandlers } from './ipc/handlers'
+import { createQuizIpc } from './ipc/quiz'
+import { createQuizService } from './quiz/service'
 import { registerHandlers } from './ipc/registerHandlers'
 import { isExternalWebUrl } from './security'
 
@@ -64,6 +68,10 @@ void app.whenReady().then(() => {
   console.log(`Database ready at schema version ${opened.schemaVersion}`)
   // CLAUDE_CLI_PATH overrides the automatic lookup until the settings screen exposes it.
   generation = new GenerationService({ db, cli: { path: process.env['CLAUDE_CLI_PATH'] } })
+  const corpus = loadCorpus(corpusPath(app.getAppPath()))
+  // Primer topics only for now: the Foundations Module topics are not defined yet.
+  const seeded = seedTopics(db, corpus)
+  if (seeded > 0) console.log(`Seeded ${seeded} topics from the Source Corpus`)
 
   session.defaultSession.setPermissionRequestHandler((_contents, _permission, callback) =>
     callback(false)
@@ -72,7 +80,9 @@ void app.whenReady().then(() => {
     ipcMain,
     createHandlers({
       generation: createGenerationIpc(generation),
-      design: createDesignIpc(db, { allowScratch: !app.isPackaged })
+      design: createDesignIpc(db, { allowScratch: !app.isPackaged }),
+      lesson: createLessonIpc({ db, corpus, service: generation }),
+      quiz: createQuizIpc(db, createQuizService(db), { allowDevFixture: !app.isPackaged })
     })
   )
   createMainWindow()

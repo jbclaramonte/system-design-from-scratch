@@ -48,6 +48,8 @@ Single source of truth for domain terms. Use these exact terms in code, schema, 
 | [[Design Scene]] | Saved state of a design canvas for one exercise (tldraw snapshot). | drawing, board |
 | [[Design Feedback]] | LLM assessment of a design, per protocol step and as a final review. | review comment, critique |
 | [[Design Canvas]] | The tldraw whiteboard with typed shapes where the user draws the design. | whiteboard, diagram editor |
+| [[Design Graph]] | Structured export of a design scene: nodes (typed components), edges (bound arrows), annotations, dangling arrows, groups. What the LLM reads. | diagram JSON, scene graph |
+| [[Design Export]] | What one design scene hands to the evaluation: its design graph, a text description of it and a PNG capture. | snapshot (that is the design scene), dump |
 
 ## Generation and data
 

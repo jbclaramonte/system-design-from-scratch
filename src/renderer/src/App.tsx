@@ -2,12 +2,16 @@ import { useEffect, useState } from 'react'
 import type { PingResponse } from '../../shared/ipc'
 import { DesignCanvasDevScreen } from './dev/DesignCanvasDevScreen'
 import { GenerationDevPanel } from './dev/GenerationDevPanel'
+import { LessonView } from './lesson/LessonView'
+import { QuizScreen } from './quiz/QuizScreen'
 
 export function App() {
   const [version, setVersion] = useState<string | null>(null)
   const [ping, setPing] = useState<PingResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [designCanvasOpen, setDesignCanvasOpen] = useState(false)
+  const [quizOpen, setQuizOpen] = useState(false)
+  const [lessonsOpen, setLessonsOpen] = useState(false)
 
   useEffect(() => {
     Promise.all([window.api.getAppVersion(), window.api.ping({ message: 'hello' })])
@@ -20,6 +24,14 @@ export function App() {
 
   if (import.meta.env.DEV && designCanvasOpen) {
     return <DesignCanvasDevScreen onClose={() => setDesignCanvasOpen(false)} />
+  }
+
+  if (quizOpen) {
+    return <QuizScreen onClose={() => setQuizOpen(false)} />
+  }
+
+  if (lessonsOpen) {
+    return <LessonView onClose={() => setLessonsOpen(false)} />
   }
 
   return (
@@ -35,6 +47,16 @@ export function App() {
           <dd data-testid="ping">{ping ? `${ping.reply} (${ping.receivedAt})` : '...'}</dd>
         </dl>
       )}
+      <p>
+        <button data-testid="open-lessons" onClick={() => setLessonsOpen(true)}>
+          Lessons
+        </button>
+      </p>
+      <p>
+        <button data-testid="open-quiz" onClick={() => setQuizOpen(true)}>
+          Quiz
+        </button>
+      </p>
       {import.meta.env.DEV && (
         <p>
           <button data-testid="open-design-canvas-dev" onClick={() => setDesignCanvasOpen(true)}>

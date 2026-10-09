@@ -15,3 +15,5 @@ One recorded answer to a [[Question]]: date, question, notion, type, result. The
 ## In code
 
 Tables `attempts` and `attempt_notions`, repository `src/main/db/repositories/assessment.ts` (`recordAttempt`, `listAttemptsByNotion`). See [[Data Model]].
+
+Recorded by the [[Quiz Engine]] on each graded answer (`submitAnswer` in `src/main/quiz/service.ts`): normalized answer `{ selected }`, `result`, `score` (all-or-nothing for multiple choice), notion tags copied from the question. One attempt per question per round.

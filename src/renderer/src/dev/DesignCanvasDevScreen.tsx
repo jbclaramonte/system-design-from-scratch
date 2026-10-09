@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
+import type { Editor } from 'tldraw'
 import type { DesignExerciseRef } from '../../../shared/ipc'
 import { DesignCanvas } from '../design/DesignCanvas'
+import { DesignExportDevPanel } from './DesignExportDevPanel'
 
 /**
  * Dev-only screen: opens the Design Canvas on a scratch Design Exercise so Design Scene
@@ -9,6 +11,7 @@ import { DesignCanvas } from '../design/DesignCanvas'
 export function DesignCanvasDevScreen({ onClose }: { onClose: () => void }) {
   const [exercise, setExercise] = useState<DesignExerciseRef | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [editor, setEditor] = useState<Editor | null>(null)
 
   useEffect(() => {
     window.api
@@ -31,11 +34,22 @@ export function DesignCanvasDevScreen({ onClose }: { onClose: () => void }) {
           </span>
         )}
       </header>
-      <div style={{ flex: 1, minHeight: 0, borderTop: '1px solid #ddd' }}>
+      <div style={{ flex: 1, minHeight: 0, borderTop: '1px solid #ddd', display: 'flex' }}>
         {error ? (
           <p role="alert">{error}</p>
         ) : (
-          exercise && <DesignCanvas key={exercise.id} designExerciseId={exercise.id} />
+          exercise && (
+            <>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <DesignCanvas
+                  key={exercise.id}
+                  designExerciseId={exercise.id}
+                  onEditorChange={setEditor}
+                />
+              </div>
+              <DesignExportDevPanel editor={editor} designExerciseId={exercise.id} />
+            </>
+          )
         )}
       </div>
     </section>

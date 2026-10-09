@@ -10,7 +10,7 @@ The LLM's assessment of the user's design: gaps, errors and forgotten trade-offs
 ## Related
 
 - Attached to a [[Protocol Step]] of a [[Design Exercise]]
-- Based on the [[Design Scene]]
+- Based on the [[Design Scene]], read through its [[Design Export]] ([[Design Graph]], text description, PNG)
 - Final review compares with the [[Reference Solution]]
 - Complemented by [[Hint]]s, which are requested by the user before submitting
 

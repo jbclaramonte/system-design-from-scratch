@@ -1,6 +1,7 @@
 /** Row types returned by the repositories. Timestamps are ISO 8601 strings. */
 
 import type { Json } from '../../shared/json'
+import { questionTypes, type AttemptResult, type QuestionType } from '../../shared/quiz'
 
 export type { Json }
 
@@ -56,13 +57,8 @@ export interface Quiz extends Timestamps, Grounded {
   contentCacheKey: string | null
 }
 
-export const questionTypes = [
-  'single_choice',
-  'multiple_choice',
-  'scenario',
-  'free_answer'
-] as const
-export type QuestionType = (typeof questionTypes)[number]
+export { questionTypes }
+export type { QuestionType, AttemptResult }
 
 export interface Question extends Timestamps {
   id: number
@@ -90,8 +86,6 @@ export interface Round extends Timestamps {
   scorePercent: number | null
   passed: boolean | null
 }
-
-export type AttemptResult = 'correct' | 'partially_correct' | 'incorrect'
 
 export interface Attempt extends Timestamps {
   id: number

@@ -3,6 +3,7 @@ import { openDatabase, type Database } from '../db/driver'
 import { migrate } from '../db/migrate'
 import { migrations } from '../db/migrations'
 import { createDesignExercise } from '../db/repositories/designPractice'
+import type { DesignGraph } from '../../shared/designGraph'
 import { createDesignIpc, SCRATCH_DESIGN_EXERCISE_SLUG } from './design'
 
 let db: Database
@@ -67,6 +68,42 @@ describe('createDesignIpc', () => {
 
     expect(first.slug).toBe(SCRATCH_DESIGN_EXERCISE_SLUG)
     expect(second).toEqual(first)
+  })
+
+  it('validates a Design Export and returns its counts', () => {
+    const design = createDesignIpc(db, { allowScratch: false })
+    const graph: DesignGraph = {
+      version: 1,
+      nodes: [
+        { id: 'shape:a', componentType: 'service', label: 'API' },
+        { id: 'shape:b', componentType: 'cache', label: 'Cache' }
+      ],
+      edges: [{ id: 'shape:e', from: 'shape:a', to: 'shape:b', label: '', direction: 'forward' }],
+      annotations: [{ id: 'shape:t', kind: 'text', text: 'TTL 1h', nearestNodeId: 'shape:b' }],
+      danglingArrows: [],
+      groups: []
+    }
+    const png = {
+      base64:
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/x8AAwMCAO+ip1sAAAAASUVORK5CYII=',
+      width: 1,
+      height: 1
+    }
+
+    expect(
+      design.exportScene({ designExerciseId: 1, graph, description: 'API -> Cache', png })
+    ).toEqual({ nodes: 2, edges: 1, annotations: 1, danglingArrows: 0, groups: 0, pngBytes: 68 })
+    expect(() =>
+      design.exportScene({
+        designExerciseId: 1,
+        graph: {
+          ...graph,
+          edges: [{ id: 'shape:e', from: 'shape:a', to: 'shape:x', label: '', direction: 'none' }]
+        },
+        description: '',
+        png: null
+      })
+    ).toThrow(/Unknown node id/)
   })
 
   it('refuses the scratch exercise when not allowed', () => {

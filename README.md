@@ -50,9 +50,12 @@ src/
     db/              SQLite driver wrapper, migrations and repositories
     corpus/          Source Corpus: primer split, excerpt lookup (docs/Corpus.md)
     generation/      Generation service: Claude Code CLI runner, queue, Content Cache, IPC
+    content/         Topic seeding from the corpus, lesson flow over IPC (docs/Lesson View.md)
   preload/           Exposes the typed window.api bridge to the renderer
   renderer/          React app (index.html with the CSP, src/ for components, src/dev/ dev-only)
-                     src/design/: Design Canvas (tldraw, typed shapes, Design Scene autosave)
+                     src/design/: Design Canvas (tldraw, typed shapes, Design Scene autosave,
+                     export/: Design Export, see docs/Design Export.md)
+                     src/lesson/: Lesson view (topic list, streamed Markdown, source chips)
   shared/            Code shared by both sides, including the IPC contract (ipc.ts)
 resources/corpus/    Generated primer corpus (CC BY 4.0), see docs/Corpus.md
 scripts/             Build-time scripts (build-corpus.ts), run with plain node

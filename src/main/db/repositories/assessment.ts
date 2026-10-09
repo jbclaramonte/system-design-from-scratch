@@ -223,6 +223,24 @@ export function getRound(db: Database, id: number): Round | undefined {
   return row && toRound(row)
 }
 
+/** Round numbers are unique per topic and never restart: one more than the topic's highest. */
+export function nextRoundNumber(db: Database, topicId: number): number {
+  return db
+    .prepare('SELECT coalesce(MAX(number), 0) + 1 AS next FROM rounds WHERE topic_id = $topicId')
+    .get<{ next: number }>({ topicId })!.next
+}
+
+/** The latest round playing the quiz that is not completed yet, if any. */
+export function findOpenRound(db: Database, quizId: number): Round | undefined {
+  const row = db
+    .prepare(
+      `SELECT ${ROUND_COLUMNS} FROM rounds WHERE quiz_id = $quizId AND completed_at IS NULL
+       ORDER BY id DESC LIMIT 1`
+    )
+    .get<RoundRow>({ quizId })
+  return row && toRound(row)
+}
+
 export function listRoundsByTopic(db: Database, topicId: number): Round[] {
   return db
     .prepare(`SELECT ${ROUND_COLUMNS} FROM rounds WHERE topic_id = $topicId ORDER BY id`)

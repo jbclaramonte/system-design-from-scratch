@@ -47,3 +47,7 @@ The About screen will show these (see [[SPEC]] section 4.1).
 - `src/main/corpus/ingest.ts`: pure split of the primer Markdown and of the solutions.
 - `src/main/corpus/lookup.ts`: `createCorpus` (`listTopics`, `getTopic`, `getSection`, `listReferenceSolutions`, `getReferenceSolution`, `findExcerpts`), `estimateTokens`, `fitExcerptsToBudget`. Lexical scoring (title, breadcrumb and body term matches weighted by rarity), no embeddings.
 - `src/main/corpus/index.ts`: `loadCorpus(corpusPath(app.getAppPath()))`. Main process only, not exposed to the renderer yet.
+
+## Teachable topics
+
+Not every primer section is a [[Topic]]. These seven are neither seeded nor listed (`NON_TEACHABLE_CORPUS_TOPIC_IDS` in `src/main/content/topics.ts`): `motivation`, `study-guide`, `how-to-approach-a-system-design-interview-question`, `system-design-interview-questions-with-solutions`, `object-oriented-design-interview-questions-with-solutions`, `system-design-topics-start-here`, `appendix`. They stay in the [[Source Corpus]]; the interview-method section is meant to feed the [[Interview Protocol]] lessons instead.

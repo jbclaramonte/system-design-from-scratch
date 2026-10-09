@@ -2,19 +2,14 @@
  * Catalogue of the typed shapes of the Design Canvas. Each component type is a tldraw custom shape
  * whose `type` is the semantic type read by the graph export (issue #13), so the LLM never has to
  * guess what a box means. Pure data, no tldraw import: safe to reuse outside the editor.
+ *
+ * The list of types lives in `src/shared/designGraph.ts`, so the main process can validate a
+ * Design Graph against it.
  */
 
-export const COMPONENT_TYPES = [
-  'client',
-  'cdn',
-  'load-balancer',
-  'service',
-  'cache',
-  'database',
-  'queue'
-] as const
+import type { ComponentType } from '../../../shared/designGraph'
 
-export type ComponentType = (typeof COMPONENT_TYPES)[number]
+export { COMPONENT_TYPES, isComponentType, type ComponentType } from '../../../shared/designGraph'
 
 export interface ComponentLook {
   /** Default label, also the palette button text. */
@@ -39,10 +34,6 @@ export const COMPONENT_LOOKS: Record<ComponentType, ComponentLook> = {
   cache: { label: 'Cache', fill: '#ffedd5', stroke: '#ea580c', defaultW: 160, defaultH: 90 },
   database: { label: 'Database', fill: '#dcfce7', stroke: '#16a34a', defaultW: 160, defaultH: 110 },
   queue: { label: 'Queue', fill: '#f3e8ff', stroke: '#9333ea', defaultW: 160, defaultH: 90 }
-}
-
-export function isComponentType(type: string): type is ComponentType {
-  return (COMPONENT_TYPES as readonly string[]).includes(type)
 }
 
 /** Outline of the load balancer hexagon, shared by its drawing and its arrow-binding geometry. */

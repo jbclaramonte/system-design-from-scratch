@@ -45,9 +45,16 @@ type LoadState =
 /**
  * Design Canvas of one Design Exercise: tldraw with the typed component shapes and a palette.
  * The Design Scene is loaded once, then autosaved (debounced) on every document change. Mount it
- * with `key={designExerciseId}` to switch exercises.
+ * with `key={designExerciseId}` to switch exercises. `onEditorChange` hands out the live editor
+ * (for the Design Export), and `null` when it unmounts.
  */
-export function DesignCanvas({ designExerciseId }: { designExerciseId: number }) {
+export function DesignCanvas({
+  designExerciseId,
+  onEditorChange
+}: {
+  designExerciseId: number
+  onEditorChange?: (editor: Editor | null) => void
+}) {
   const [load, setLoad] = useState<LoadState>({ status: 'loading' })
   const [editor, setEditor] = useState<Editor | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
@@ -69,6 +76,7 @@ export function DesignCanvas({ designExerciseId }: { designExerciseId: number })
 
   const onMount = (mounted: Editor) => {
     setEditor(mounted)
+    onEditorChange?.(mounted)
     const autosave = createDebouncedSave({
       delayMs: AUTOSAVE_DELAY_MS,
       capture: () => serializeScene(getSnapshot(mounted.store)),
@@ -90,6 +98,7 @@ export function DesignCanvas({ designExerciseId }: { designExerciseId: number })
       unlisten()
       void autosave.flush()
       setEditor(null)
+      onEditorChange?.(null)
     }
   }
 

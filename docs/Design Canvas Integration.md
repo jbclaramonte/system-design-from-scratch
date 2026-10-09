@@ -13,7 +13,7 @@ How the [[Design Canvas]] (tldraw) is embedded in the app and how its [[Design S
 
 | Path | Role |
 |---|---|
-| `src/renderer/src/design/componentTypes.ts` | Catalogue of component types (`client`, `cdn`, `load-balancer`, `service`, `cache`, `database`, `queue`): labels, colours, default sizes. Pure data, reusable by the graph export (#13). |
+| `src/renderer/src/design/componentTypes.ts` | Catalogue of component types (`client`, `cdn`, `load-balancer`, `service`, `cache`, `database`, `queue`): labels, colours, default sizes. Pure data. The type list itself lives in `src/shared/designGraph.ts` (re-exported here) so the main process can validate a [[Design Graph]]. |
 | `src/renderer/src/design/componentShapes.tsx` | One tldraw `ShapeUtil` per component type (ported from `spikes/tldraw/`): SVG body, editable plain-text label, arrow-binding geometry, SVG export. |
 | `src/renderer/src/design/DesignCanvas.tsx` | `<DesignCanvas designExerciseId>`: palette plus `<Tldraw>`, loads and autosaves the scene. |
 | `src/renderer/src/design/sceneSnapshot.ts` | `serializeScene` / `deserializeScene`: tldraw snapshot to and from stored JSON. |
@@ -61,7 +61,7 @@ Driven over the Chrome DevTools protocol with a scratch `--user-data-dir`:
 ## Related
 
 - [[Design Canvas]], [[Design Scene]], [[Design Exercise]]
-- Graph export for evaluation: issue #13
+- Graph export for evaluation: [[Design Export]] (issue #13)
 
 ## Open licensing question: watermark tracking request
 

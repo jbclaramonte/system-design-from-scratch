@@ -22,7 +22,36 @@ const handlers: IpcHandlers = {
   'generation:cancel': () => undefined,
   'design:loadScene': () => null,
   'design:saveScene': () => undefined,
-  'design:openScratchExercise': () => ({ id: 1, slug: 'dev-scratch', title: 'Scratch' })
+  'design:openScratchExercise': () => ({ id: 1, slug: 'dev-scratch', title: 'Scratch' }),
+  'design:exportScene': () => ({
+    nodes: 0,
+    edges: 0,
+    annotations: 0,
+    danglingArrows: 0,
+    groups: 0,
+    pngBytes: 0
+  }),
+  'topic:list': () => [],
+  'topic:get': () => {
+    throw new Error('no topic')
+  },
+  'lesson:start': () => undefined,
+  'lesson:cancel': () => undefined,
+  'quiz:listTopics': () => [],
+  'quiz:listQuizzes': () => [],
+  'quiz:load': () => {
+    throw new Error('no quiz')
+  },
+  'quiz:startRound': () => {
+    throw new Error('no quiz')
+  },
+  'quiz:submitAnswer': () => {
+    throw new Error('no round')
+  },
+  'quiz:completeRound': () => {
+    throw new Error('no round')
+  },
+  'quiz:createDevQuiz': () => ({ topicId: 1, quizId: 1 })
 }
 
 describe('registerHandlers', () => {
@@ -33,12 +62,24 @@ describe('registerHandlers', () => {
 
     expect([...ipc.listeners.keys()].sort()).toEqual([
       'app:getVersion',
+      'design:exportScene',
       'design:loadScene',
       'design:openScratchExercise',
       'design:saveScene',
       'generation:cancel',
       'generation:start',
-      'system:ping'
+      'lesson:cancel',
+      'lesson:start',
+      'quiz:completeRound',
+      'quiz:createDevQuiz',
+      'quiz:listQuizzes',
+      'quiz:listTopics',
+      'quiz:load',
+      'quiz:startRound',
+      'quiz:submitAnswer',
+      'system:ping',
+      'topic:get',
+      'topic:list'
     ])
   })
 

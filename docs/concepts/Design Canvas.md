@@ -14,4 +14,4 @@ The embedded tldraw whiteboard with a library of typed shapes (load balancer, ca
 
 ## In code
 
-Component `DesignCanvas` and the typed shapes in `src/renderer/src/design/` (catalogue `componentTypes.ts`, tldraw shapes `componentShapes.tsx`). Snapshots stored in table `design_scenes`, repository `src/main/db/repositories/designPractice.ts`. See [[Design Canvas Integration]] and [[Data Model]].
+Component `DesignCanvas` and the typed shapes in `src/renderer/src/design/` (catalogue `componentTypes.ts`, tldraw shapes `componentShapes.tsx`). Snapshots stored in table `design_scenes`, repository `src/main/db/repositories/designPractice.ts`. Export for the LLM (graph JSON, text description, PNG) in `src/renderer/src/design/export/`, see [[Design Export]]. See [[Design Canvas Integration]] and [[Data Model]].

@@ -10,6 +10,19 @@
  */
 
 import type { GenerationEvent, GenerationKind, GenerationPriority, Json } from './generation'
+import type { DesignExport, DesignExportSummary } from './designGraph'
+import type { LessonCancelRequest, LessonStartRequest, LessonStreamEvent } from './lesson'
+import type { TopicDetail, TopicGetRequest, TopicSummary } from './topic'
+import type {
+  QuestionFeedback,
+  QuizRef,
+  QuizSummary,
+  QuizTopic,
+  QuizView,
+  RoundResult,
+  RoundStart,
+  SubmittedAnswer
+} from './quiz'
 
 /** The fields of a Design Exercise the renderer needs to open its Design Canvas. */
 export interface DesignExerciseRef {
@@ -71,11 +84,40 @@ export interface IpcChannels {
   'design:saveScene': { request: DesignSceneSaveRequest; response: void }
   /** Dev only (rejected in a packaged app): gets or creates the scratch Design Exercise. */
   'design:openScratchExercise': { request: void; response: DesignExerciseRef }
+  /** Hands a Design Export to the main process (validated; used by the evaluation, #14). */
+  'design:exportScene': { request: DesignExport; response: DesignExportSummary }
+  /** Topics in Learning Path order. */
+  'topic:list': { request: void; response: TopicSummary[] }
+  /** A topic with its Notion Outline status. */
+  'topic:get': { request: TopicGetRequest; response: TopicDetail }
+  /** Starts (or serves from the Content Cache) the topic's Lesson; events on `lesson:event`. */
+  'lesson:start': { request: LessonStartRequest; response: void }
+  'lesson:cancel': { request: LessonCancelRequest; response: void }
+  /** Topics with their number of quizzes. */
+  'quiz:listTopics': { request: void; response: QuizTopic[] }
+  'quiz:listQuizzes': { request: { topicId: number }; response: QuizSummary[] }
+  /** A quiz without its answer keys. */
+  'quiz:load': { request: { quizId: number }; response: QuizView }
+  /** Resumes the quiz's open Round or starts one with the topic's next round number. */
+  'quiz:startRound': { request: { quizId: number }; response: RoundStart }
+  /** Grades one answer in the main process and records it as an Attempt. */
+  'quiz:submitAnswer': {
+    request: { roundId: number } & SubmittedAnswer
+    response: QuestionFeedback
+  }
+  /** Submits the remaining answers (optional), then grades the Round against the Mastery Threshold. */
+  'quiz:completeRound': {
+    request: { roundId: number; answers?: SubmittedAnswer[] }
+    response: RoundResult
+  }
+  /** Dev only (rejected in a packaged app): creates a fixture quiz on a dev topic. */
+  'quiz:createDevQuiz': { request: void; response: QuizRef }
 }
 
 /** Event channel (main to renderer) to payload type. */
 export interface IpcEvents {
   'generation:event': GenerationStreamEvent
+  'lesson:event': LessonStreamEvent
 }
 
 export type IpcEventChannel = keyof IpcEvents
@@ -92,12 +134,25 @@ export const apiChannels = {
   cancelGeneration: 'generation:cancel',
   loadDesignScene: 'design:loadScene',
   saveDesignScene: 'design:saveScene',
-  openScratchDesignExercise: 'design:openScratchExercise'
+  openScratchDesignExercise: 'design:openScratchExercise',
+  exportDesignScene: 'design:exportScene',
+  listTopics: 'topic:list',
+  getTopic: 'topic:get',
+  startLesson: 'lesson:start',
+  cancelLesson: 'lesson:cancel',
+  listQuizTopics: 'quiz:listTopics',
+  listQuizzes: 'quiz:listQuizzes',
+  loadQuiz: 'quiz:load',
+  startRound: 'quiz:startRound',
+  submitAnswer: 'quiz:submitAnswer',
+  completeRound: 'quiz:completeRound',
+  createDevQuiz: 'quiz:createDevQuiz'
 } as const satisfies Record<string, IpcChannel>
 
 /** `window.api` subscription method to event channel. */
 export const apiEvents = {
-  onGenerationEvent: 'generation:event'
+  onGenerationEvent: 'generation:event',
+  onLessonEvent: 'lesson:event'
 } as const satisfies Record<string, IpcEventChannel>
 
 type ApiChannels = typeof apiChannels

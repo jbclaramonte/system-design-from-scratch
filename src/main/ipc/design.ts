@@ -5,6 +5,7 @@ import {
   listDesignExercises,
   saveDesignScene
 } from '../db/repositories/designPractice'
+import { designExportSchema, type DesignExportSummary } from '../../shared/designGraph'
 import type { DesignExerciseRef, IpcRequest, IpcResponse } from '../../shared/ipc'
 
 /** Slug of the throwaway Design Exercise used by the dev Design Canvas screen. */
@@ -26,6 +27,7 @@ export interface DesignIpc {
   loadScene(request: IpcRequest<'design:loadScene'>): IpcResponse<'design:loadScene'>
   saveScene(request: IpcRequest<'design:saveScene'>): void
   openScratchExercise(): DesignExerciseRef
+  exportScene(request: IpcRequest<'design:exportScene'>): DesignExportSummary
 }
 
 /** Design Scene persistence over IPC. `allowScratch` is false in a packaged app. */
@@ -54,6 +56,19 @@ export function createDesignIpc(
           grounded: false
         })
       return { id: exercise.id, slug: exercise.slug, title: exercise.title }
+    },
+    exportScene(request) {
+      // The renderer is not trusted: validate the whole export. Nothing is stored yet; the LLM
+      // evaluation (#14) will consume it from here.
+      const { graph, png } = designExportSchema.parse(request)
+      return {
+        nodes: graph.nodes.length,
+        edges: graph.edges.length,
+        annotations: graph.annotations.length,
+        danglingArrows: graph.danglingArrows.length,
+        groups: graph.groups.length,
+        pngBytes: png ? Buffer.from(png.base64, 'base64').length : 0
+      }
     }
   }
 }

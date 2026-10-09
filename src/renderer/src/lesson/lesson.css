@@ -1,0 +1,193 @@
+.lesson-view {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  margin: 0;
+  padding: 0 1.5rem;
+  box-sizing: border-box;
+  font-family: system-ui, sans-serif;
+}
+
+.lesson-nav {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.lesson-nav h1 {
+  font-size: 1.25rem;
+}
+
+.lesson-topic-list {
+  list-style: none;
+  padding: 0;
+  overflow-y: auto;
+}
+
+.lesson-topic-list button {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 40rem;
+  margin-bottom: 0.25rem;
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.lesson-topic-title {
+  flex: 1;
+}
+
+.lesson-topic-meta {
+  color: #666;
+  font-size: 0.85em;
+}
+
+.lesson-screen {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.lesson-header h2 {
+  margin: 0.25rem 0;
+}
+
+.lesson-badges,
+.lesson-notions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.4rem 0;
+}
+
+.lesson-badge {
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: #eef;
+  color: #335;
+  font-size: 0.8em;
+}
+
+.lesson-badge-grounded {
+  background: #e6f4ea;
+  color: #1e5631;
+}
+
+.lesson-badge-ungrounded {
+  background: #fff4e5;
+  color: #8a4b00;
+  border: 1px solid #f0b46a;
+}
+
+.lesson-notions button {
+  font-size: 0.85em;
+  cursor: pointer;
+}
+
+.lesson-status {
+  color: #555;
+}
+
+.lesson-spinner {
+  display: inline-block;
+  width: 0.8em;
+  height: 0.8em;
+  border: 2px solid #bbb;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: lesson-spin 0.8s linear infinite;
+  vertical-align: middle;
+}
+
+@keyframes lesson-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.lesson-error,
+.lesson-notice {
+  margin: 0.5rem 0;
+  padding: 0.75rem;
+  border-radius: 6px;
+  background: #fdecea;
+  color: #611a15;
+}
+
+.lesson-notice {
+  background: #f2f2f2;
+  color: #333;
+}
+
+.lesson-error p {
+  margin: 0.4rem 0;
+  white-space: pre-wrap;
+}
+
+.lesson-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: 2rem;
+}
+
+.lesson-body {
+  max-width: 46rem;
+  line-height: 1.6;
+}
+
+.lesson-body pre {
+  overflow-x: auto;
+  padding: 0.75rem;
+  border-radius: 6px;
+  background: #f5f5f5;
+}
+
+.lesson-table {
+  overflow-x: auto;
+}
+
+.lesson-table table {
+  border-collapse: collapse;
+}
+
+.lesson-table th,
+.lesson-table td {
+  padding: 0.3rem 0.6rem;
+  border: 1px solid #ccc;
+}
+
+.source-chip {
+  font-style: normal;
+  font-size: 0.7em;
+  vertical-align: 0.15em;
+  margin: 0 0.1em;
+}
+
+.source-chip button {
+  padding: 0 0.4em;
+  border: 1px solid #b9c7e6;
+  border-radius: 999px;
+  background: #f0f4fc;
+  color: #2b4a8b;
+  font: inherit;
+  cursor: pointer;
+}
+
+.source-chip-unknown {
+  padding: 0 0.4em;
+  border: 1px dashed #d99;
+  border-radius: 999px;
+  color: #a33;
+}
+
+.lesson-sources {
+  max-width: 46rem;
+  margin-top: 2rem;
+  font-size: 0.85em;
+  color: #444;
+}
