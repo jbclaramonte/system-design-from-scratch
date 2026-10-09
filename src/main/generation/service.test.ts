@@ -264,6 +264,45 @@ describe('GenerationService with the fake CLI', () => {
   })
 })
 
+describe('GenerationService Claude config directory', () => {
+  it('passes the configured directory as CLAUDE_CONFIG_DIR, read again on every call', async () => {
+    const envs: NodeJS.ProcessEnv[] = []
+    let configDir: string | null = '/Users/me/.claude-perso'
+    const service = new GenerationService({
+      db,
+      cli: { env: { PATH: '/usr/bin' } },
+      configDir: () => configDir,
+      resolveCli: async () => '/fake/claude',
+      runner: async (options) => {
+        envs.push(options.env ?? {})
+        return {
+          isError: false,
+          subtype: 'success',
+          text: 'ok',
+          structuredOutput: undefined,
+          inputTokens: 1,
+          outputTokens: 1,
+          costUsd: 0
+        }
+      }
+    })
+    const request = (topic: string): GenerationRequest => ({
+      kind: 'lesson',
+      input: { topic },
+      prompt: prompt('text')
+    })
+
+    await service.generate(request('first')).result
+    // Settings change, no restart.
+    configDir = null
+    await service.generate(request('second')).result
+
+    expect(envs[0]).toEqual({ PATH: '/usr/bin', CLAUDE_CONFIG_DIR: '/Users/me/.claude-perso' })
+    expect(envs[1]).toEqual({ PATH: '/usr/bin' })
+    expect(envs[1]).not.toHaveProperty('CLAUDE_CONFIG_DIR')
+  })
+})
+
 describe('GenerationService queue and deduplication', () => {
   interface PendingCall {
     options: CliCallOptions

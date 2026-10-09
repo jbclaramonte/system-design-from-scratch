@@ -1,3 +1,4 @@
+import { SettingsErrorAction } from '../settings/SettingsErrorAction'
 import type { GradingError } from './useGrading'
 
 /** Pending state (with Cancel) or the error of a free-answer grading, with what to do next. */
@@ -36,7 +37,7 @@ export function GradingStatus({
   return (
     <p role="alert" data-testid="grading-error" data-code={error.code}>
       {error.message}
-      {error.code !== 'refused' && ` ${failureHint}`}
+      {error.code !== 'refused' && ` ${failureHint}`} <SettingsErrorAction code={error.code} />
     </p>
   )
 }

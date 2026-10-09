@@ -188,7 +188,7 @@ if (process.argv.includes('--input-format')) {
 if (process.env['FAKE_CLAUDE_LOG']) {
   appendFileSync(
     process.env['FAKE_CLAUDE_LOG'],
-    `${JSON.stringify({ argv: process.argv.slice(2), cwd: process.cwd(), cwdEntries: readdirSync(process.cwd()), stdin, images, pid: process.pid })}\n`
+    `${JSON.stringify({ argv: process.argv.slice(2), cwd: process.cwd(), cwdEntries: readdirSync(process.cwd()), stdin, images, pid: process.pid, configDir: process.env['CLAUDE_CONFIG_DIR'] ?? null })}\n`
   )
 }
 
@@ -272,6 +272,9 @@ switch (scenario) {
     break
   case 'not-logged-in':
     fail('Not logged in · Please run /login', '')
+    break
+  case 'oauth-expired':
+    fail('Failed to authenticate: OAuth session expired and could not be refreshed', '')
     break
   case 'rate-limit':
     init()

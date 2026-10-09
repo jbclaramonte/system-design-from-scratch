@@ -302,7 +302,7 @@ describe('lesson channels', () => {
     await expect.poll(() => isEnded('r1')).toBe(true)
     expect(eventsOf('r1').at(-1)).toMatchObject({
       type: 'error',
-      error: { code: 'not_logged_in', message: expect.stringMatching(/log in/) }
+      error: { code: 'not_logged_in', message: expect.stringMatching(/log in/i) }
     })
   })
 

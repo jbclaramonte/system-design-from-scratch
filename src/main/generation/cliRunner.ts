@@ -79,6 +79,18 @@ export function buildCliArgs(options: CliCallOptions): string[] {
   return args
 }
 
+/**
+ * The CLI environment with `CLAUDE_CONFIG_DIR` set to the configured Claude profile directory.
+ * Without one, the environment is inherited as is (the CLI then uses `~/.claude` unless the app
+ * itself was started with `CLAUDE_CONFIG_DIR`).
+ */
+export function cliEnv(
+  configDir: string | null | undefined,
+  env: NodeJS.ProcessEnv = process.env
+): NodeJS.ProcessEnv {
+  return configDir ? { ...env, CLAUDE_CONFIG_DIR: configDir } : env
+}
+
 /** What goes on stdin: the prompt text, or one stream-json user message when images are sent. */
 export function buildCliInput(options: Pick<CliCallOptions, 'prompt' | 'images'>): string {
   if (!options.images?.length) return options.prompt

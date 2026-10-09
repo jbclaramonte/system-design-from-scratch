@@ -6,6 +6,7 @@ import { LessonScreen } from '../lesson/LessonScreen'
 import { errorTitle } from '../lesson/lessonState'
 import { OutsidePrimerBadge } from '../lesson/OutsidePrimerBadge'
 import { errorMessage } from '../quiz/errorMessage'
+import { SettingsErrorAction } from '../settings/SettingsErrorAction'
 import { formatPercent } from '../quiz/progress'
 import { QuizPlayer } from '../quiz/QuizPlayer'
 import { QuizResults } from '../quiz/QuizResults'
@@ -30,7 +31,17 @@ type Overlay =
  * the missed notions, next round... until mastered, with the Round Limit choice. The step comes
  * from the main process (derived from the database), so leaving and coming back resumes it.
  */
-export function TopicScreen({ topic }: { topic: TopicSummary }) {
+export function TopicScreen({
+  topic,
+  showTitle = true
+}: {
+  topic: TopicSummary
+  /**
+   * False when the enclosing screen already has the topic title as its heading (a topic opened
+   * from the Learning Path). The dev "All topics" screen keeps it.
+   */
+  showTitle?: boolean
+}) {
   const [state, setState] = useState<MasteryState | null>(null)
   const [overlay, setOverlay] = useState<Overlay | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -112,25 +123,7 @@ export function TopicScreen({ topic }: { topic: TopicSummary }) {
 
   return (
     <section className="mastery-topic" data-testid="mastery-topic">
-      <header className="mastery-header">
-        <h2>{state.topicTitle}</h2>
-        <p className="mastery-progress" data-testid="mastery-progress">
-          <span className={`mastery-badge mastery-${state.status}`} data-testid="mastery-status">
-            {masteryLabels[state.status]}
-          </span>{' '}
-          {!topic.grounded && (
-            <>
-              <OutsidePrimerBadge testId="mastery-ungrounded" />{' '}
-            </>
-          )}
-          {roundProgress(state)}
-        </p>
-        {error && (
-          <p role="alert" className="lesson-error">
-            {error}
-          </p>
-        )}
-      </header>
+      <TopicHeader state={state} grounded={topic.grounded} showTitle={showTitle} error={error} />
 
       {overlay?.name === 'preparing' && (
         <Preparing
@@ -157,7 +150,8 @@ export function TopicScreen({ topic }: { topic: TopicSummary }) {
               {overlay.result.round.passed ? 'Continue' : 'Continue to the Remediation Lessons'}
             </button>
           </p>
-          <QuizResults result={overlay.result} outsidePrimer={!topic.grounded} />
+          {/* The Outside the primer badge is already on the progress line. */}
+          <QuizResults result={overlay.result} />
         </div>
       )}
 
@@ -165,6 +159,7 @@ export function TopicScreen({ topic }: { topic: TopicSummary }) {
         <>
           <LessonScreen
             key={attempt}
+            embedded
             topic={topic}
             onRetry={() => setAttempt((n) => n + 1)}
             onDone={() => setLessonDone(true)}
@@ -246,6 +241,44 @@ export function TopicScreen({ topic }: { topic: TopicSummary }) {
   )
 }
 
+/**
+ * Title (unless the enclosing screen shows it), then the progress line: mastery status, the
+ * Outside the primer badge (the only one on the topic screen), round progress.
+ */
+export function TopicHeader({
+  state,
+  grounded,
+  showTitle,
+  error
+}: {
+  state: MasteryState
+  grounded: boolean
+  showTitle: boolean
+  error: string | null
+}) {
+  return (
+    <header className="mastery-header">
+      {showTitle && <h2>{state.topicTitle}</h2>}
+      <p className="mastery-progress" data-testid="mastery-progress">
+        <span className={`mastery-badge mastery-${state.status}`} data-testid="mastery-status">
+          {masteryLabels[state.status]}
+        </span>{' '}
+        {!grounded && (
+          <>
+            <OutsidePrimerBadge testId="mastery-ungrounded" />{' '}
+          </>
+        )}
+        {roundProgress(state)}
+      </p>
+      {error && (
+        <p role="alert" className="lesson-error">
+          {error}
+        </p>
+      )}
+    </header>
+  )
+}
+
 function Preparing({
   preparation,
   roundNumber,
@@ -272,6 +305,7 @@ function Preparing({
             : `The quiz could not be prepared: ${errorTitle(preparation.code)}`}
         </strong>
         {preparation.status === 'error' && <p>{preparation.message}</p>}
+        {preparation.status === 'error' && <SettingsErrorAction code={preparation.code} />}
         <button type="button" onClick={onRetry} data-testid="mastery-round-retry">
           Retry
         </button>{' '}

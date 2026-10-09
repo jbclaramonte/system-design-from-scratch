@@ -15,7 +15,7 @@ import {
   putCachedContent
 } from '../db/repositories/contentCache'
 import type { ContentCacheKind } from '../db/types'
-import { runCli, type CliCallOptions, type CliImage } from './cliRunner'
+import { cliEnv, runCli, type CliCallOptions, type CliImage } from './cliRunner'
 import { GenerationError, toGenerationError } from './errors'
 import { EventStream } from './eventStream'
 import { GenerationQueue, type QueueOptions, type QueueTask } from './queue'
@@ -85,6 +85,11 @@ export interface GenerationServiceOptions {
   runner?: CliRunner
   /** Defaults to `resolveCliPath` with `cli.path`. */
   resolveCli?: () => Promise<string>
+  /**
+   * Claude profile directory passed as `CLAUDE_CONFIG_DIR` to every call; read on each call, so a
+   * settings change applies at once. Null or absent: the environment is inherited.
+   */
+  configDir?: () => string | null | undefined
 }
 
 const contentCacheKinds = new Set<GenerationKind>([
@@ -177,6 +182,7 @@ export class GenerationService {
   private readonly queue: GenerationQueue
   private readonly runner: CliRunner
   private readonly resolveCli: () => Promise<string>
+  private readonly configDir: () => string | null | undefined
   private readonly jobs = new Set<Job>()
   private readonly inFlight = new Map<string, Job>()
   private cliPath: Promise<string> | undefined
@@ -189,6 +195,7 @@ export class GenerationService {
     this.resolveCli =
       options.resolveCli ??
       (() => resolveCliPath({ configuredPath: this.cli.path, env: this.cli.env }))
+    this.configDir = options.configDir ?? (() => undefined)
   }
 
   /**
@@ -356,6 +363,7 @@ export class GenerationService {
     if (signal.aborted) throw new GenerationError('cancelled')
 
     const jsonSchema = request.schema ? toJsonSchema(request.schema) : null
+    const env = cliEnv(this.configDir(), this.cli.env)
     let feedback: string | undefined
     for (let attempt = 1; ; attempt++) {
       job.emit({ type: 'started', attempt })
@@ -370,7 +378,7 @@ export class GenerationService {
         signal,
         timeoutMs: request.timeoutMs ?? this.cli.timeoutMs,
         killGraceMs: this.cli.killGraceMs,
-        env: this.cli.env,
+        env,
         onEvent: (event) => {
           // Structured output arrives as partial JSON fragments: only the final object is sent.
           if (event.type === 'text_delta' && !request.schema && !signal.aborted) {

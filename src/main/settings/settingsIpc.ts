@@ -1,5 +1,6 @@
 // Settings over IPC: read, validated update (applied at once, no restart), and the Claude CLI
-// path test.
+// test (path, version, login state of the profile).
+import { statSync } from 'node:fs'
 import { z } from 'zod'
 import type { Database } from '../db'
 import { getSettings, updateSettings } from '../db/repositories/settings'
@@ -17,13 +18,17 @@ const updateRequest = z
     masteryThreshold: z.number(),
     roundLimit: z.number(),
     questionsPerQuiz: z.number().nullable(),
-    claudeCliPath: z.string().nullable()
+    claudeCliPath: z.string().nullable(),
+    claudeConfigDir: z.string().nullable()
   })
   .partial()
   .strict()
-const checkRequest = z.object({ claudeCliPath: z.string().nullable() })
+const checkRequest = z.object({
+  claudeCliPath: z.string().nullable(),
+  claudeConfigDir: z.string().nullable()
+})
 
-/** An empty path means the automatic lookup. */
+/** An empty path means the automatic lookup (CLI path) or the inherited environment (config dir). */
 const normalizePath = (path: string | null | undefined) =>
   path === undefined ? undefined : path?.trim() || null
 
@@ -40,14 +45,31 @@ export interface SettingsIpcOptions {
   fallbackCliPath?: string
 }
 
+const isDirectory = (path: string) => {
+  try {
+    return statSync(path).isDirectory()
+  } catch {
+    return false
+  }
+}
+
 export function createSettingsIpc(db: Database, options: SettingsIpcOptions = {}): SettingsIpc {
   return {
     get: () => getSettings(db),
 
     update(request) {
       const parsed = updateRequest.parse(request)
-      const changes = { ...parsed, claudeCliPath: normalizePath(parsed.claudeCliPath) }
+      const changes = {
+        ...parsed,
+        claudeCliPath: normalizePath(parsed.claudeCliPath),
+        claudeConfigDir: normalizePath(parsed.claudeConfigDir)
+      }
       const errors = Object.values(settingsErrors(changes))
+      if (changes.claudeConfigDir && errors.length === 0 && !isDirectory(changes.claudeConfigDir)) {
+        errors.push(
+          `Claude config directory ${changes.claudeConfigDir} is not an existing directory.`
+        )
+      }
       if (errors.length > 0) throw new Error(`Invalid settings: ${errors.join(' ')}`)
       const before = getSettings(db).claudeCliPath
       const updated = updateSettings(db, changes)
@@ -56,8 +78,14 @@ export function createSettingsIpc(db: Database, options: SettingsIpcOptions = {}
     },
 
     testCli(request) {
-      const path = normalizePath(checkRequest.parse(request).claudeCliPath)
-      return checkCli({ configuredPath: path ?? options.fallbackCliPath })
+      const parsed = checkRequest.parse(request)
+      const path = normalizePath(parsed.claudeCliPath)
+      const configDir = normalizePath(parsed.claudeConfigDir)
+      if (configDir && !isDirectory(configDir)) {
+        const message = `Claude config directory ${configDir} is not an existing directory.`
+        return Promise.resolve({ ok: false, error: { code: 'unknown', message } })
+      }
+      return checkCli({ configuredPath: path ?? options.fallbackCliPath, configDir })
     }
   }
 }

@@ -9,6 +9,7 @@ import {
   lessonReducer,
   type LessonState
 } from './lessonState'
+import { SettingsErrorAction } from '../settings/SettingsErrorAction'
 import { OutsidePrimerBadge } from './OutsidePrimerBadge'
 import { createTextBuffer, isNearBottom } from './textBuffer'
 
@@ -71,12 +72,18 @@ function statusText({ status, text }: LessonState): string | null {
 export function LessonScreen({
   topic,
   onRetry,
-  onDone
+  onDone,
+  embedded = false
 }: {
   topic: TopicSummary
   onRetry: () => void
   /** Called once the lesson is complete (streamed or from the Content Cache). */
   onDone?: () => void
+  /**
+   * Inside the topic screen, whose heading and progress line already show the topic title and
+   * the Outside the primer badge: neither is repeated. Standalone (Lessons dev screen) by default.
+   */
+  embedded?: boolean
 }) {
   const { state, cancel } = useLesson(topic.id)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -106,7 +113,7 @@ export function LessonScreen({
   return (
     <section className="lesson-screen" data-testid="lesson-screen">
       <header className="lesson-header">
-        <h2>{topic.title}</h2>
+        {!embedded && <h2>{topic.title}</h2>}
         <div className="lesson-badges">
           {grounded ? (
             <span
@@ -116,7 +123,7 @@ export function LessonScreen({
               System Design Primer
             </span>
           ) : (
-            <OutsidePrimerBadge testId="lesson-ungrounded" />
+            !embedded && <OutsidePrimerBadge testId="lesson-ungrounded" />
           )}
           {state.status === 'done' && (
             <span className="lesson-badge" data-testid="lesson-origin">
@@ -156,6 +163,7 @@ export function LessonScreen({
           >
             <strong>{errorTitle(state.error.code)}</strong>
             {state.status !== 'cancelled' && <p>{state.error.message}</p>}
+            <SettingsErrorAction code={state.error.code} />
             <button type="button" onClick={onRetry} data-testid="lesson-retry">
               Retry
             </button>

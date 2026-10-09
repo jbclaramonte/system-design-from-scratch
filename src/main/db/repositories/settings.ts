@@ -7,16 +7,24 @@ const settingKeys = {
   masteryThreshold: 'mastery_threshold',
   roundLimit: 'round_limit',
   questionsPerQuiz: 'questions_per_quiz',
-  claudeCliPath: 'claude_cli_path'
+  claudeCliPath: 'claude_cli_path',
+  claudeConfigDir: 'claude_config_dir'
 } as const satisfies Record<keyof Settings, string>
+
+/**
+ * Defaults of settings added without a migration (the table is key/value): read until the first
+ * save writes the row.
+ */
+const unseededDefaults: Partial<Settings> = { claudeConfigDir: null }
 
 export function getSettings(db: Database): Settings {
   const rows = db.prepare('SELECT key, value FROM settings').all<{ key: string; value: string }>()
   const values = new Map(rows.map((row) => [row.key, JSON.parse(row.value) as unknown]))
   const settings = {} as Record<keyof Settings, unknown>
   for (const [field, key] of Object.entries(settingKeys) as [keyof Settings, string][]) {
-    if (!values.has(key)) throw new Error(`Missing setting ${key}.`)
-    settings[field] = values.get(key)
+    if (values.has(key)) settings[field] = values.get(key)
+    else if (field in unseededDefaults) settings[field] = unseededDefaults[field]
+    else throw new Error(`Missing setting ${key}.`)
   }
   return settings as Settings
 }

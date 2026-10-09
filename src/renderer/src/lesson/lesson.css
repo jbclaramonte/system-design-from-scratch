@@ -123,6 +123,11 @@
   color: #333;
 }
 
+.lesson-error .settings-error-action {
+  display: block;
+  margin: 0.4rem 0;
+}
+
 .lesson-error p {
   margin: 0.4rem 0;
   white-space: pre-wrap;

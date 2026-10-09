@@ -1,8 +1,8 @@
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { buildCliArgs, ISOLATION_FLAGS, runCli, type CliCallOptions } from './cliRunner'
-import { classifyCliFailure, GenerationError } from './errors'
+import { buildCliArgs, cliEnv, ISOLATION_FLAGS, runCli, type CliCallOptions } from './cliRunner'
+import { classifyCliFailure, cliFailure, GenerationError } from './errors'
 import { parseStreamLine, type CliEvent } from './streamJson'
 import { installFakeCli, isAlive, type FakeCli } from './testing/fakeCli'
 
@@ -146,6 +146,7 @@ describe('runCli', () => {
   it.each([
     ['bad-model', 'bad_model'],
     ['not-logged-in', 'not_logged_in'],
+    ['oauth-expired', 'not_logged_in'],
     ['rate-limit', 'quota_or_rate_limit'],
     ['crash', 'unknown'],
     ['no-result', 'unknown']
@@ -199,9 +200,63 @@ describe('runCli', () => {
 describe('classifyCliFailure', () => {
   it('falls back to unknown', () => {
     expect(classifyCliFailure('Something odd happened')).toBe('unknown')
+    expect(classifyCliFailure('Claude Code CLI exited with code 1.')).toBe('unknown')
   })
 
-  it('recognises an invalid API key as not logged in', () => {
-    expect(classifyCliFailure('Invalid API key · Please run /login')).toBe('not_logged_in')
+  it.each([
+    // Seen on first use (#20), with the default profile's expired session.
+    'Failed to authenticate: OAuth session expired and could not be refreshed',
+    'Failed to authenticate. API Error: 401 {"type":"error","error":{"type":"authentication_error"}}',
+    'OAuth token has expired. Please obtain a new token or refresh your existing token.',
+    'Not logged in · Please run /login',
+    'Invalid API key · Please run /login',
+    'API Error: 401 Unauthorized',
+    'Authentication required'
+  ])('classifies %j as not_logged_in', (text) => {
+    expect(classifyCliFailure(text)).toBe('not_logged_in')
+  })
+
+  it.each([
+    [
+      "There's an issue with the selected model (claude-nope). [claude-code:unrecognized_model]",
+      'bad_model'
+    ],
+    ['Claude AI usage limit reached|1760000000', 'quota_or_rate_limit'],
+    ['API Error: 429 rate_limit_error', 'quota_or_rate_limit'],
+    ['Credit balance is too low', 'quota_or_rate_limit'],
+    ['API Error: 529 Overloaded', 'quota_or_rate_limit']
+  ] as const)('keeps %j as %s', (text, code) => {
+    expect(classifyCliFailure(text)).toBe(code)
+  })
+
+  it('tells what to do about an expired login, with the CLI message', () => {
+    const error = cliFailure('Failed to authenticate: OAuth session expired')
+
+    expect(error.code).toBe('not_logged_in')
+    expect(error.message).toMatch(/CLAUDE_CONFIG_DIR=<dir> claude.*\/login.*config directory/)
+    expect(error.message).toContain('(Failed to authenticate: OAuth session expired)')
+  })
+})
+
+describe('Claude config directory', () => {
+  it('sets CLAUDE_CONFIG_DIR when configured and inherits the environment otherwise', () => {
+    const base = { PATH: '/usr/bin' }
+
+    expect(cliEnv('/Users/me/.claude-perso', base)).toEqual({
+      PATH: '/usr/bin',
+      CLAUDE_CONFIG_DIR: '/Users/me/.claude-perso'
+    })
+    expect(cliEnv(null, base)).toBe(base)
+    expect(cliEnv(undefined, base)).not.toHaveProperty('CLAUDE_CONFIG_DIR')
+  })
+
+  it('reaches the spawned CLI', async () => {
+    const base: NodeJS.ProcessEnv = { ...fake.env }
+    delete base['CLAUDE_CONFIG_DIR']
+
+    await call('text', { env: cliEnv('/Users/me/.claude-perso', base) }).promise
+    await call('text', { env: cliEnv(null, base) }).promise
+
+    expect(fake.calls().map((c) => c.configDir)).toEqual(['/Users/me/.claude-perso', null])
   })
 })

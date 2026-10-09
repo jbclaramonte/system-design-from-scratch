@@ -378,12 +378,24 @@ describe('settings', () => {
       masteryThreshold: 100,
       roundLimit: 3,
       questionsPerQuiz: null,
-      claudeCliPath: null
+      claudeCliPath: null,
+      claudeConfigDir: null
     }
     expect(getSettings(db)).toEqual(defaults)
     expect(updateSettings(db, { roundLimit: 5 })).toEqual({ ...defaults, roundLimit: 5 })
     expect(getSettings(db).roundLimit).toBe(5)
     expect(updateSettings(db, { claudeCliPath: '/opt/claude' }).claudeCliPath).toBe('/opt/claude')
     expect(updateSettings(db, { claudeCliPath: null }).claudeCliPath).toBeNull()
+  })
+
+  it('reads the Claude config directory as null until it is first saved (no migration)', () => {
+    expect(
+      db.prepare("SELECT COUNT(*) AS n FROM settings WHERE key = 'claude_config_dir'").get()
+    ).toEqual({ n: 0 })
+    expect(getSettings(db).claudeConfigDir).toBeNull()
+    expect(updateSettings(db, { claudeConfigDir: '/Users/me/.claude-perso' }).claudeConfigDir).toBe(
+      '/Users/me/.claude-perso'
+    )
+    expect(updateSettings(db, { claudeConfigDir: null }).claudeConfigDir).toBeNull()
   })
 })

@@ -58,7 +58,8 @@ export function PathTopicView({
           </p>
         )}
       </nav>
-      <TopicScreen key={topic.id} topic={topic} />
+      {/* The title is this screen's heading: the topic screen does not repeat it. */}
+      <TopicScreen key={topic.id} topic={topic} showTitle={false} />
     </main>
   )
 }

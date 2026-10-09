@@ -82,7 +82,9 @@ void app.whenReady().then(() => {
   generation = new GenerationService({
     db,
     resolveCli: () =>
-      resolveCliPath({ configuredPath: getSettings(appDb).claudeCliPath ?? envCliPath })
+      resolveCliPath({ configuredPath: getSettings(appDb).claudeCliPath ?? envCliPath }),
+    // Read on every call: a Claude config directory change applies at once.
+    configDir: () => getSettings(appDb).claudeConfigDir
   })
   const generationService = generation
   const corpus = loadCorpus(corpusPath(app.getAppPath()))

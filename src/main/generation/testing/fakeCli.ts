@@ -11,6 +11,8 @@ export interface FakeCliCall {
   /** Image blocks of a stream-json input. */
   images: number
   pid: number
+  /** `CLAUDE_CONFIG_DIR` as the call saw it. */
+  configDir: string | null
 }
 
 export interface FakeCli {

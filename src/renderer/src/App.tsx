@@ -13,6 +13,7 @@ import { MasteryView } from './mastery/MasteryView'
 import { LearningPathScreen } from './path/LearningPathScreen'
 import { PathTopicView } from './path/PathTopicView'
 import { QuizScreen } from './quiz/QuizScreen'
+import { OpenSettingsContext } from './settings/openSettings'
 import { SettingsScreen } from './settings/SettingsScreen'
 
 /**
@@ -25,7 +26,8 @@ type Screen =
   | { name: 'topic'; topic: TopicMasterySummary; from?: 'dashboard' }
   | { name: 'dashboard' }
   | { name: 'exercise'; designExerciseId: number }
-  | { name: 'settings' }
+  /** `back`: the screen to return to when opened from an error ("Open Settings"). */
+  | { name: 'settings'; back?: Screen }
   | { name: 'about' }
   // Dev builds only:
   | { name: 'dev-topics' }
@@ -86,11 +88,24 @@ function DevSection({
   )
 }
 
+/** Every screen can open the Settings screen (the "Open Settings" button of auth errors). */
 export function App() {
+  const [screen, setScreen] = useState<Screen>({ name: 'home' })
+  const openSettings = () =>
+    setScreen((current) =>
+      current.name === 'settings' ? current : { name: 'settings', back: current }
+    )
+  return (
+    <OpenSettingsContext.Provider value={openSettings}>
+      <AppScreen screen={screen} setScreen={setScreen} />
+    </OpenSettingsContext.Provider>
+  )
+}
+
+function AppScreen({ screen, setScreen }: { screen: Screen; setScreen: (screen: Screen) => void }) {
   const [version, setVersion] = useState<string | null>(null)
   const [ping, setPing] = useState<PingResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [screen, setScreen] = useState<Screen>({ name: 'home' })
   const home = () => setScreen({ name: 'home' })
   const openTopic = (topic: TopicMasterySummary) => setScreen({ name: 'topic', topic })
   const openExercise = (designExerciseId: number) =>
@@ -132,7 +147,7 @@ export function App() {
         />
       )
     case 'settings':
-      return <SettingsScreen onClose={home} />
+      return <SettingsScreen onClose={() => setScreen(screen.back ?? { name: 'home' })} />
     case 'about':
       return <AboutScreen onClose={home} />
     case 'dev-topics':

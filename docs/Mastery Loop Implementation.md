@@ -74,7 +74,8 @@ Read models for the [[Notion Map]] (#17) and the [[Dashboard]] (#18), in `querie
 
 `src/renderer/src/mastery/`: a topic opened from the [[Learning Path Implementation|Learning Path]] home screen shows `TopicScreen` (the dev-only "All topics (dev)" entry keeps `MasteryView`, the topic list with mastery badges):
 
-- Progress line: status badge, round number, "attempt k of N before the Round Limit", Mastery Threshold.
+- Heading hierarchy (#21): the topic title once, as the screen heading (`PathTopicView`'s `h1`, next to the back button), then the progress line, then the step content. `TopicScreen` takes `showTitle` (default `true`, so the dev "All topics" screen keeps its `h2`; `PathTopicView` passes `false`) and renders `LessonScreen` with `embedded`, which drops its own title and Outside the primer badge. The round results inside the topic screen do not repeat the badge either.
+- Progress line (`TopicHeader`): status badge, the Outside the primer badge (the only one on the screen), round number, "attempt k of N before the Round Limit", Mastery Threshold.
 - `lesson`: the [[Lesson View]] screen (`LessonScreen`, streamed or from cache), then "Take the quiz".
 - Round: the quiz player of the [[Quiz Engine]] (`QuizPlayer`, unchanged), then `QuizResults` with the per-notion breakdown and "Continue".
 - `remediation`: one tab per missed notion with its score, the streamed Remediation Lesson (`RemediationLesson`, with its angle and "Generated" / "From cache"), "Next notion", then "Start round N" once all are recorded.
@@ -93,8 +94,13 @@ The separate Lessons and Quiz screens stay reachable in dev builds only ("Lesson
 | Round Limit | `round_limit` | 3 | 1 to 10 |
 | Questions per quiz | `questions_per_quiz` | `null` (automatic: max(6, targeted notions)) | 4 to 20 |
 | Claude Code CLI path | `claude_cli_path` | `null` (automatic lookup) | absolute path |
+| Claude config directory | `claude_config_dir` | `null` (inherit the environment) | absolute path of an existing directory |
 
-Applied without restart: the threshold and limit are read on every action; a CLI path change calls `GenerationService.resetCliPath()`, so the next Generation resolves it again. The path setting wins over the `CLAUDE_CLI_PATH` environment variable, which stays as a fallback for development and tests. "Test" resolves the CLI like a Generation does (configured path first, no silent fallback) and runs `claude --version`.
+Applied without restart: the threshold and limit are read on every action; a CLI path change calls `GenerationService.resetCliPath()`, so the next Generation resolves it again; the Claude config directory is read on every CLI call and passed as `CLAUDE_CONFIG_DIR` ([[Generation Service#Claude profile]]). The path setting wins over the `CLAUDE_CLI_PATH` environment variable, which stays as a fallback for development and tests. "Test" resolves the CLI like a Generation does (configured path first, no silent fallback), runs `claude --version`, then `claude auth status --json` in the configured profile, and shows the login state, auth method, account email and config directory, with what to do when logged out.
+
+`claude_config_dir` was added without a migration (the `settings` table is key/value): `getSettings` reads it as `null` until the first save writes the row (`unseededDefaults` in `src/main/db/repositories/settings.ts`).
+
+"Open Settings": every Generation error display (lesson, Remediation Lesson, quiz preparation, free-answer grading, Protocol Step Lesson and protocol calls, dev Generation panel) renders `SettingsErrorAction` (`src/renderer/src/settings/`) next to Retry; for `not_logged_in` it explains that Retry will fail until the profile is logged in and opens the Settings screen (`OpenSettingsContext`, provided by `App`; Back returns to the screen it was opened from).
 
 ## Data
 

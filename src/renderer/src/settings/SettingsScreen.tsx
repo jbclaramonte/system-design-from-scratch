@@ -3,6 +3,7 @@ import {
   settingsErrors,
   settingsLimits,
   type AppSettings,
+  type CliAuthStatus,
   type CliCheck
 } from '../../../shared/settings'
 import { errorMessage } from '../quiz/errorMessage'
@@ -15,23 +16,30 @@ interface Draft {
   questionsPerQuiz: string
   /** Empty = automatic lookup. */
   claudeCliPath: string
+  /** Empty = inherit the environment. */
+  claudeConfigDir: string
 }
 
 const toDraft = (settings: AppSettings): Draft => ({
   masteryThreshold: String(settings.masteryThreshold),
   roundLimit: String(settings.roundLimit),
   questionsPerQuiz: settings.questionsPerQuiz === null ? '' : String(settings.questionsPerQuiz),
-  claudeCliPath: settings.claudeCliPath ?? ''
+  claudeCliPath: settings.claudeCliPath ?? '',
+  claudeConfigDir: settings.claudeConfigDir ?? ''
 })
 
 const fromDraft = (draft: Draft): AppSettings => ({
   masteryThreshold: Number(draft.masteryThreshold),
   roundLimit: Number(draft.roundLimit),
   questionsPerQuiz: draft.questionsPerQuiz.trim() ? Number(draft.questionsPerQuiz) : null,
-  claudeCliPath: draft.claudeCliPath.trim() || null
+  claudeCliPath: draft.claudeCliPath.trim() || null,
+  claudeConfigDir: draft.claudeConfigDir.trim() || null
 })
 
-/** Mastery Threshold, Round Limit, questions per quiz and the Claude Code CLI path. */
+/**
+ * Mastery Threshold, Round Limit, questions per quiz, the Claude Code CLI path and the Claude
+ * config directory (profile).
+ */
 export function SettingsScreen({ onClose }: { onClose: () => void }) {
   const [draft, setDraft] = useState<Draft | null>(null)
   const [status, setStatus] = useState<string | null>(null)
@@ -73,7 +81,7 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
   const testCli = () => {
     setCheck('running')
     window.api
-      .testCli({ claudeCliPath: values.claudeCliPath })
+      .testCli({ claudeCliPath: values.claudeCliPath, claudeConfigDir: values.claudeConfigDir })
       .then(setCheck)
       .catch((reason: unknown) =>
         setCheck({ ok: false, error: { code: 'unknown', message: errorMessage(reason) } })
@@ -138,24 +146,52 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
           error={errors.claudeCliPath}
           placeholder="Automatic"
         />
-        <p>
+        <Field
+          id="claude-config-dir"
+          label="Claude config directory"
+          help="Empty: the profile of the environment the app was started from (usually ~/.claude). Set it when your logged-in profile lives elsewhere, for example ~/.claude-perso with CLAUDE_CONFIG_DIR: an app started from the Finder or the Dock does not see that variable. Absolute path of an existing directory (in a file dialog, Cmd+Shift+. shows hidden folders)."
+          value={draft.claudeConfigDir}
+          onChange={(value) => {
+            setCheck(null)
+            edit('claudeConfigDir')(value)
+          }}
+          error={errors.claudeConfigDir}
+          placeholder="Inherit the environment"
+        />
+        <div>
           <button
             type="button"
             data-testid="settings-test-cli"
             onClick={testCli}
-            disabled={check === 'running' || errors.claudeCliPath !== undefined}
+            disabled={
+              check === 'running' ||
+              errors.claudeCliPath !== undefined ||
+              errors.claudeConfigDir !== undefined
+            }
           >
             Test
           </button>{' '}
-          <span role="status" data-testid="settings-cli-check">
-            {check === 'running' && 'Checking...'}
-            {check !== null &&
-              check !== 'running' &&
-              check.ok &&
-              `OK: ${check.version} at ${check.path}`}
-            {check !== null && check !== 'running' && !check.ok && `${check.error.message}`}
-          </span>
-        </p>
+          <small style={{ color: '#555' }}>
+            Runs <code>claude --version</code> and <code>claude auth status</code> with the values
+            above (no model call).
+          </small>
+          <div role="status" data-testid="settings-cli-check">
+            {check === 'running' && <p>Checking...</p>}
+            {check !== null && check !== 'running' && !check.ok && <p>{check.error.message}</p>}
+            {check !== null && check !== 'running' && check.ok && (
+              <>
+                <p>
+                  OK: {check.version} at {check.path}
+                </p>
+                {check.auth.ok ? (
+                  <AuthStatusView status={check.auth.status} configDir={values.claudeConfigDir} />
+                ) : (
+                  <p>Login state unknown: {check.auth.error.message}</p>
+                )}
+              </>
+            )}
+          </div>
+        </div>
         {error && <p role="alert">{error}</p>}
         <p>
           <button type="submit" data-testid="settings-save" disabled={!valid}>
@@ -169,6 +205,48 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
         </p>
       </form>
     </main>
+  )
+}
+
+/** Login state of the tested profile, and what to do when it is logged out. */
+function AuthStatusView({
+  status,
+  configDir
+}: {
+  status: CliAuthStatus
+  configDir: string | null
+}) {
+  const dir = status.configDirectory ?? configDir ?? '~/.claude'
+  return (
+    <>
+      <dl data-testid="settings-auth-status" style={{ margin: '0.25rem 0' }}>
+        <dt>Login</dt>
+        <dd data-testid="settings-auth-logged-in">
+          {status.loggedIn ? 'Logged in' : 'Not logged in'}
+        </dd>
+        <dt>Auth method</dt>
+        <dd>
+          {status.authMethod}
+          {status.apiProvider && status.apiProvider !== 'firstParty' && ` (${status.apiProvider})`}
+        </dd>
+        {status.email && (
+          <>
+            <dt>Account</dt>
+            <dd>{status.email}</dd>
+          </>
+        )}
+        <dt>Config directory</dt>
+        <dd data-testid="settings-auth-config-dir">{dir}</dd>
+      </dl>
+      {!status.loggedIn && (
+        <p role="alert" data-testid="settings-auth-help">
+          This profile is not logged in, so every generation will fail. Either log it in: run{' '}
+          <code>CLAUDE_CONFIG_DIR={dir} claude</code> in a terminal and use <code>/login</code>, or
+          set the Claude config directory above to the profile that is logged in, then Test again
+          and Save.
+        </p>
+      )}
+    </>
   )
 }
 

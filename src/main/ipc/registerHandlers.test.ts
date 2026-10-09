@@ -68,12 +68,27 @@ const handlers: IpcHandlers = {
     masteryThreshold: 100,
     roundLimit: 3,
     questionsPerQuiz: null,
-    claudeCliPath: null
+    claudeCliPath: null,
+    claudeConfigDir: null
   }),
   'settings:update': () => {
     throw new Error('invalid')
   },
-  'settings:testCli': async () => ({ ok: true, path: '/x/claude', version: '1.0.0' }),
+  'settings:testCli': async () => ({
+    ok: true,
+    path: '/x/claude',
+    version: '1.0.0',
+    auth: {
+      ok: true,
+      status: {
+        loggedIn: true,
+        authMethod: 'claude.ai',
+        apiProvider: 'firstParty',
+        email: null,
+        configDirectory: '/x/.claude'
+      }
+    }
+  }),
   'quiz:listTopics': () => [],
   'quiz:listQuizzes': () => [],
   'quiz:load': () => {

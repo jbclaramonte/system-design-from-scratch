@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { GenerationEvent, GenerationKind } from '../../../shared/generation'
+import { SettingsErrorAction } from '../settings/SettingsErrorAction'
 
 /**
  * Dev-only check of the Generation round trip (start, streamed events, cancel) over IPC. Uses the
@@ -64,6 +65,7 @@ export function GenerationDevPanel() {
       <p data-testid="generation-log">{log.join(' ')}</p>
       <pre data-testid="generation-text">{text}</pre>
       <pre data-testid="generation-last">{last && JSON.stringify(last, null, 2)}</pre>
+      {last?.type === 'error' && <SettingsErrorAction code={last.error.code} />}
     </section>
   )
 }

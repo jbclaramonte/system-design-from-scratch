@@ -13,6 +13,11 @@ export interface AppSettings {
   questionsPerQuiz: number | null
   /** Absolute path of the `claude` binary; null = automatic lookup. */
   claudeCliPath: string | null
+  /**
+   * Claude profile directory, passed as `CLAUDE_CONFIG_DIR` to every CLI call; null = inherit the
+   * environment. Must be an existing directory (checked by the main process).
+   */
+  claudeConfigDir: string | null
 }
 
 export const settingsLimits = {
@@ -23,13 +28,15 @@ export const settingsLimits = {
 
 export type SettingsErrors = Partial<Record<keyof AppSettings, string>>
 
+const isAbsolutePath = (path: string) => /^(\/|[A-Za-z]:[\\/])/.test(path)
+
 const inRange = (value: unknown, { min, max }: { min: number; max: number }) =>
   typeof value === 'number' && Number.isInteger(value) && value >= min && value <= max
 
 /** Validation errors of a settings change, by field; empty when valid. */
 export function settingsErrors(changes: Partial<AppSettings>): SettingsErrors {
   const errors: SettingsErrors = {}
-  const { masteryThreshold, roundLimit, questionsPerQuiz, claudeCliPath } = changes
+  const { masteryThreshold, roundLimit, questionsPerQuiz, claudeCliPath, claudeConfigDir } = changes
   if (
     masteryThreshold !== undefined &&
     !inRange(masteryThreshold, settingsLimits.masteryThreshold)
@@ -47,19 +54,55 @@ export function settingsErrors(changes: Partial<AppSettings>): SettingsErrors {
     errors.questionsPerQuiz = 'Automatic, or a whole number between 4 and 20.'
   }
   if (claudeCliPath !== undefined && claudeCliPath !== null) {
-    const absolute = /^(\/|[A-Za-z]:[\\/])/.test(claudeCliPath)
-    if (typeof claudeCliPath !== 'string' || !claudeCliPath.trim() || !absolute) {
+    if (
+      typeof claudeCliPath !== 'string' ||
+      !claudeCliPath.trim() ||
+      !isAbsolutePath(claudeCliPath)
+    ) {
       errors.claudeCliPath = 'An absolute path, or empty for the automatic lookup.'
+    }
+  }
+  if (claudeConfigDir !== undefined && claudeConfigDir !== null) {
+    if (
+      typeof claudeConfigDir !== 'string' ||
+      !claudeConfigDir.trim() ||
+      !isAbsolutePath(claudeConfigDir)
+    ) {
+      errors.claudeConfigDir = 'An absolute directory path, or empty to inherit the environment.'
     }
   }
   return errors
 }
 
-/** Result of the "Test" button of the Claude CLI path setting. */
+/** Login state reported by `claude auth status --json` for one Claude profile. */
+export interface CliAuthStatus {
+  loggedIn: boolean
+  /** For example `claude.ai`, `console`, `third_party`, `none`. */
+  authMethod: string
+  /** For example `firstParty`, `bedrock`. Null when not reported. */
+  apiProvider: string | null
+  /** Account email; null when logged out or not reported. */
+  email: string | null
+  /** The profile directory the CLI used (`~/.claude` unless `CLAUDE_CONFIG_DIR` is set). */
+  configDirectory: string | null
+}
+
+/**
+ * Result of the "Test" button of the Claude CLI settings: the resolved binary, its version, and
+ * the login state of the configured profile (`auth` is an error when it could not be read).
+ */
 export type CliCheck =
-  { ok: true; path: string; version: string } | { ok: false; error: GenerationErrorInfo }
+  | {
+      ok: true
+      path: string
+      version: string
+      auth: { ok: true; status: CliAuthStatus } | { ok: false; error: GenerationErrorInfo }
+    }
+  | { ok: false; error: GenerationErrorInfo }
 
 export interface CliCheckRequest {
   /** The path to test; null tests the automatic lookup. */
   claudeCliPath: string | null
+  /** The Claude profile directory to test; null inherits the environment. */
+  claudeConfigDir: string | null
 }

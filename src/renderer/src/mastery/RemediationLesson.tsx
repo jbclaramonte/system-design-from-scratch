@@ -9,6 +9,7 @@ import {
   type LessonState
 } from '../lesson/lessonState'
 import { createTextBuffer } from '../lesson/textBuffer'
+import { SettingsErrorAction } from '../settings/SettingsErrorAction'
 import { angleLabels } from './masteryText'
 
 /**
@@ -103,6 +104,7 @@ export function RemediationLesson({
               : errorTitle(state.error.code)}
           </strong>
           {state.status !== 'cancelled' && <p>{state.error.message}</p>}
+          <SettingsErrorAction code={state.error.code} />
           <button type="button" onClick={onRetry} data-testid="remediation-retry">
             Retry
           </button>

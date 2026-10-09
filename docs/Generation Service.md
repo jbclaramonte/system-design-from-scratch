@@ -115,6 +115,14 @@ A GUI-launched Electron app gets a minimal PATH (`/usr/bin:/bin:...`), so `spawn
 3. Common install locations: `~/.claude/local`, `~/.local/bin`, `/opt/homebrew/bin`, `/usr/local/bin`, `~/.npm-global/bin`, `$npm_config_prefix/bin`.
 4. `$SHELL -lc 'command -v claude'` (login shell, 5 s timeout). Only an absolute, executable path is accepted (an alias prints its definition).
 
+### Claude profile
+
+The CLI keeps its login in a profile directory: `~/.claude`, or `$CLAUDE_CONFIG_DIR` when set. An app started from the Finder or the Dock, or from a shell without that variable, uses `~/.claude` even if the learner's logged-in profile lives elsewhere (for example `~/.claude-perso`); an expired session there fails every call with `not_logged_in` (#20).
+
+- Setting `claude_config_dir` ("Claude config directory" in the Settings screen, default `null` = inherit the environment): an absolute path of an existing directory, checked by the main process on save.
+- Every CLI call gets it as `CLAUDE_CONFIG_DIR` (`cliEnv(configDir, env)` in `cliRunner.ts`): `GenerationService` reads the `configDir` option on each call, so a change applies at once without restart; the Settings screen's "Test" uses it too.
+- "Test" runs `claude --version`, then `claude auth status --json` (no model call; exit code 1 with JSON when logged out) and shows: logged in or not, auth method (and API provider when not first party), account email, config directory, CLI version. A logged-out profile comes with what to do: `CLAUDE_CONFIG_DIR=<dir> claude` then `/login`, or pick the profile that is logged in.
+
 ## Errors
 
 Every failure ends the stream with `{ type: 'error', error: { code, message } }`. The message tells the learner what to do; for CLI failures it ends with the CLI's own text.
@@ -122,7 +130,7 @@ Every failure ends the stream with `{ type: 'error', error: { code, message } }`
 | Code | When | What the learner should do |
 |---|---|---|
 | `cli_not_found` | Binary not resolved, or `spawn` fails with `ENOENT`/`EACCES` | Install Claude Code or fix its path in the settings |
-| `not_logged_in` | Failed run whose message mentions login, an invalid API key or 401 | Run `claude` in a terminal and log in |
+| `not_logged_in` | Failed run whose message mentions an authentication failure: "Failed to authenticate", "OAuth" (for example "OAuth session expired and could not be refreshed"), "Not logged in", `/login`, an invalid API key, "authentication", "unauthorized" or 401 | Log in again with the CLI for the profile the app uses (`CLAUDE_CONFIG_DIR=<dir> claude`, then `/login`), or set the Claude config directory in Settings. Retry alone cannot help: every Generation error display shows an "Open Settings" button for this code (`SettingsErrorAction`) |
 | `quota_or_rate_limit` | Failed run mentioning a usage limit, rate limit, quota, 429 or overload | Wait for the limit to reset |
 | `bad_model` | Failed run with `[claude-code:unrecognized_model]` or "issue with the selected model" | Pick another model |
 | `timeout` | No result within `timeoutMs` (default 120 s) | Retry |
@@ -131,7 +139,7 @@ Every failure ends the stream with `{ type: 'error', error: { code, message } }`
 | `topic_locked` | Not from the CLI: a Round or Remediation Lesson refused before any Generation because the topic is locked on the [[Learning Path]] (packaged app only, see [[Learning Path Implementation#Lock enforcement]]) | Master the previous step |
 | `unknown` | Anything else (non-zero exit, no `result` event) | Retry |
 
-A run fails when the `result` event has `is_error: true`, even if `subtype` is `"success"` (observed in the spike), or when the process exits without a successful result. Only the `bad_model` shape was observed for real; the login and quota patterns are best-effort.
+A run fails when the `result` event has `is_error: true`, even if `subtype` is `"success"` (observed in the spike), or when the process exits without a successful result. The `bad_model` shape and the expired OAuth session ("Failed to authenticate: OAuth session expired and could not be refreshed") were observed for real; the other login and quota patterns are best-effort. The patterns are tried in table order (`bad_model`, then `not_logged_in`, then `quota_or_rate_limit`), tested in `cliRunner.test.ts`.
 
 On invalid output the service retries once, appending the validation error to the prompt, and sends a `retry` event (the renderer drops the text streamed so far).
 
@@ -152,5 +160,6 @@ Declared in `src/shared/ipc.ts`:
 ## Tests
 
 - Unit tests run against a fake `claude` (`src/main/generation/testing/fakeClaude.mts`, an executable Node script in a temp dir emitting stream-json shaped like the real CLI), or an injected runner for queue and deduplication tests. No quota is used.
+- `CLAUDE_CONFIG_DIR` injection: `cliRunner.test.ts` (the fake CLI logs the variable it got), `service.test.ts` (read on each call), `src/main/settings/settings.test.ts` (Test button, `claude auth status` parsing on real output fixtures, setting validation and round trip).
 - `src/main/generation/cli.integration.test.ts` makes 2 real calls (streamed text, schema output) and is skipped unless `RUN_CLI_INTEGRATION=1`.
 - `scripts/prompt-quality-check.ts` runs the real content pipeline for one topic (at most 5 calls), see [[Prompts#How to iterate]].

@@ -3,7 +3,8 @@ import type { GenerationErrorCode, GenerationErrorInfo } from '../../shared/gene
 const defaultMessages: Record<GenerationErrorCode, string> = {
   cli_not_found:
     'Claude Code CLI not found. Install it (https://docs.claude.com/en/docs/claude-code) or set its path in the settings.',
-  not_logged_in: 'Claude Code is not logged in. Run `claude` in a terminal and log in, then retry.',
+  not_logged_in:
+    'Claude Code is not logged in for the profile the app uses. Log in again with the CLI for that profile (`CLAUDE_CONFIG_DIR=<dir> claude`, then /login), or set the Claude config directory in the settings to a profile that is logged in, then retry.',
   quota_or_rate_limit:
     'Claude usage limit or rate limit reached. Wait for the limit to reset, then retry.',
   bad_model: 'The configured model is not available. Pick another model in the settings.',
@@ -33,13 +34,14 @@ export function toGenerationError(error: unknown): GenerationError {
   return new GenerationError('unknown', undefined, { cause: error })
 }
 
-// Matched against the result text and stderr of a failed CLI run. Only the bad model shape was
-// observed in the spike (docs/spikes/cli-latency.md); the others are best-effort patterns.
+// Matched against the result text and stderr of a failed CLI run. The bad model shape was observed
+// in the spike (docs/spikes/cli-latency.md), the expired OAuth session on first use (#20); the
+// others are best-effort patterns.
 const failurePatterns: [GenerationErrorCode, RegExp][] = [
   ['bad_model', /unrecognized_model|issue with the selected model|model .*(not found|not exist)/i],
   [
     'not_logged_in',
-    /not logged in|please run \/login|\/login|invalid api key|authentication_error|oauth token|unauthorized|\b401\b/i
+    /not logged in|\/login|invalid api key|failed to authenticate|authentication|oauth|could not be refreshed|unauthori[sz]ed|\b401\b/i
   ],
   [
     'quota_or_rate_limit',

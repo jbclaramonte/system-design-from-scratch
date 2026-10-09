@@ -9,6 +9,7 @@ import {
   type LessonState
 } from '../../lesson/lessonState'
 import { createTextBuffer } from '../../lesson/textBuffer'
+import { SettingsErrorAction } from '../../settings/SettingsErrorAction'
 
 /**
  * Streams the Protocol Step Lesson of a step and cancels it on unmount. Each effect run has its
@@ -95,6 +96,7 @@ function StepLessonStream({
             {state.status === 'cancelled' ? 'Lesson cancelled' : errorTitle(state.error.code)}
           </strong>
           {state.status !== 'cancelled' && <p>{state.error.message}</p>}
+          <SettingsErrorAction code={state.error.code} />
           <button type="button" onClick={onRetry} data-testid="step-lesson-retry">
             Retry
           </button>

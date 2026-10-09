@@ -103,9 +103,19 @@ on your Claude subscription. Requirements:
 - An app launched from Finder or the Dock does not see your shell PATH. The app looks for `claude`
   on PATH, then in `~/.claude/local`, `~/.local/bin`, `/opt/homebrew/bin`, `/usr/local/bin`,
   `~/.npm-global/bin`, then asks your login shell. To force a path, set it in **Settings > Claude
-  Code CLI path** (applied at once; the **Test** button runs `claude --version` on it). The
+  Code CLI path** (applied at once; the **Test** button runs `claude --version` and
+  `claude auth status` on it). The
   `CLAUDE_CLI_PATH=/absolute/path/to/claude` environment variable is still read when the setting
   is empty (development, tests).
+- **Troubleshooting "Claude Code is not logged in" (`not_logged_in`)**: the app uses the CLI
+  profile of the environment it was started from, `~/.claude` unless `CLAUDE_CONFIG_DIR` is set.
+  If you log in with another profile (for example `CLAUDE_CONFIG_DIR=~/.claude-perso`), an app
+  started from Finder, the Dock or a shell without that variable uses `~/.claude`, whose session
+  may be expired ("Failed to authenticate: OAuth session expired"). Open **Settings > Claude
+  config directory**, set the absolute path of the logged-in profile, press **Test** (it runs
+  `claude auth status`: login state, auth method, account, config directory) and save; it
+  applies at once. Or log that profile in again: `CLAUDE_CONFIG_DIR=<dir> claude`, then `/login`.
+  Every generation error of this kind shows an **Open Settings** button.
 - Each call runs isolated from your Claude Code setup (no hooks, plugins, MCP servers, settings or
   tools), with `--model sonnet --effort low`, from an empty temp directory.
 
