@@ -57,3 +57,4 @@ Single source of truth for domain terms. Use these exact terms in code, schema, 
 | [[Excerpt]] | A passage of the source corpus returned by lookup, with a citation to its source section, passed to a generation for grounding. | snippet, chunk |
 | [[Content Cache]] | SQLite store of every generated lesson, remediation lesson and quiz, reused on repeat. | store, memo |
 | [[Generation]] | One LLM call (via the Claude Code CLI) that produces content or grades a free answer. | completion, request |
+| [[Pre-generation]] | A Generation started in the background before its result is needed (for example the quiz while the lesson is read); waits behind foreground Generations, cancellable, stored in the Content Cache. | prefetch, warm-up |

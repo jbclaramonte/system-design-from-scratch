@@ -1,7 +1,8 @@
 import { join } from 'node:path'
 import { app, BrowserWindow, ipcMain, session, shell } from 'electron'
 import { openAppDatabase, type Database } from './db'
-import { handlers } from './ipc/handlers'
+import { createGenerationIpc, GenerationService } from './generation'
+import { createHandlers } from './ipc/handlers'
 import { registerHandlers } from './ipc/registerHandlers'
 import { isExternalWebUrl } from './security'
 
@@ -54,16 +55,19 @@ app.on('web-contents-created', (_event, contents) => {
 })
 
 let db: Database | undefined
+let generation: GenerationService | undefined
 
 void app.whenReady().then(() => {
   const opened = openAppDatabase(app.getPath('userData'))
   db = opened.db
   console.log(`Database ready at schema version ${opened.schemaVersion}`)
+  // CLAUDE_CLI_PATH overrides the automatic lookup until the settings screen exposes it.
+  generation = new GenerationService({ db, cli: { path: process.env['CLAUDE_CLI_PATH'] } })
 
   session.defaultSession.setPermissionRequestHandler((_contents, _permission, callback) =>
     callback(false)
   )
-  registerHandlers(ipcMain, handlers)
+  registerHandlers(ipcMain, createHandlers({ generation: createGenerationIpc(generation) }))
   createMainWindow()
 
   app.on('activate', () => {
@@ -74,6 +78,9 @@ void app.whenReady().then(() => {
 })
 
 app.on('will-quit', () => {
+  // Kills running CLI processes and drops queued Generations.
+  generation?.dispose()
+  generation = undefined
   db?.close()
   db = undefined
 })

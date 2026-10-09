@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { PingResponse } from '../../shared/ipc'
+import { GenerationDevPanel } from './dev/GenerationDevPanel'
 
 export function App() {
   const [version, setVersion] = useState<string | null>(null)
@@ -28,6 +29,7 @@ export function App() {
           <dd data-testid="ping">{ping ? `${ping.reply} (${ping.receivedAt})` : '...'}</dd>
         </dl>
       )}
+      {import.meta.env.DEV && <GenerationDevPanel />}
     </main>
   )
 }

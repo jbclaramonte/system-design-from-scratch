@@ -27,7 +27,7 @@ gantt
 
     section Content engine
     #5 Ingest and split primer corpus         :done, c1, after f1, 3d
-    #6 Generation service (CLI, stream, cache):crit, c2, after f2, 5d
+    #6 Generation service (CLI, stream, cache):done, crit, c2, after f2, 5d
     #7 Grounded lesson and quiz prompts       :c3, after c1 c2, 4d
 
     section Mastery loop

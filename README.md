@@ -12,8 +12,7 @@ for the product spec, roadmap and glossary.
   and npm.
 - The [Claude Code CLI](https://docs.claude.com/en/docs/claude-code) installed and logged in. The app
   drives it as a subprocess for every generation, so it is required at runtime (not for building or
-  testing). See [docs/spikes/cli-latency.md](docs/spikes/cli-latency.md) for how it is invoked and
-  why.
+  testing). See [Claude Code CLI](#claude-code-cli) below.
 
 ## Getting started
 
@@ -50,8 +49,9 @@ src/
     ipc/             registerHandlers helper and the handler for each channel
     db/              SQLite driver wrapper, migrations and repositories
     corpus/          Source Corpus: primer split, excerpt lookup (docs/Corpus.md)
+    generation/      Generation service: Claude Code CLI runner, queue, Content Cache, IPC
   preload/           Exposes the typed window.api bridge to the renderer
-  renderer/          React app (index.html with the CSP, src/ for components)
+  renderer/          React app (index.html with the CSP, src/ for components, src/dev/ dev-only)
   shared/            Code shared by both sides, including the IPC contract (ipc.ts)
 resources/corpus/    Generated primer corpus (CC BY 4.0), see docs/Corpus.md
 scripts/             Build-time scripts (build-corpus.ts), run with plain node
@@ -65,6 +65,9 @@ spikes/              Standalone throwaway prototypes, not part of the app build
 each channel with its request and response types and maps it to a `window.api` method. The preload
 builds `window.api` from that map, and the main process must provide a handler for every channel
 (enforced by the type of `registerHandlers`). The renderer never touches `ipcRenderer` directly.
+Events pushed by the main process (such as `generation:event`) are declared in `IpcEvents`, exposed
+as `window.api.on...` subscriptions that return an unsubscribe function, and sent with `sendEvent`
+(`src/main/ipc/sendEvent.ts`).
 
 ### Database
 
@@ -74,6 +77,26 @@ Electron `userData` directory, opened at startup with WAL and foreign keys on. I
 `src/main/db/driver.ts`. Migrations live in `src/main/db/migrations/`: append a new numbered one,
 never edit an applied one; each runs in a transaction and is recorded in `schema_migrations`. The
 schema is documented in [docs/Data Model.md](docs/Data%20Model.md).
+
+### Claude Code CLI
+
+Every generation (lessons, remediation lessons, quizzes, free-answer grading, design feedback) is
+one call to the `claude` CLI, made by the Generation service in `src/main/generation/`. Calls draw
+on your Claude subscription. Requirements:
+
+- `claude` installed and logged in (run `claude` once in a terminal). If it is missing or logged
+  out, generations fail with an explicit `cli_not_found` or `not_logged_in` error.
+- An app launched from Finder or the Dock does not see your shell PATH. The app looks for `claude`
+  on PATH, then in `~/.claude/local`, `~/.local/bin`, `/opt/homebrew/bin`, `/usr/local/bin`,
+  `~/.npm-global/bin`, then asks your login shell. To force a path, start the app with
+  `CLAUDE_CLI_PATH=/absolute/path/to/claude`.
+- Each call runs isolated from your Claude Code setup (no hooks, plugins, MCP servers, settings or
+  tools), with `--model sonnet --effort low`, from an empty temp directory.
+
+The tests never call the real CLI: they use a fake `claude` script. One opt-in test makes 2 real
+calls: `RUN_CLI_INTEGRATION=1 npx vitest run src/main/generation/cli.integration.test.ts`. Details,
+flags and error codes: [docs/Generation Service.md](docs/Generation%20Service.md); measurements
+behind the choices: [docs/spikes/cli-latency.md](docs/spikes/cli-latency.md).
 
 ### Security
 

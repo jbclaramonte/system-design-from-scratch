@@ -1,6 +1,8 @@
 /** Row types returned by the repositories. Timestamps are ISO 8601 strings. */
 
-export type Json = null | boolean | number | string | Json[] | { [key: string]: Json }
+import type { Json } from '../../shared/json'
+
+export type { Json }
 
 export interface Timestamps {
   createdAt: string

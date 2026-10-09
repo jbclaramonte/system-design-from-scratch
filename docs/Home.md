@@ -12,6 +12,7 @@ Desktop app to learn system design: lesson, quiz, targeted remediation until mas
 - [[Ubiquitous Language]]
 - [[Data Model]]
 - [[Corpus|Source Corpus build and license]]
+- [[Generation Service]]
 
 ## Concept notes
 
@@ -21,6 +22,6 @@ Assessment: [[Quiz]], [[Question]], [[Attempt]], [[Round]], [[Mastery Loop]], [[
 
 Design practice: [[Design Exercise]], [[Interview Protocol]], [[Protocol Step]], [[Hint]], [[Reference Solution]], [[Design Canvas]], [[Design Scene]], [[Design Feedback]]
 
-Generation and data: [[Grounding]], [[Source Corpus]], [[Excerpt]], [[Content Cache]], [[Generation]]
+Generation and data: [[Grounding]], [[Source Corpus]], [[Excerpt]], [[Content Cache]], [[Generation]], [[Pre-generation]]
 
 Task tracking lives in GitHub Issues, see `CLAUDE.md`.

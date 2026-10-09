@@ -17,3 +17,6 @@ release/
 # Obsidian per-user state (keep the vault content, ignore workspace files)
 docs/.obsidian/workspace*.json
 docs/.obsidian/cache
+
+# Test tooling cache
+.vitest/
