@@ -62,6 +62,8 @@ src/
                      export/: Design Export, see docs/Design Export.md;
                      protocol/: Design Exercise screen with the Interview Protocol steps)
                      src/lesson/: Lesson view (topic list, streamed Markdown, source chips)
+                     src/markdown/: shared Markdown renderer and Mermaid Diagrams
+                     (docs/Mermaid Diagrams.md)
                      src/mastery/: topic screen driving the Mastery Loop
                      src/path/: Learning Path home screen (docs/Learning Path Implementation.md)
                      src/dashboard/: Dashboard screen with the Notion Map heat grid
@@ -126,6 +128,15 @@ real calls and writes a sample under `docs/samples/` (see [docs/Prompts.md](docs
 Foundations Module slug such as `how-the-web-works` runs the ungrounded prompts). Details,
 flags and error codes: [docs/Generation Service.md](docs/Generation%20Service.md); measurements
 behind the choices: [docs/spikes/cli-latency.md](docs/spikes/cli-latency.md).
+
+### Markdown and diagrams
+
+Every Markdown view (lessons, Remediation Lessons, Protocol Step Lessons) renders through
+`MarkdownContent` (`src/renderer/src/markdown/`): GFM, no raw HTML, http(s) links only.
+` ```mermaid ` blocks are drawn as diagrams by `MermaidDiagram`, with `mermaid` loaded on first use
+(not in the main bundle), `securityLevel: 'strict'`, size and node limits, and a fallback to the
+source as code when a diagram cannot be drawn. **Diagrams (dev)** under Developer tools shows the
+fixtures. See [docs/Mermaid Diagrams.md](docs/Mermaid%20Diagrams.md).
 
 ### Security
 

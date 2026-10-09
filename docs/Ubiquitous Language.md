@@ -20,6 +20,7 @@ Single source of truth for domain terms. Use these exact terms in code, schema, 
 | [[Lesson]] | Generated text course on a topic. | course, article |
 | [[Remediation Lesson]] | Short generated lesson on one missed notion, from a different angle than the original lesson. | recap, targeted course, mini-course |
 | [[Foundations Module]] | Prerequisite topics the primer assumes but does not teach (how the web works, networking basics, data storage basics...), generated ungrounded unless grounded on primer sections that are not a topic (orders of magnitude on the appendix). | module 0, basics |
+| [[Diagram]] | A Mermaid schema in generated content (a ```` ```mermaid ```` block), drawn in the app, or shown as its source when it cannot be drawn. | schema, chart, figure, graph (graph is the Design Graph) |
 | [[Learning Path]] | The linear, unlockable sequence: foundations, topics, design exercises. | curriculum, roadmap (roadmap is the Gantt) |
 
 ## Assessment

@@ -53,6 +53,10 @@ Personal desktop app to learn system design from scratch, built around this loop
 - While a lesson is being read, the matching quiz is pre-generated in the background.
 - All generated content (lessons, remediation lessons, quizzes) is stored in the [[Content Cache]] (SQLite) and reused when a topic is redone.
 
+### 4.4 Diagrams
+
+Lessons, remediation lessons, protocol step lessons and scenario questions include Mermaid diagrams written by the LLM (flowchart, sequence diagram, etc.), rendered in the app in strict mode with a text alternative. An invalid diagram falls back to a code block and never breaks the content. Diagrams only show what the excerpts support (ungrounded content is flagged as usual).
+
 ## 5. Mastery loop
 
 - Each [[Question]] is tagged with one or more notions.

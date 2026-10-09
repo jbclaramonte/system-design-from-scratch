@@ -1,10 +1,9 @@
 import { memo, useMemo } from 'react'
-import Markdown, { type Components } from 'react-markdown'
-import remarkGfm from 'remark-gfm'
+import type { Components } from 'react-markdown'
 import type { LessonSource } from '../../../shared/lesson'
+import type { DiagramErrorEvent } from '../markdown/diagramSource'
+import { MarkdownContent } from '../markdown/MarkdownContent'
 import { remarkLesson, shortSourceLabel } from './citations'
-
-const isWebUrl = (url: string | undefined): url is string => !!url && /^https?:\/\//i.test(url)
 
 /** Opens a primer permalink: the main process routes http(s) `window.open` to the OS browser. */
 const openExternal = (url: string) => window.open(url, '_blank', 'noopener,noreferrer')
@@ -30,18 +29,24 @@ export function SourceChip({ sectionId, source }: { sectionId: string; source?: 
   )
 }
 
-const plugins = [remarkGfm, remarkLesson]
+const plugins = [remarkLesson]
 
 /**
- * Renders lesson Markdown (GFM tables, code blocks) with source chips. Raw HTML is never
- * rendered (`skipHtml`) and links only open http(s) URLs, in the OS browser.
+ * Renders lesson Markdown (lessons, Remediation Lessons, Protocol Step Lessons) through the
+ * shared `MarkdownContent` (GFM, Mermaid Diagrams, no raw HTML, http(s) links only), with
+ * source chips and notion anchors.
  */
 export const LessonMarkdown = memo(function LessonMarkdown({
   markdown,
-  sources
+  sources,
+  streaming = false,
+  onDiagramError
 }: {
   markdown: string
   sources: LessonSource[]
+  /** True while the lesson streams (see `MarkdownContent`). */
+  streaming?: boolean
+  onDiagramError?: (event: DiagramErrorEvent) => void
 }) {
   const components = useMemo<Components>(() => {
     const bySection = new Map(sources.map((source) => [source.sectionId, source]))
@@ -57,28 +62,17 @@ export const LessonMarkdown = memo(function LessonMarkdown({
         ) : (
           <span>{children}</span>
         )
-      },
-      a: ({ href, children }) =>
-        isWebUrl(href) ? (
-          <a href={href} target="_blank" rel="noreferrer">
-            {children}
-          </a>
-        ) : (
-          <span>{children}</span>
-        ),
-      // Remote images are blocked by the CSP and the lesson prompt asks for none: show the alt.
-      img: ({ alt }) => (alt ? <em>[{alt}]</em> : null),
-      table: ({ children }) => (
-        <div className="lesson-table">
-          <table>{children}</table>
-        </div>
-      )
+      }
     }
   }, [sources])
 
   return (
-    <Markdown remarkPlugins={plugins} components={components} skipHtml>
-      {markdown}
-    </Markdown>
+    <MarkdownContent
+      markdown={markdown}
+      streaming={streaming}
+      onDiagramError={onDiagramError}
+      remarkPlugins={plugins}
+      components={components}
+    />
   )
 })

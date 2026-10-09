@@ -111,7 +111,7 @@ export function RemediationLesson({
         </div>
       )}
       <div className="lesson-body" data-testid="remediation-body">
-        <LessonMarkdown markdown={state.text} sources={state.sources} />
+        <LessonMarkdown markdown={state.text} sources={state.sources} streaming={running} />
       </div>
     </article>
   )

@@ -7,6 +7,7 @@ import { DashboardScreen } from './dashboard/DashboardScreen'
 import { ProtocolDevScreen } from './design/protocol/ProtocolDevScreen'
 import { ProtocolExerciseScreen } from './design/protocol/ProtocolExerciseScreen'
 import { DesignCanvasDevScreen } from './dev/DesignCanvasDevScreen'
+import { DiagramDevScreen } from './dev/DiagramDevScreen'
 import { GenerationDevPanel } from './dev/GenerationDevPanel'
 import { LessonView } from './lesson/LessonView'
 import { MasteryView } from './mastery/MasteryView'
@@ -35,6 +36,7 @@ type Screen =
   | { name: 'dev-quiz' }
   | { name: 'dev-design-canvas' }
   | { name: 'dev-design-exercise' }
+  | { name: 'dev-diagrams' }
 
 /** Dev-only tools, in a compact section under the Learning Path. */
 function DevSection({
@@ -73,6 +75,9 @@ function DevSection({
             onClick={() => open({ name: 'dev-design-exercise' })}
           >
             Design exercise (dev)
+          </button>
+          <button data-testid="open-diagrams-dev" onClick={() => open({ name: 'dev-diagrams' })}>
+            Diagrams (dev)
           </button>
         </div>
         {error ? (
@@ -164,6 +169,9 @@ function AppScreen({ screen, setScreen }: { screen: Screen; setScreen: (screen: 
       break
     case 'dev-design-exercise':
       if (import.meta.env.DEV) return <ProtocolDevScreen onClose={home} />
+      break
+    case 'dev-diagrams':
+      if (import.meta.env.DEV) return <DiagramDevScreen onClose={home} />
       break
   }
 

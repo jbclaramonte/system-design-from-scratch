@@ -51,6 +51,11 @@ gantt
     section Fixes
     #20 Claude CLI profile setting, auth errors :done, crit, x1, 2026-10-09, 1d
     #21 Topic title shown three times         :done, x2, 2026-10-09, 1d
+
+    section Diagrams
+    #22 Mermaid rendering in markdown         :done, crit, g1, 2026-10-12, 2d
+    #23 Diagrams in lessons and step lessons  :g2, after g1, 3d
+    #24 Diagrams in quiz scenarios            :g3, after g1, 3d
 ```
 
 ## Dependency table
@@ -78,6 +83,9 @@ gantt
 | #19 | #5 |
 | #20 | none |
 | #21 | none |
+| #22 | none |
+| #23 | #22 |
+| #24 | #22 |
 
 ## Conventions
 

@@ -103,7 +103,7 @@ function StepLessonStream({
         </div>
       )}
       <div className="lesson-body" data-testid="step-lesson-body">
-        <LessonMarkdown markdown={state.text} sources={state.sources} />
+        <LessonMarkdown markdown={state.text} sources={state.sources} streaming={running} />
       </div>
       <p>
         <button

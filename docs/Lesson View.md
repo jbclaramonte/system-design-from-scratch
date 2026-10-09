@@ -67,7 +67,7 @@ Declared in `src/shared/ipc.ts`, types in `src/shared/topic.ts` and `src/shared/
 
 `src/renderer/src/lesson/`:
 
-- `LessonMarkdown.tsx`: `react-markdown` 10.1.0 + `remark-gfm` 4.0.1 (tables, strikethrough, task lists), code blocks as `<pre><code class="language-x">`. **No raw HTML** (`skipHtml`), links only for `http(s)` URLs and opened in the OS browser, images replaced by their alt text.
+- `LessonMarkdown.tsx`: the shared `MarkdownContent` (`src/renderer/src/markdown/`: `react-markdown` 10.1.0 + `remark-gfm` 4.0.1, tables, strikethrough, task lists) plus the source chips and notion anchors. Code blocks render as `<pre><code class="language-x">`, except ```` ```mermaid ```` blocks, drawn as a [[Diagram]] once their fence is closed (a "Diagram loading…" placeholder while it streams), see [[Mermaid Diagrams]]. **No raw HTML** (`skipHtml`), links only for `http(s)` URLs and opened in the OS browser, images replaced by their alt text. The same component renders [[Remediation Lesson|Remediation Lessons]] and [[Protocol Step Lesson|Protocol Step Lessons]]; each view passes `streaming` while its Generation runs.
 - `citations.ts`: the `remarkLesson` plugin turns `[source: <section id>]` in text nodes (never in code) into source chips, and `<!-- notion: <slug> -->` markers into hidden anchors used by the notion buttons of the header. A chip shows the section's last heading and opens its primer permalink; an id that is not among the lesson's excerpts shows as a dashed "unknown" chip.
 - `textBuffer.ts`: text deltas are batched (one render per 80 ms at most); auto-scroll follows the stream only while the learner stays within 48 px of the bottom.
 - `lessonState.ts`: reducer of the screen states (`starting`, `outline`, `queued`, `generating`, `done`, `cancelled`, `error`), error titles per code.
@@ -75,7 +75,7 @@ Declared in `src/shared/ipc.ts`, types in `src/shared/topic.ts` and `src/shared/
 - Retry remounts the screen with a new request. Leaving the screen cancels a running request. A `not_logged_in` error also shows "Open Settings" (`SettingsErrorAction`, see [[Generation Service#Errors]]).
 - `embedded` (default `false`): inside the topic screen of the [[Mastery Loop Implementation|Mastery Loop]], `LessonScreen` shows neither the topic title nor the Outside the primer badge, which the topic screen's heading and progress line already show (#21). The standalone Lessons (dev) screen keeps both.
 
-Not done: syntax highlighting (no highlighter bundled) and Mermaid diagrams (the lesson prompt asks for neither, and Mermaid adds a large bundle); a fenced `mermaid` block renders as code.
+Not done: syntax highlighting (no highlighter bundled). Mermaid Diagrams are rendered (#22, mermaid loaded lazily) but the lesson prompt does not ask for them yet (#23).
 
 ## Verification (2026-10-09)
 
@@ -94,8 +94,9 @@ Built app driven over the Chrome DevTools protocol, `CLAUDE_CLI_PATH` pointing t
 
 - `src/main/content/`: `seedTopics`, `listTopicSummaries`, `getTopicDetail` (`topics.ts`); `createLessonIpc` (`lessonIpc.ts`); tests in `content.test.ts`.
 - `src/renderer/src/lesson/`: `LessonView`, `LessonScreen`, `LessonMarkdown`; tests in `lesson.test.ts`.
+- `src/renderer/src/markdown/`: `MarkdownContent`, `MermaidDiagram` ([[Mermaid Diagrams]]); tests in `markdown.test.ts`.
 
 ## Related
 
 - [[Lesson]], [[Topic]], [[Notion Outline]], [[Grounding]], [[Pre-generation]], [[Content Cache]]
-- [[Prompts]], [[Generation Service]]
+- [[Prompts]], [[Generation Service]], [[Mermaid Diagrams]], [[Diagram]]

@@ -21,6 +21,7 @@ Desktop app to learn system design: lesson, quiz, targeted remediation until mas
 - [[Prompts|Prompts and output schemas]] (sample: [[samples/cache|Cache]])
 - [[Quiz Engine|Quiz Engine and local grading]]
 - [[Lesson View|Lesson view and topic bootstrap]]
+- [[Mermaid Diagrams|Mermaid Diagrams: rendering, limits, CSP, fallback]]
 - [[Mastery Loop Implementation|Mastery Loop, remediation and settings]]
 - [[Learning Path Implementation|Learning Path, unlock rules and home screen]]
 - [[Dashboard Implementation|Dashboard, Notion Map and weak points]]
@@ -28,7 +29,7 @@ Desktop app to learn system design: lesson, quiz, targeted remediation until mas
 
 ## Concept notes
 
-Learning content: [[Topic]], [[Notion]], [[Notion Outline]], [[Lesson]], [[Remediation Lesson]], [[Foundations Module]], [[Learning Path]]
+Learning content: [[Topic]], [[Notion]], [[Notion Outline]], [[Lesson]], [[Remediation Lesson]], [[Foundations Module]], [[Learning Path]], [[Diagram]]
 
 Assessment: [[Quiz]], [[Question]], [[Attempt]], [[Round]], [[Mastery Loop]], [[Mastery Threshold]], [[Round Limit]], [[Notion Map]], [[Dashboard]], [[Weak Point]]
 

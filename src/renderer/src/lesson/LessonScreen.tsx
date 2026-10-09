@@ -176,7 +176,7 @@ export function LessonScreen({
         onScroll={(event) => (followRef.current = isNearBottom(event.currentTarget))}
       >
         <article className="lesson-body" data-testid="lesson-body" aria-busy={running}>
-          <LessonMarkdown markdown={state.text} sources={state.sources} />
+          <LessonMarkdown markdown={state.text} sources={state.sources} streaming={running} />
         </article>
         {state.status === 'done' && state.sources.length > 0 && (
           <footer className="lesson-sources">
