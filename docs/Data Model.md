@@ -17,6 +17,11 @@ Local SQLite database of the app, owned by the Electron main process. Table name
 
 `src/main/db/migrations/` holds numbered migrations, listed in order in `migrations/index.ts`. `migrate()` (`src/main/db/migrate.ts`) applies the pending ones at startup, each in its own transaction, and records it in `schema_migrations (version, name, applied_at)`. Running it again is a no-op; a database newer than the app is refused. Never edit or reorder an applied migration: append a new one.
 
+| Version | Name | Change |
+|---|---|---|
+| 1 | `initial-schema` | Every table below. |
+| 2 | `notion-sources-and-question-flags` | `notions.source_sections`; `questions.flagged_at`, `flag_reason`, `replaced_by_question_id` (#7). |
+
 ## Diagram
 
 ```mermaid
@@ -28,6 +33,7 @@ erDiagram
   quizzes ||--o{ questions : contains
   quizzes ||--o{ rounds : "played in"
   questions ||--o{ question_notions : "tagged with"
+  questions |o--o| questions : "replaced by"
   notions ||--o{ question_notions : ""
   notions ||--o{ remediation_lessons : "targeted by"
   rounds |o--o{ remediation_lessons : "followed by"
@@ -55,6 +61,7 @@ erDiagram
     text slug "unique per topic"
     text title
     text description
+    text source_sections "JSON array"
   }
   lessons {
     int id PK
@@ -87,6 +94,9 @@ erDiagram
     text type
     text prompt
     text body "JSON"
+    text flagged_at
+    text flag_reason
+    int replaced_by_question_id FK
   }
   question_notions {
     int question_id PK
@@ -158,7 +168,7 @@ erDiagram
 ### Learning content
 
 - `topics`: one [[Topic]] per row, ordered by `position` along the [[Learning Path]]. `in_foundations_module` marks [[Foundations Module]] topics; `source_section` points to the primer heading in the [[Source Corpus]] (null for foundations).
-- `notions`: [[Notion]]s of a topic, `slug` unique per topic. Deleted with their topic.
+- `notions`: [[Notion]]s of a topic, `slug` unique per topic, in [[Notion Outline]] order (`id`). `source_sections` lists the [[Source Corpus]] sections the notion comes from (empty in the [[Foundations Module]]); a remediation lesson on the notion is grounded on them. The outline is generated once and is not in `content_cache`: notion ids are referenced by tags and attempts, so they must not change with a prompt version (see [[Prompts]]). Deleted with their topic.
 - `lessons`: generated [[Lesson]]s of a topic (markdown). Several per topic are allowed (regeneration).
 - `remediation_lessons`: [[Remediation Lesson]]s on one notion, with the [[Round]] whose failure triggered them (nullable).
 
@@ -167,7 +177,7 @@ Generated rows carry `grounded` and `source_sections` ([[Grounding]]) and an opt
 ### Assessment
 
 - `quizzes`: one [[Quiz]] on a topic.
-- `questions`: [[Question]]s of a quiz, unique `position` per quiz. `type` is one of `single_choice`, `multiple_choice`, `scenario`, `free_answer`. `body` holds the type-specific payload (choices, answer key, scenario, rubric). Deleted with their quiz, unless they have attempts.
+- `questions`: [[Question]]s of a quiz, unique `position` per quiz. `type` is one of `single_choice`, `multiple_choice`, `scenario`, `free_answer`. `body` holds the type-specific payload (choices with their `correct` flag, explanation, scenario, expected points and model answer, source sections; see [[Prompts]]). Deleted with their quiz, unless they have attempts. A faulty question is flagged (`flagged_at`, `flag_reason`) and may be replaced: the replacement takes its position, the flagged row moves after the last position and points to it with `replaced_by_question_id` (history; attempts stay valid). `listQuestions` skips replaced questions, `listQuestionHistory` keeps them.
 - `question_notions`: tags each question with one or more notions.
 - `rounds`: one [[Round]] of the [[Mastery Loop]] on a topic, playing one quiz. `number` is unique per topic and never restarts, so the history stays ordered; the [[Round Limit]] counts rounds since the last passed round of that topic. `completed_at`, `score_percent` (0 to 100) and `passed` are all null until the round is graded, then all set; `passed` is stored because the [[Mastery Threshold]] can change later.
 - `attempts`: one [[Attempt]] per answer: `attempted_at` (date), `question_id`, `question_type`, `answer` (JSON), `result` (`correct`, `partially_correct`, `incorrect`), `score` (0 to 1), optional `feedback` (free answer grading) and `round_id`. Attempts are history: a question or round with attempts cannot be deleted.
@@ -184,7 +194,7 @@ Generated rows carry `grounded` and `source_sections` ([[Grounding]]) and an opt
 
 ### Generation and data
 
-- `content_cache`: [[Content Cache]]. `cache_key` is the SHA-256 of the canonical JSON of `{ kind, inputs, promptVersion }` (object keys sorted). `kind` is `lesson`, `remediation_lesson` or `quiz`. Storing an entry with an existing key replaces its content.
+- `content_cache`: [[Content Cache]]. `cache_key` is the SHA-256 of the canonical JSON of `{ kind, inputs, promptVersion }` (object keys sorted). `kind` is `lesson`, `remediation_lesson` or `quiz` (a `notion_outline` Generation is stored in `notions` instead). Storing an entry with an existing key replaces its content.
 - `settings`: key/value, values as JSON. Seeded with `mastery_threshold = 100` ([[Mastery Threshold]]) and `round_limit = 3` ([[Round Limit]]).
 - `schema_migrations`: applied migrations.
 

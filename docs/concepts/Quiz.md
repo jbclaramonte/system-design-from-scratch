@@ -16,3 +16,5 @@ A set of [[Question]]s on a [[Topic]], played as one [[Round]]. Pre-generated in
 ## In code
 
 Table `quizzes`, repository `src/main/db/repositories/assessment.ts`. See [[Data Model]].
+
+Prompt and output schema `buildQuizGeneration` / `quizSchema` (`src/main/generation/prompts/quiz.ts`), request built by `prepareQuiz` and stored by `saveQuiz` (`src/main/generation/pipelines.ts`). See [[Prompts]].

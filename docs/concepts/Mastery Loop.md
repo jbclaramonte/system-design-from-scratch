@@ -15,4 +15,4 @@ Lesson, quiz, remediation lessons on missed notions, new quiz with fresh questio
 
 ## In code
 
-Not implemented yet.
+Not implemented yet (#11). Its Generations are ready: quiz options `focusNotions`, `reminderNotions` and `avoidPrompts` for the rounds, and the Remediation Lesson prompt (`src/main/generation/prompts/`). See [[Prompts]].

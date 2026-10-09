@@ -15,4 +15,4 @@ Generating content from bundled excerpts of the [[Source Corpus]] and citing the
 ## In code
 
 - Excerpt lookup with citations: `findExcerpts` and `fitExcerptsToBudget` in `src/main/corpus/lookup.ts`. See [[Corpus]].
-- Not yet wired into generation.
+- Prompt rules, citation format `[source: <section id>]` and excerpt assembly within a token budget: `src/main/generation/prompts/common.ts`. Topic and notion excerpts: `topicGrounding` and `notionGrounding` in `src/main/generation/pipelines.ts`. See [[Prompts]].

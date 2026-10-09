@@ -15,4 +15,4 @@ The saved state of a [[Design Canvas]] for one [[Design Exercise]]: a tldraw sna
 
 ## In code
 
-Table `design_scenes`, see [[Data Model]].
+Table `design_scenes`, see [[Data Model]]. IPC `design:loadScene` / `design:saveScene` (`src/main/ipc/design.ts`), (de)serialization in `src/renderer/src/design/sceneSnapshot.ts`, debounced autosave in `DesignCanvas.tsx`. See [[Design Canvas Integration]].

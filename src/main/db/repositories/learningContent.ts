@@ -67,33 +67,55 @@ export interface NewNotion {
   slug: string
   title: string
   description?: string | null
+  sourceSections?: string[]
 }
 
-const NOTION_COLUMNS = `id, topic_id AS topicId, slug, title, description, ${TIMESTAMP_COLUMNS}`
+interface NotionRow extends Omit<Notion, 'sourceSections'> {
+  sourceSections: string
+}
+
+const NOTION_COLUMNS = `id, topic_id AS topicId, slug, title, description,
+  source_sections AS sourceSections, ${TIMESTAMP_COLUMNS}`
+
+const toNotion = (row: NotionRow): Notion => ({
+  ...row,
+  sourceSections: fromJson<string[]>(row.sourceSections)
+})
 
 export function createNotion(db: Database, notion: NewNotion): Notion {
   const { lastInsertRowid } = db
     .prepare(
-      `INSERT INTO notions (topic_id, slug, title, description)
-       VALUES ($topicId, $slug, $title, $description)`
+      `INSERT INTO notions (topic_id, slug, title, description, source_sections)
+       VALUES ($topicId, $slug, $title, $description, $sourceSections)`
     )
     .run({
       topicId: notion.topicId,
       slug: notion.slug,
       title: notion.title,
-      description: notion.description ?? null
+      description: notion.description ?? null,
+      sourceSections: toJson(notion.sourceSections ?? [])
     })
   return getNotion(db, lastInsertRowid)!
 }
 
-export function getNotion(db: Database, id: number): Notion | undefined {
-  return db.prepare(`SELECT ${NOTION_COLUMNS} FROM notions WHERE id = $id`).get<Notion>({ id })
+/** Creates the notions of a topic (its Notion Outline) in order, atomically. */
+export function createNotions(db: Database, notions: NewNotion[]): Notion[] {
+  return db.transaction(() => notions.map((notion) => createNotion(db, notion)))
 }
 
+export function getNotion(db: Database, id: number): Notion | undefined {
+  const row = db
+    .prepare(`SELECT ${NOTION_COLUMNS} FROM notions WHERE id = $id`)
+    .get<NotionRow>({ id })
+  return row && toNotion(row)
+}
+
+/** Notions of a topic in outline order. */
 export function listNotionsByTopic(db: Database, topicId: number): Notion[] {
   return db
     .prepare(`SELECT ${NOTION_COLUMNS} FROM notions WHERE topic_id = $topicId ORDER BY id`)
-    .all<Notion>({ topicId })
+    .all<NotionRow>({ topicId })
+    .map(toNotion)
 }
 
 // Lessons

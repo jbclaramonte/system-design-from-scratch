@@ -6,11 +6,15 @@ import type { Json } from './json'
 
 export type { Json }
 
-/** What a Generation produces. The first three are stored in the Content Cache. */
+/**
+ * What a Generation produces. The first three are stored in the Content Cache. A Notion Outline
+ * is stored in the `notions` table instead, once per topic.
+ */
 export const generationKinds = [
   'lesson',
   'remediation_lesson',
   'quiz',
+  'notion_outline',
   'free_answer_grading',
   'design_feedback'
 ] as const

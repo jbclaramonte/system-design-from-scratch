@@ -31,6 +31,8 @@ export interface Notion extends Timestamps {
   slug: string
   title: string
   description: string | null
+  /** Source Corpus sections the notion comes from (empty in the Foundations Module). */
+  sourceSections: string[]
 }
 
 export interface Lesson extends Timestamps, Grounded {
@@ -71,6 +73,11 @@ export interface Question extends Timestamps {
   /** Type-specific payload: choices, answer key, scenario, grading rubric. */
   body: Json
   notionIds: number[]
+  /** Set when the learner flagged the question as faulty. */
+  flaggedAt: string | null
+  flagReason: string | null
+  /** The question that replaced this flagged one in its quiz, if it was regenerated. */
+  replacedByQuestionId: number | null
 }
 
 export interface Round extends Timestamps {

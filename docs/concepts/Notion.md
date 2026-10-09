@@ -9,11 +9,11 @@ A fine-grained idea inside a [[Topic]], for example cache-aside versus write-thr
 
 ## Related
 
-- Belongs to a [[Topic]]
+- Belongs to a [[Topic]], listed in its [[Notion Outline]]
 - Tags [[Question]]s
 - Drives [[Remediation Lesson]]
 - Visualized in the [[Notion Map]]
 
 ## In code
 
-Table `notions`, repository `src/main/db/repositories/learningContent.ts`. See [[Data Model]].
+Table `notions` (with `source_sections`), repository `src/main/db/repositories/learningContent.ts`. Created from the topic's [[Notion Outline]] by `ensureNotionOutline` (`src/main/generation/pipelines.ts`). See [[Data Model]] and [[Prompts]].

@@ -16,3 +16,5 @@ Generated text course on a [[Topic]], streamed to the user. Grounded on the [[So
 ## In code
 
 Table `lessons`, repository `src/main/db/repositories/learningContent.ts`. See [[Data Model]].
+
+Prompt `buildLessonGeneration` (`src/main/generation/prompts/lesson.ts`), request built by `prepareLesson` (`src/main/generation/pipelines.ts`): one section per notion of the [[Notion Outline]], inline `[source: <section id>]` citations, a recap per notion. See [[Prompts]].

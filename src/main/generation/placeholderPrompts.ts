@@ -1,6 +1,7 @@
-// PLACEHOLDER prompts and schemas, only here to exercise the Generation service end to end.
-// The real pedagogical prompts, output schemas and their versions are issue #7: replace this
-// file there, do not build on it.
+// PLACEHOLDER prompts and schemas, only used by the generic `generation:start` IPC round trip
+// (the dev panel), which receives free-form input. The real prompts live in `./prompts` and run
+// through `./pipelines` (issue #7); free-answer grading (#10) and design feedback (#14) prompts
+// are still to come. Do not build on this file.
 import { z } from 'zod'
 import type { GenerationKind, Json } from '../../shared/generation'
 import type { GenerationPrompt } from './service'

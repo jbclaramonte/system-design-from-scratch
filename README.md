@@ -52,6 +52,7 @@ src/
     generation/      Generation service: Claude Code CLI runner, queue, Content Cache, IPC
   preload/           Exposes the typed window.api bridge to the renderer
   renderer/          React app (index.html with the CSP, src/ for components, src/dev/ dev-only)
+                     src/design/: Design Canvas (tldraw, typed shapes, Design Scene autosave)
   shared/            Code shared by both sides, including the IPC contract (ipc.ts)
 resources/corpus/    Generated primer corpus (CC BY 4.0), see docs/Corpus.md
 scripts/             Build-time scripts (build-corpus.ts), run with plain node
@@ -94,7 +95,9 @@ on your Claude subscription. Requirements:
   tools), with `--model sonnet --effort low`, from an empty temp directory.
 
 The tests never call the real CLI: they use a fake `claude` script. One opt-in test makes 2 real
-calls: `RUN_CLI_INTEGRATION=1 npx vitest run src/main/generation/cli.integration.test.ts`. Details,
+calls: `RUN_CLI_INTEGRATION=1 npx vitest run src/main/generation/cli.integration.test.ts`. To check
+the content prompts on real output, `node scripts/prompt-quality-check.ts [topic-id]` makes at most 5
+real calls and writes a sample under `docs/samples/` (see [docs/Prompts.md](docs/Prompts.md)). Details,
 flags and error codes: [docs/Generation Service.md](docs/Generation%20Service.md); measurements
 behind the choices: [docs/spikes/cli-latency.md](docs/spikes/cli-latency.md).
 
@@ -109,6 +112,12 @@ window go to the OS browser (http and https only), and permission requests are d
 Copy `.env.example` to `.env.local` at the repo root and fill in the values. `.env.local` is
 ignored by git. Only variables prefixed with `VITE_` (or `RENDERER_VITE_`) are exposed to the
 renderer, as `import.meta.env.VITE_...`; they end up in the bundle, so treat them as public.
+
+- `VITE_TLDRAW_LICENSE_KEY`: tldraw license key for the Design Canvas. Optional in dev
+  (`npm run dev` shows a "Get a license for production" watermark), **required for production
+  builds** (`npm run build` / `npm run preview`, renderer loaded from `file://`): without a valid
+  key tldraw stops rendering the canvas after 5 seconds. See
+  [docs/Design Canvas Integration.md](docs/Design%20Canvas%20Integration.md).
 
 ## License
 

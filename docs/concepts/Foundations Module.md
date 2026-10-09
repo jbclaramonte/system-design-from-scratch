@@ -14,4 +14,4 @@ Prerequisite topics absent from the primer (client/server, HTTP, DNS, basic data
 
 ## In code
 
-Not implemented yet.
+Ungrounded prompt variants (no excerpts, no citations, `grounded: false`) for every content prompt, chosen from `topics.in_foundations_module` by `topicGrounding` (`src/main/generation/pipelines.ts`). See [[Prompts]]. The module's topics themselves are not seeded yet (#16).

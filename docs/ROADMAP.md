@@ -28,7 +28,7 @@ gantt
     section Content engine
     #5 Ingest and split primer corpus         :done, c1, after f1, 3d
     #6 Generation service (CLI, stream, cache):done, crit, c2, after f2, 5d
-    #7 Grounded lesson and quiz prompts       :c3, after c1 c2, 4d
+    #7 Grounded lesson and quiz prompts       :done, c3, after c1 c2, 4d
 
     section Mastery loop
     #8 Lesson view with streaming             :m1, after c3, 3d
@@ -37,7 +37,7 @@ gantt
     #11 Mastery loop, remediation, settings   :crit, m4, after m1 m2, 5d
 
     section Design practice
-    #12 Design canvas with typed shapes       :d1, after s2 f1, 5d
+    #12 Design canvas with typed shapes       :done, d1, after s2 f1, 5d
     #13 Canvas export (JSON + PNG)            :d2, after d1, 3d
     #14 Protocol steps, feedback, hints       :d3, after d2 m4, 6d
     #15 First two design exercises            :d4, after d3, 4d

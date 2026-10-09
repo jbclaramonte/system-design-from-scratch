@@ -40,6 +40,8 @@ interface QuestionRow extends Omit<Question, 'body' | 'notionIds'> {
 }
 
 const QUESTION_SELECT = `SELECT q.id, q.quiz_id AS quizId, q.position, q.type, q.prompt, q.body,
+    q.flagged_at AS flaggedAt, q.flag_reason AS flagReason,
+    q.replaced_by_question_id AS replacedByQuestionId,
     q.created_at AS createdAt, q.updated_at AS updatedAt,
     (SELECT group_concat(notion_id) FROM
       (SELECT notion_id FROM question_notions WHERE question_id = q.id ORDER BY notion_id)
@@ -66,27 +68,30 @@ export function createQuiz(db: Database, quiz: NewQuiz): Quiz {
         sourceSections: toJson(quiz.sourceSections ?? []),
         contentCacheKey: quiz.contentCacheKey ?? null
       })
-    const insertQuestion = db.prepare(
+    for (const question of quiz.questions) insertQuestion(db, quizId, question)
+    return getQuiz(db, quizId)!
+  })
+}
+
+/** Inserts a question with its notion tags. Call inside a transaction. */
+function insertQuestion(db: Database, quizId: number, question: NewQuestion): number {
+  const { lastInsertRowid: questionId } = db
+    .prepare(
       `INSERT INTO questions (quiz_id, position, type, prompt, body)
        VALUES ($quizId, $position, $type, $prompt, $body)`
     )
-    const tagQuestion = db.prepare(
-      'INSERT INTO question_notions (question_id, notion_id) VALUES ($questionId, $notionId)'
-    )
-    for (const question of quiz.questions) {
-      const { lastInsertRowid: questionId } = insertQuestion.run({
-        quizId,
-        position: question.position,
-        type: question.type,
-        prompt: question.prompt,
-        body: toJson(question.body)
-      })
-      for (const notionId of question.notionIds) {
-        tagQuestion.run({ questionId, notionId })
-      }
-    }
-    return getQuiz(db, quizId)!
-  })
+    .run({
+      quizId,
+      position: question.position,
+      type: question.type,
+      prompt: question.prompt,
+      body: toJson(question.body)
+    })
+  const tagQuestion = db.prepare(
+    'INSERT INTO question_notions (question_id, notion_id) VALUES ($questionId, $notionId)'
+  )
+  for (const notionId of question.notionIds) tagQuestion.run({ questionId, notionId })
+  return questionId
 }
 
 export function getQuiz(db: Database, id: number): Quiz | undefined {
@@ -106,11 +111,70 @@ export function getQuestion(db: Database, id: number): Question | undefined {
   return row && toQuestion(row)
 }
 
+/** Questions played in a quiz, in order. Replaced (flagged and regenerated) ones are left out. */
 export function listQuestions(db: Database, quizId: number): Question[] {
+  return db
+    .prepare(
+      `${QUESTION_SELECT} WHERE q.quiz_id = $quizId AND q.replaced_by_question_id IS NULL
+       ORDER BY q.position`
+    )
+    .all<QuestionRow>({ quizId })
+    .map(toQuestion)
+}
+
+/** Every question of a quiz, replaced ones included (history), by position. */
+export function listQuestionHistory(db: Database, quizId: number): Question[] {
   return db
     .prepare(`${QUESTION_SELECT} WHERE q.quiz_id = $quizId ORDER BY q.position`)
     .all<QuestionRow>({ quizId })
     .map(toQuestion)
+}
+
+/** Marks a question as faulty, with the learner's reason. Flagging again updates the reason. */
+export function flagQuestion(db: Database, id: number, reason: string | null): Question {
+  const { changes } = db
+    .prepare(
+      `UPDATE questions SET flagged_at = coalesce(flagged_at, ${NOW}), flag_reason = $reason,
+         updated_at = ${NOW}
+       WHERE id = $id`
+    )
+    .run({ id, reason })
+  if (changes === 0) throw new Error(`Question ${id} does not exist.`)
+  return getQuestion(db, id)!
+}
+
+/**
+ * Replaces a flagged question in its quiz, atomically. The replacement takes the flagged
+ * question's position; the flagged question is kept (its attempts stay valid), moved after the
+ * last position and linked to its replacement. `position` of the replacement is ignored.
+ */
+export function replaceQuestion(
+  db: Database,
+  flaggedId: number,
+  replacement: Omit<NewQuestion, 'position'>
+): Question {
+  return db.transaction(() => {
+    const flagged = getQuestion(db, flaggedId)
+    if (!flagged) throw new Error(`Question ${flaggedId} does not exist.`)
+    if (flagged.flaggedAt === null) throw new Error(`Question ${flaggedId} is not flagged.`)
+    if (flagged.replacedByQuestionId !== null) {
+      throw new Error(`Question ${flaggedId} was already replaced.`)
+    }
+    db.prepare(
+      `UPDATE questions SET position = (SELECT MAX(position) + 1 FROM questions
+         WHERE quiz_id = $quizId), updated_at = ${NOW}
+       WHERE id = $id`
+    ).run({ id: flaggedId, quizId: flagged.quizId })
+    const replacementId = insertQuestion(db, flagged.quizId, {
+      ...replacement,
+      position: flagged.position
+    })
+    db.prepare(
+      `UPDATE questions SET replaced_by_question_id = $replacementId, updated_at = ${NOW}
+       WHERE id = $id`
+    ).run({ id: flaggedId, replacementId })
+    return getQuestion(db, replacementId)!
+  })
 }
 
 // Rounds

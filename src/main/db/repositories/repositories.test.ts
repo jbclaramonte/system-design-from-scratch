@@ -6,11 +6,14 @@ import {
   completeRound,
   createQuiz,
   createRound,
+  flagQuestion,
   getQuestion,
   listAttemptsByNotion,
   listAttemptsByRound,
+  listQuestionHistory,
   listQuestions,
-  recordAttempt
+  recordAttempt,
+  replaceQuestion
 } from './assessment'
 import { contentCacheKey, getCachedContent, putCachedContent } from './contentCache'
 import {
@@ -23,6 +26,7 @@ import {
 import {
   createLesson,
   createNotion,
+  createNotions,
   createRemediationLesson,
   createTopic,
   getTopicBySlug,
@@ -101,6 +105,23 @@ describe('learning content', () => {
         roundId: null
       })
     ])
+  })
+
+  it('stores the source sections of a Notion Outline, in order', () => {
+    const topic = createTopic(db, { slug: 'lb', title: 'Load balancer', position: 1 })
+    const notions = createNotions(db, [
+      { topicId: topic.id, slug: 'layer-4', title: 'Layer 4', sourceSections: ['lb/l4'] },
+      { topicId: topic.id, slug: 'layer-7', title: 'Layer 7', description: 'HTTP aware.' }
+    ])
+    expect(listNotionsByTopic(db, topic.id)).toEqual(notions)
+    expect(notions.map((n) => n.sourceSections)).toEqual([['lb/l4'], []])
+    expect(() =>
+      createNotions(db, [
+        { topicId: topic.id, slug: 'new', title: 'New' },
+        { topicId: topic.id, slug: 'layer-4', title: 'Duplicate' }
+      ])
+    ).toThrow(/UNIQUE/)
+    expect(listNotionsByTopic(db, topic.id)).toHaveLength(2)
   })
 
   it('enforces unique slugs and existing parents', () => {
@@ -215,6 +236,44 @@ describe('assessment', () => {
     db.prepare('DELETE FROM question_notions WHERE question_id = $id').run({ id: question.id })
     expect(getQuestion(db, question.id)?.notionIds).toEqual([])
     expect(listAttemptsByNotion(db, cacheAside.id)).toHaveLength(1)
+  })
+
+  it('flags a question and swaps in its replacement, keeping the flagged one as history', () => {
+    const { quiz, cacheAside } = seedQuiz()
+    const [first, second] = listQuestions(db, quiz.id)
+    recordAttempt(db, { questionId: first!.id, answer: 1, result: 'incorrect', score: 0 })
+    expect(first).toMatchObject({ flaggedAt: null, flagReason: null, replacedByQuestionId: null })
+    expect(() => replaceQuestion(db, first!.id, { ...first!, notionIds: [] })).toThrow(
+      /not flagged/
+    )
+
+    const flagged = flagQuestion(db, first!.id, 'Two answers are correct.')
+    expect(flagged.flaggedAt).toMatch(ISO)
+    expect(flagged.flagReason).toBe('Two answers are correct.')
+
+    const replacement = replaceQuestion(db, first!.id, {
+      type: 'single_choice',
+      prompt: 'Which pattern reads the database on a miss?',
+      body: { choices: ['cache-aside', 'write-through'], answer: 0 },
+      notionIds: [cacheAside.id]
+    })
+    expect(replacement).toMatchObject({ position: 0, notionIds: [cacheAside.id] })
+    expect(listQuestions(db, quiz.id).map((q) => q.id)).toEqual([replacement.id, second!.id])
+    expect(listQuestionHistory(db, quiz.id).map((q) => q.id)).toEqual([
+      replacement.id,
+      second!.id,
+      first!.id
+    ])
+    expect(getQuestion(db, first!.id)).toMatchObject({
+      position: 2,
+      replacedByQuestionId: replacement.id,
+      flagReason: 'Two answers are correct.'
+    })
+    expect(listAttemptsByNotion(db, cacheAside.id).map((a) => a.questionId)).toEqual([first!.id])
+    expect(() => replaceQuestion(db, first!.id, { ...replacement, notionIds: [] })).toThrow(
+      /already replaced/
+    )
+    expect(() => flagQuestion(db, 999, null)).toThrow(/does not exist/)
   })
 
   it('enforces attempt constraints and protects the history', () => {

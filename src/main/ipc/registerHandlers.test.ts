@@ -19,7 +19,10 @@ const handlers: IpcHandlers = {
   'app:getVersion': () => '1.2.3',
   'system:ping': ({ message }) => ({ reply: `pong: ${message}`, receivedAt: 'now' }),
   'generation:start': () => undefined,
-  'generation:cancel': () => undefined
+  'generation:cancel': () => undefined,
+  'design:loadScene': () => null,
+  'design:saveScene': () => undefined,
+  'design:openScratchExercise': () => ({ id: 1, slug: 'dev-scratch', title: 'Scratch' })
 }
 
 describe('registerHandlers', () => {
@@ -30,6 +33,9 @@ describe('registerHandlers', () => {
 
     expect([...ipc.listeners.keys()].sort()).toEqual([
       'app:getVersion',
+      'design:loadScene',
+      'design:openScratchExercise',
+      'design:saveScene',
       'generation:cancel',
       'generation:start',
       'system:ping'

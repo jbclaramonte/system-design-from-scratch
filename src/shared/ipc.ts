@@ -11,6 +11,23 @@
 
 import type { GenerationEvent, GenerationKind, GenerationPriority, Json } from './generation'
 
+/** The fields of a Design Exercise the renderer needs to open its Design Canvas. */
+export interface DesignExerciseRef {
+  id: number
+  slug: string
+  title: string
+}
+
+export interface DesignSceneLoadRequest {
+  designExerciseId: number
+}
+
+export interface DesignSceneSaveRequest {
+  designExerciseId: number
+  /** tldraw editor snapshot, see `src/renderer/src/design/sceneSnapshot.ts`. */
+  snapshot: Json
+}
+
 export interface PingRequest {
   message: string
 }
@@ -49,6 +66,11 @@ export interface IpcChannels {
   /** Starts a Generation; its events follow on `generation:event`. */
   'generation:start': { request: GenerationStartRequest; response: void }
   'generation:cancel': { request: GenerationCancelRequest; response: void }
+  /** Stored Design Scene snapshot of the exercise, or `null` when it has none yet. */
+  'design:loadScene': { request: DesignSceneLoadRequest; response: Json | null }
+  'design:saveScene': { request: DesignSceneSaveRequest; response: void }
+  /** Dev only (rejected in a packaged app): gets or creates the scratch Design Exercise. */
+  'design:openScratchExercise': { request: void; response: DesignExerciseRef }
 }
 
 /** Event channel (main to renderer) to payload type. */
@@ -67,7 +89,10 @@ export const apiChannels = {
   getAppVersion: 'app:getVersion',
   ping: 'system:ping',
   startGeneration: 'generation:start',
-  cancelGeneration: 'generation:cancel'
+  cancelGeneration: 'generation:cancel',
+  loadDesignScene: 'design:loadScene',
+  saveDesignScene: 'design:saveScene',
+  openScratchDesignExercise: 'design:openScratchExercise'
 } as const satisfies Record<string, IpcChannel>
 
 /** `window.api` subscription method to event channel. */

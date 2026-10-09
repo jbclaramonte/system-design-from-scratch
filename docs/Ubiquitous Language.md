@@ -16,6 +16,7 @@ Single source of truth for domain terms. Use these exact terms in code, schema, 
 |---|---|---|
 | [[Topic]] | A system design subject taught as one unit (for example Caching, Load Balancing). Maps to a primer heading. | concept, chapter, module (for a single subject) |
 | [[Notion]] | A fine-grained idea inside a topic (for example cache-aside vs write-through). The unit of mastery tracking; each question targets notions. | skill, tag, sub-concept |
+| [[Notion Outline]] | The ordered list of notions of a topic, generated once from its sub-topics and then fixed. | notion list, syllabus, tag list |
 | [[Lesson]] | Generated text course on a topic. | course, article |
 | [[Remediation Lesson]] | Short generated lesson on one missed notion, from a different angle than the original lesson. | recap, targeted course, mini-course |
 | [[Foundations Module]] | Prerequisite topics outside the primer (HTTP, DNS, basic databases), generated ungrounded. | module 0, basics |

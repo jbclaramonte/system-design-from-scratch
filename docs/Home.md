@@ -13,10 +13,12 @@ Desktop app to learn system design: lesson, quiz, targeted remediation until mas
 - [[Data Model]]
 - [[Corpus|Source Corpus build and license]]
 - [[Generation Service]]
+- [[Design Canvas Integration]]
+- [[Prompts|Prompts and output schemas]] (sample: [[samples/cache|Cache]])
 
 ## Concept notes
 
-Learning content: [[Topic]], [[Notion]], [[Lesson]], [[Remediation Lesson]], [[Foundations Module]], [[Learning Path]]
+Learning content: [[Topic]], [[Notion]], [[Notion Outline]], [[Lesson]], [[Remediation Lesson]], [[Foundations Module]], [[Learning Path]]
 
 Assessment: [[Quiz]], [[Question]], [[Attempt]], [[Round]], [[Mastery Loop]], [[Mastery Threshold]], [[Round Limit]], [[Notion Map]], [[Dashboard]]
 

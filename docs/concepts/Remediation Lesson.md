@@ -16,3 +16,5 @@ Short generated lesson about a single missed [[Notion]], written from a differen
 ## In code
 
 Table `remediation_lessons`, repository `src/main/db/repositories/learningContent.ts`. See [[Data Model]].
+
+Prompt `buildRemediationLessonGeneration` (`src/main/generation/prompts/remediationLesson.ts`, angles `concrete_example` and `analogy`), request built by `prepareRemediationLesson` (`src/main/generation/pipelines.ts`), grounded on the notion's own sections. See [[Prompts]].

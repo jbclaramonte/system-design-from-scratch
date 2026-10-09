@@ -8,8 +8,8 @@ issue: 6
 
 The single service in the Electron main process that performs every [[Generation]]: [[Lesson|lessons]], [[Remediation Lesson|remediation lessons]], [[Quiz|quizzes]], free-answer grading and [[Design Feedback]]. It drives the Claude Code CLI as a subprocess, streams the output to the renderer over IPC, validates structured output, and reads and writes the [[Content Cache]]. Code: `src/main/generation/`. How the CLI is invoked comes from the [[cli-latency|CLI latency spike]].
 
-> [!warning] Placeholder prompts
-> The prompts and output schemas in `src/main/generation/placeholderPrompts.ts` only exercise the service. The real pedagogical prompts are issue #7.
+> [!note] Prompts
+> The content prompts and output schemas (Notion Outline, lesson, quiz, remediation lesson) are in `src/main/generation/prompts/`, with the pipelines that load and persist their data in `src/main/generation/pipelines.ts`: see [[Prompts]]. `src/main/generation/placeholderPrompts.ts` only serves the generic `generation:start` IPC round trip of the dev panel, and the kinds whose prompts are still to come (free-answer grading #10, design feedback #14).
 
 ## Flow
 
@@ -61,7 +61,7 @@ sequenceDiagram
 
 - `events`: async iterable of `GenerationEvent` (`queued`, `started`, `text_delta`, `retry`, then `done` or `error`). Types in `src/shared/generation.ts`, shared with the renderer.
 - `result`: promise of the `GenerationOutput` (`content`, `fromCache`, `grounded`, `sourceSections`, `cacheKey`, `usage`), rejected with a `GenerationError`.
-- `kind`: `lesson`, `remediation_lesson`, `quiz`, `free_answer_grading`, `design_feedback`.
+- `kind`: `lesson`, `remediation_lesson`, `quiz`, `notion_outline`, `free_answer_grading`, `design_feedback`.
 - `prompt`: `{ version, system, user }`. `version` is part of the cache key: bump it with every prompt change.
 - `schema`: a Zod schema. When set, the Generation is structured: the schema is converted to JSON schema (draft-07, without `$schema`, which the CLI rejects) and passed as `--json-schema`; the CLI returns `structured_output`, which is validated again with Zod. Structured Generations send no `text_delta` (the CLI streams partial JSON fragments, not worth rendering).
 - `groundedSourceSections`: [[Source Corpus]] section ids such as `cache/when-to-update-the-cache`. Non-empty means [[Grounding|grounded]].
@@ -145,9 +145,10 @@ Declared in `src/shared/ipc.ts`:
 - `window.api.cancelGeneration({ requestId })`.
 - `window.api.onGenerationEvent(listener)`: event channel `generation:event` (main to renderer), payload `{ requestId, event }`; returns an unsubscribe function.
 
-`src/main/generation/ipc.ts` builds the prompt and schema for the kind (placeholders until #7), runs the Generation and forwards its events. In development builds, the home screen shows a small "Generation (dev only)" panel to check the round trip.
+`src/main/generation/ipc.ts` builds the prompt and schema for the kind (placeholders: the renderer sends free-form input; typed channels for the real pipelines come with #8, #9 and #11), runs the Generation and forwards its events. In development builds, the home screen shows a small "Generation (dev only)" panel to check the round trip.
 
 ## Tests
 
 - Unit tests run against a fake `claude` (`src/main/generation/testing/fakeClaude.mts`, an executable Node script in a temp dir emitting stream-json shaped like the real CLI), or an injected runner for queue and deduplication tests. No quota is used.
 - `src/main/generation/cli.integration.test.ts` makes 2 real calls (streamed text, schema output) and is skipped unless `RUN_CLI_INTEGRATION=1`.
+- `scripts/prompt-quality-check.ts` runs the real content pipeline for one topic (at most 5 calls), see [[Prompts#How to iterate]].

@@ -2,6 +2,7 @@ import { join } from 'node:path'
 import { app, BrowserWindow, ipcMain, session, shell } from 'electron'
 import { openAppDatabase, type Database } from './db'
 import { createGenerationIpc, GenerationService } from './generation'
+import { createDesignIpc } from './ipc/design'
 import { createHandlers } from './ipc/handlers'
 import { registerHandlers } from './ipc/registerHandlers'
 import { isExternalWebUrl } from './security'
@@ -67,7 +68,13 @@ void app.whenReady().then(() => {
   session.defaultSession.setPermissionRequestHandler((_contents, _permission, callback) =>
     callback(false)
   )
-  registerHandlers(ipcMain, createHandlers({ generation: createGenerationIpc(generation) }))
+  registerHandlers(
+    ipcMain,
+    createHandlers({
+      generation: createGenerationIpc(generation),
+      design: createDesignIpc(db, { allowScratch: !app.isPackaged })
+    })
+  )
   createMainWindow()
 
   app.on('activate', () => {

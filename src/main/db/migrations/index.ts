@@ -1,5 +1,6 @@
 import type { Migration } from '../migrate'
 import { initialSchema } from './0001-initial-schema'
+import { notionSourcesAndQuestionFlags } from './0002-notion-sources-and-question-flags'
 
 /** Every migration, in order. Append new ones; never edit or reorder an applied one. */
-export const migrations: readonly Migration[] = [initialSchema]
+export const migrations: readonly Migration[] = [initialSchema, notionSourcesAndQuestionFlags]

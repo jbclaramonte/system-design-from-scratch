@@ -20,6 +20,22 @@ describe('createApi', () => {
     expect(invoke).toHaveBeenNthCalledWith(2, 'system:ping', { message: 'hello' })
   })
 
+  it('forwards Design Scene calls to the design channels', async () => {
+    const invoke = vi.fn(() => Promise.resolve(null))
+    const api = createApi(invoke, vi.fn())
+    const snapshot = { document: { store: {}, schema: {} } }
+
+    await api.loadDesignScene({ designExerciseId: 7 })
+    await api.saveDesignScene({ designExerciseId: 7, snapshot })
+    await api.openScratchDesignExercise()
+
+    expect(invoke.mock.calls).toEqual([
+      ['design:loadScene', { designExerciseId: 7 }],
+      ['design:saveScene', { designExerciseId: 7, snapshot }],
+      ['design:openScratchExercise', undefined]
+    ])
+  })
+
   it('subscribes event listeners to their channel and returns the unsubscribe', () => {
     const unsubscribe = vi.fn()
     const subscribe = vi.fn(() => unsubscribe)

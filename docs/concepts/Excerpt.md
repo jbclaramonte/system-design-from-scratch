@@ -15,4 +15,4 @@ A passage of the [[Source Corpus]] returned by the lookup API (`findExcerpts`), 
 
 ## In code
 
-`src/main/corpus/` (lookup and budget helpers). See [[Corpus]].
+`src/main/corpus/` (lookup and budget helpers). See [[Corpus]]. Formatted for prompts by `assembleExcerpts` (`src/main/generation/prompts/common.ts`), see [[Prompts]].
