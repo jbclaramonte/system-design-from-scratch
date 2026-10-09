@@ -15,4 +15,4 @@ One item of a [[Quiz]], tagged with [[Notion]]s. Types: single-choice, multiple-
 
 ## In code
 
-Not implemented yet.
+Tables `questions` and `question_notions`, repository `src/main/db/repositories/assessment.ts`. See [[Data Model]].

@@ -16,4 +16,4 @@ A system design subject taught as one unit, for example Caching or Load Balancin
 
 ## In code
 
-Not implemented yet.
+Table `topics`, repository `src/main/db/repositories/learningContent.ts`. See [[Data Model]].

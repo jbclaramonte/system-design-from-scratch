@@ -14,4 +14,4 @@ One iteration of the [[Mastery Loop]]: play a [[Quiz]], grade it, and if the [[M
 
 ## In code
 
-Not implemented yet.
+Table `rounds`, repository `src/main/db/repositories/assessment.ts`. See [[Data Model]].

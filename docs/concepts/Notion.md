@@ -16,4 +16,4 @@ A fine-grained idea inside a [[Topic]], for example cache-aside versus write-thr
 
 ## In code
 
-Not implemented yet.
+Table `notions`, repository `src/main/db/repositories/learningContent.ts`. See [[Data Model]].

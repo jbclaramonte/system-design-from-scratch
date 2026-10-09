@@ -15,4 +15,4 @@ A hands-on system design problem solved on the [[Design Canvas]], for example a 
 
 ## In code
 
-Not implemented yet.
+Table `design_exercises`, repository `src/main/db/repositories/designPractice.ts`. See [[Data Model]].

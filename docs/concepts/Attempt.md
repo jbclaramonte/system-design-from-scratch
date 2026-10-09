@@ -14,4 +14,4 @@ One recorded answer to a [[Question]]: date, question, notion, type, result. The
 
 ## In code
 
-Not implemented yet.
+Tables `attempts` and `attempt_notions`, repository `src/main/db/repositories/assessment.ts` (`recordAttempt`, `listAttemptsByNotion`). See [[Data Model]].

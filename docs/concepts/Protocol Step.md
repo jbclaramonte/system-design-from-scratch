@@ -14,4 +14,4 @@ One step of the [[Interview Protocol]]. Unlocked progressively; on first encount
 
 ## In code
 
-Not implemented yet.
+`protocol_step` column of table `design_feedback`, `ProtocolStep` type in `src/main/db/types.ts`. See [[Data Model]].

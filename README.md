@@ -8,7 +8,8 @@ for the product spec, roadmap and glossary.
 
 ## Prerequisites
 
-- Node.js 24 LTS (22.12 or later works; CI runs on 24) and npm.
+- Node.js 24 LTS (22.18 or later works, the tests need the built-in `node:sqlite`; CI runs on 24)
+  and npm.
 - The [Claude Code CLI](https://docs.claude.com/en/docs/claude-code) installed and logged in. The app
   drives it as a subprocess for every generation, so it is required at runtime (not for building or
   testing). See [docs/spikes/cli-latency.md](docs/spikes/cli-latency.md) for how it is invoked and
@@ -36,6 +37,7 @@ Electron no longer downloads its binary at install time. `npm run dev` and `npm 
 | `npm run format`       | Formats the code with Prettier.                                        |
 | `npm run format:check` | Checks formatting without writing.                                     |
 | `npm test`             | Runs the unit tests with Vitest.                                       |
+| `npm run corpus:build` | Re-fetches the primer at the pinned commit into `resources/corpus/`.   |
 
 CI (`.github/workflows/ci.yml`) runs lint, format check, typecheck and tests on every push and pull
 request.
@@ -46,9 +48,13 @@ request.
 src/
   main/              Electron main process (window, security, IPC handlers)
     ipc/             registerHandlers helper and the handler for each channel
+    db/              SQLite driver wrapper, migrations and repositories
+    corpus/          Source Corpus: primer split, excerpt lookup (docs/Corpus.md)
   preload/           Exposes the typed window.api bridge to the renderer
   renderer/          React app (index.html with the CSP, src/ for components)
   shared/            Code shared by both sides, including the IPC contract (ipc.ts)
+resources/corpus/    Generated primer corpus (CC BY 4.0), see docs/Corpus.md
+scripts/             Build-time scripts (build-corpus.ts), run with plain node
 docs/                Obsidian vault: spec, roadmap, glossary, spike findings
 spikes/              Standalone throwaway prototypes, not part of the app build
 ```
@@ -59,6 +65,15 @@ spikes/              Standalone throwaway prototypes, not part of the app build
 each channel with its request and response types and maps it to a `window.api` method. The preload
 builds `window.api` from that map, and the main process must provide a handler for every channel
 (enforced by the type of `registerHandlers`). The renderer never touches `ipcRenderer` directly.
+
+### Database
+
+The main process keeps everything in a local SQLite file, `system-design-from-scratch.db` in the
+Electron `userData` directory, opened at startup with WAL and foreign keys on. It uses the built-in
+`node:sqlite` module (no native dependency to rebuild) behind the small `Database` interface in
+`src/main/db/driver.ts`. Migrations live in `src/main/db/migrations/`: append a new numbered one,
+never edit an applied one; each runs in a transaction and is recorded in `schema_migrations`. The
+schema is documented in [docs/Data Model.md](docs/Data%20Model.md).
 
 ### Security
 

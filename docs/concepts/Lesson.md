@@ -15,4 +15,4 @@ Generated text course on a [[Topic]], streamed to the user. Grounded on the [[So
 
 ## In code
 
-Not implemented yet.
+Table `lessons`, repository `src/main/db/repositories/learningContent.ts`. See [[Data Model]].

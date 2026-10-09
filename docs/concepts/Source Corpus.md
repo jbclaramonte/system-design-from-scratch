@@ -13,4 +13,6 @@ The bundled system-design-primer (CC BY 4.0), split by Markdown heading. Attribu
 
 ## In code
 
-Not implemented yet.
+- Artifact: `resources/corpus/primer.json`, built by `scripts/build-corpus.ts`. See [[Corpus]].
+- Types: `src/main/corpus/types.ts` (`CorpusTopic`, `CorpusSubTopic`, `CorpusMetadata`).
+- Split: `src/main/corpus/ingest.ts`. Loader: `src/main/corpus/index.ts`.

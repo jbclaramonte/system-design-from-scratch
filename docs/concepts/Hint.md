@@ -13,4 +13,4 @@ Graded, spoiler-free help on a [[Protocol Step]], requested by the user.
 
 ## In code
 
-Not implemented yet.
+`design_feedback` rows with `kind = hint`, repository `src/main/db/repositories/designPractice.ts`. See [[Data Model]].

@@ -44,6 +44,8 @@ Single source of truth for domain terms. Use these exact terms in code, schema, 
 | [[Protocol Step]] | One step of the interview protocol, unlocked progressively with a "why it matters" lesson. | phase, stage |
 | [[Hint]] | Graded, spoiler-free help on a protocol step. | tip, clue |
 | [[Reference Solution]] | The primer's solution for a design exercise, used for the final comparison. | model answer, answer key |
+| [[Design Scene]] | Saved state of a design canvas for one exercise (tldraw snapshot). | drawing, board |
+| [[Design Feedback]] | LLM assessment of a design, per protocol step and as a final review. | review comment, critique |
 | [[Design Canvas]] | The tldraw whiteboard with typed shapes where the user draws the design. | whiteboard, diagram editor |
 
 ## Generation and data
@@ -52,5 +54,6 @@ Single source of truth for domain terms. Use these exact terms in code, schema, 
 |---|---|---|
 | [[Grounding]] | Generating from bundled primer excerpts and citing the source section. Content is either grounded or ungrounded. | RAG, sourced |
 | [[Source Corpus]] | The bundled primer, split by heading. | knowledge base, dataset |
+| [[Excerpt]] | A passage of the source corpus returned by lookup, with a citation to its source section, passed to a generation for grounding. | snippet, chunk |
 | [[Content Cache]] | SQLite store of every generated lesson, remediation lesson and quiz, reused on repeat. | store, memo |
 | [[Generation]] | One LLM call (via the Claude Code CLI) that produces content or grades a free answer. | completion, request |

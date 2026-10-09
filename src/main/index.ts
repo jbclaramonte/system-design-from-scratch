@@ -1,5 +1,6 @@
 import { join } from 'node:path'
 import { app, BrowserWindow, ipcMain, session, shell } from 'electron'
+import { openAppDatabase, type Database } from './db'
 import { handlers } from './ipc/handlers'
 import { registerHandlers } from './ipc/registerHandlers'
 import { isExternalWebUrl } from './security'
@@ -52,7 +53,13 @@ app.on('web-contents-created', (_event, contents) => {
   contents.on('will-attach-webview', (event) => event.preventDefault())
 })
 
+let db: Database | undefined
+
 void app.whenReady().then(() => {
+  const opened = openAppDatabase(app.getPath('userData'))
+  db = opened.db
+  console.log(`Database ready at schema version ${opened.schemaVersion}`)
+
   session.defaultSession.setPermissionRequestHandler((_contents, _permission, callback) =>
     callback(false)
   )
@@ -64,6 +71,11 @@ void app.whenReady().then(() => {
       createMainWindow()
     }
   })
+})
+
+app.on('will-quit', () => {
+  db?.close()
+  db = undefined
 })
 
 app.on('window-all-closed', () => {

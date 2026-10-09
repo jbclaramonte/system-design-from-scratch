@@ -13,4 +13,4 @@ The primer's solution to a [[Design Exercise]]. Used for the final comparison wi
 
 ## In code
 
-Not implemented yet.
+- `ReferenceSolution` in `src/main/corpus/types.ts`, parsed by `parseSolution` in `src/main/corpus/ingest.ts`, bundled in `resources/corpus/primer.json`. See [[Corpus]].

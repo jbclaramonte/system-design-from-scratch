@@ -15,4 +15,4 @@ Short generated lesson about a single missed [[Notion]], written from a differen
 
 ## In code
 
-Not implemented yet.
+Table `remediation_lessons`, repository `src/main/db/repositories/learningContent.ts`. See [[Data Model]].

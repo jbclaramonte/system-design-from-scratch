@@ -14,4 +14,5 @@ Generating content from bundled excerpts of the [[Source Corpus]] and citing the
 
 ## In code
 
-Not implemented yet.
+- Excerpt lookup with citations: `findExcerpts` and `fitExcerptsToBudget` in `src/main/corpus/lookup.ts`. See [[Corpus]].
+- Not yet wired into generation.

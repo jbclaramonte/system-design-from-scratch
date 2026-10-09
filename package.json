@@ -6,7 +6,7 @@
   "license": "Apache-2.0",
   "main": "./out/main/index.js",
   "engines": {
-    "node": ">=22.12.0"
+    "node": ">=22.18.0"
   },
   "scripts": {
     "dev": "install-electron && electron-vite dev",
@@ -18,7 +18,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "corpus:build": "node scripts/build-corpus.ts"
   },
   "dependencies": {
     "react": "19.3.0",

@@ -13,4 +13,4 @@ Maximum number of [[Round]]s (N, adjustable) before the app offers another angle
 
 ## In code
 
-Not implemented yet.
+Setting `round_limit` in table `settings`, repository `src/main/db/repositories/settings.ts`. See [[Data Model]].

@@ -23,10 +23,10 @@ gantt
 
     section Foundation
     #3 Scaffold Electron + React + TS         :done, f1, after s1, 3d
-    #4 SQLite schema and migrations           :f2, after f1, 3d
+    #4 SQLite schema and migrations           :done, f2, after f1, 3d
 
     section Content engine
-    #5 Ingest and split primer corpus         :c1, after f1, 3d
+    #5 Ingest and split primer corpus         :done, c1, after f1, 3d
     #6 Generation service (CLI, stream, cache):crit, c2, after f2, 5d
     #7 Grounded lesson and quiz prompts       :c3, after c1 c2, 4d
 

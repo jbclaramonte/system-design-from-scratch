@@ -14,4 +14,4 @@ Minimum quiz score, in percent, to validate a [[Topic]]. Global setting, 100 by 
 
 ## In code
 
-Not implemented yet.
+Setting `mastery_threshold` in table `settings`, repository `src/main/db/repositories/settings.ts`. See [[Data Model]].

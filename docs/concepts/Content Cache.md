@@ -13,4 +13,4 @@ SQLite store of every generated lesson, remediation lesson and quiz, reused when
 
 ## In code
 
-Not implemented yet.
+Table `content_cache`, repository `src/main/db/repositories/contentCache.ts` (`contentCacheKey`). See [[Data Model]].

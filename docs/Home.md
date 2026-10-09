@@ -10,6 +10,8 @@ Desktop app to learn system design: lesson, quiz, targeted remediation until mas
 - [[SPEC|Product spec]]
 - [[ROADMAP|Roadmap (Gantt)]]
 - [[Ubiquitous Language]]
+- [[Data Model]]
+- [[Corpus|Source Corpus build and license]]
 
 ## Concept notes
 
@@ -17,8 +19,8 @@ Learning content: [[Topic]], [[Notion]], [[Lesson]], [[Remediation Lesson]], [[F
 
 Assessment: [[Quiz]], [[Question]], [[Attempt]], [[Round]], [[Mastery Loop]], [[Mastery Threshold]], [[Round Limit]], [[Notion Map]], [[Dashboard]]
 
-Design practice: [[Design Exercise]], [[Interview Protocol]], [[Protocol Step]], [[Hint]], [[Reference Solution]], [[Design Canvas]]
+Design practice: [[Design Exercise]], [[Interview Protocol]], [[Protocol Step]], [[Hint]], [[Reference Solution]], [[Design Canvas]], [[Design Scene]], [[Design Feedback]]
 
-Generation and data: [[Grounding]], [[Source Corpus]], [[Content Cache]], [[Generation]]
+Generation and data: [[Grounding]], [[Source Corpus]], [[Excerpt]], [[Content Cache]], [[Generation]]
 
 Task tracking lives in GitHub Issues, see `CLAUDE.md`.

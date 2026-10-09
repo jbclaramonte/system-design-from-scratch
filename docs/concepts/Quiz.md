@@ -15,4 +15,4 @@ A set of [[Question]]s on a [[Topic]], played as one [[Round]]. Pre-generated in
 
 ## In code
 
-Not implemented yet.
+Table `quizzes`, repository `src/main/db/repositories/assessment.ts`. See [[Data Model]].

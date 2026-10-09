@@ -5,3 +5,4 @@ release/
 spikes/
 docs/
 package-lock.json
+resources/corpus/
