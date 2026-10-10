@@ -14,9 +14,13 @@ export default defineConfig({
     optimizeDeps: { exclude: ['@tldraw/assets'] },
     build: {
       // The built renderer runs from file://, where Chromium blocks font and mask-image loads
-      // (CORS, opaque origin) and fetch() of files. Inline tldraw's assets as data: URLs instead.
+      // (CORS, opaque origin) and fetch() of files. Inline tldraw's assets and the self-hosted
+      // Geist and JetBrains Mono fonts (about 170 KB each) as data: URLs instead.
       assetsInlineLimit: (filePath) =>
-        filePath.includes('/node_modules/@tldraw/assets/') ? true : undefined
+        filePath.includes('/node_modules/@tldraw/assets/') ||
+        filePath.includes('/node_modules/@fontsource-variable/')
+          ? true
+          : undefined
     },
     plugins: [react()]
   }

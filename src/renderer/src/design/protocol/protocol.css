@@ -3,7 +3,7 @@
   inset: 0;
   display: flex;
   flex-direction: column;
-  background: #fff;
+  background: var(--color-canvas);
 }
 
 .protocol-header {
@@ -11,7 +11,7 @@
   gap: 12px;
   align-items: center;
   padding: 6px 12px;
-  border-bottom: 1px solid #ddd;
+  border-bottom: 1px solid var(--color-border-hairline);
 }
 
 .protocol-body {
@@ -24,7 +24,7 @@
   width: 260px;
   padding: 12px;
   overflow-y: auto;
-  border-right: 1px solid #ddd;
+  border-right: 1px solid var(--color-border-hairline);
 }
 
 .protocol-statement {
@@ -54,7 +54,7 @@
 }
 
 .protocol-steps button[aria-current='true'] {
-  outline: 2px solid #4a6ee0;
+  outline: 2px solid var(--color-border-focus);
 }
 
 .protocol-steps button:disabled {
@@ -63,7 +63,7 @@
 }
 
 .protocol-steps small {
-  color: #555;
+  color: var(--color-text-secondary);
 }
 
 .protocol-main {
@@ -86,11 +86,11 @@
 
 .protocol-main-canvas .protocol-panel {
   flex: 0 0 420px;
-  border-left: 1px solid #ddd;
+  border-left: 1px solid var(--color-border-hairline);
 }
 
 .protocol-goal {
-  color: #444;
+  color: var(--color-text-secondary);
 }
 
 .protocol-new {
@@ -101,8 +101,9 @@
 .protocol-lesson {
   margin: 0.5rem 0 1rem;
   padding: 0.5rem 1rem;
-  border-radius: 6px;
-  background: #f7f8fc;
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-base);
 }
 
 .protocol-editor {
@@ -119,21 +120,21 @@
 }
 
 .protocol-hint-text {
-  color: #555;
+  color: var(--color-text-secondary);
   font-size: 0.9em;
 }
 
 .protocol-submission {
   margin: 0.5rem 0;
   padding: 0.5rem;
-  border: 1px solid #e3e3e3;
-  border-radius: 6px;
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-lg);
 }
 
 .protocol-submitted {
   white-space: pre-wrap;
   font-size: 0.85em;
-  background: #f5f5f5;
+  background: var(--color-surface-elevated);
   padding: 0.5rem;
 }
 
@@ -148,26 +149,26 @@
 }
 
 .protocol-verdict-met .protocol-verdict {
-  color: #1b6e2c;
+  color: var(--color-mastered-text);
 }
 
 .protocol-verdict-partial .protocol-verdict {
-  color: #8a5a00;
+  color: var(--color-attention-text);
 }
 
 .protocol-verdict-missing .protocol-verdict {
-  color: #a11d1d;
+  color: var(--color-error-text);
 }
 
 .protocol-checklist-item {
-  color: #555;
+  color: var(--color-text-secondary);
 }
 
 .protocol-link {
   padding: 0;
   border: none;
   background: none;
-  color: #2a4dbf;
+  color: var(--color-link);
   text-decoration: underline;
   cursor: pointer;
 }

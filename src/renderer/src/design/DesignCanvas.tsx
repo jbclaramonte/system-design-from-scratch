@@ -116,7 +116,7 @@ export function DesignCanvas({
           display: 'flex',
           flexDirection: 'column',
           gap: 6,
-          borderRight: '1px solid #ddd'
+          borderRight: '1px solid var(--color-border-hairline)'
         }}
       >
         <strong>Components</strong>

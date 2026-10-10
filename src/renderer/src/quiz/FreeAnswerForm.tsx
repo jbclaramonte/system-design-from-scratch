@@ -58,7 +58,10 @@ export function FreeAnswerForm({
       <label htmlFor={inputId} lang="fr" style={{ display: 'block', fontSize: '1.15em' }}>
         {question.prompt}
       </label>
-      <p id={`${inputId}-hint`} style={{ fontSize: '0.85em', color: '#555', margin: '4px 0' }}>
+      <p
+        id={`${inputId}-hint`}
+        style={{ fontSize: '0.85em', color: 'var(--color-text-secondary)', margin: '4px 0' }}
+      >
         Answer in one to a few sentences, in your own words. Ctrl+Enter (⌘+Enter) to send.
       </p>
       <textarea
@@ -79,7 +82,12 @@ export function FreeAnswerForm({
       />
       <p
         id={`${inputId}-count`}
-        style={{ fontSize: '0.85em', color: '#555', margin: 0, textAlign: 'right' }}
+        style={{
+          fontSize: '0.85em',
+          color: 'var(--color-text-secondary)',
+          margin: 0,
+          textAlign: 'right'
+        }}
       >
         {text.length}/{FREE_ANSWER_MAX_LENGTH}
       </p>

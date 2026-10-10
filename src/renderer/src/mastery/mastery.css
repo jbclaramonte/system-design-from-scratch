@@ -11,36 +11,41 @@
 
 .mastery-progress {
   margin: 0.25rem 0 0.5rem;
-  color: #444;
+  color: var(--color-text-secondary);
   font-size: 0.9em;
 }
 
 .mastery-badge {
   padding: 0.1rem 0.5rem;
-  border-radius: 999px;
-  background: #eee;
-  color: #333;
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-sm);
+  background: var(--color-hover);
+  color: var(--color-text-secondary);
   font-size: 0.8em;
 }
 
 .mastery-in_progress {
-  background: #eef;
-  color: #335;
+  border-color: var(--color-progress-border);
+  background: var(--color-progress-fill);
+  color: var(--color-progress-text);
 }
 
 .mastery-mastered {
-  background: #e6f4ea;
-  color: #1e5631;
+  border-color: var(--color-mastered-border);
+  background: var(--color-mastered-fill);
+  color: var(--color-mastered-text);
 }
 
 .mastery-limit_reached {
-  background: #fdecea;
-  color: #611a15;
+  border-color: var(--color-error-border);
+  background: var(--color-error-fill);
+  color: var(--color-error-text);
 }
 
 .mastery-skipped {
-  background: #fff4e5;
-  color: #8a4b00;
+  border-color: var(--color-attention-border);
+  background: var(--color-attention-fill);
+  color: var(--color-attention-text);
 }
 
 .mastery-scroll {

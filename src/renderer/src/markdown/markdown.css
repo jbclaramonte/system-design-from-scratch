@@ -7,9 +7,11 @@
 .diagram-scroll {
   overflow-x: auto;
   padding: 0.5rem;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  background: #fff;
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-lg);
+  /* Mermaid is themed for a light background (mermaidRenderer.ts): keep a light card under it. */
+  background: var(--color-paper);
+  color: var(--color-paper-text);
 }
 
 /* Mermaid sets width 100% and max-width to the natural width; below 70 % of it (text
@@ -23,44 +25,38 @@
 
 .diagram-loading {
   padding: 0.75rem;
-  border: 1px dashed #ccc;
-  border-radius: 6px;
-  color: #555;
+  border: 1px dashed var(--color-border-active);
+  border-radius: var(--radius-lg);
+  color: var(--color-text-secondary);
   font-size: 0.9em;
 }
 
 .diagram-source {
   margin-top: 0.3rem;
   font-size: 0.85em;
-  color: #444;
+  color: var(--color-text-secondary);
 }
 
 .diagram-source summary {
   cursor: pointer;
 }
 
-.diagram pre {
-  overflow-x: auto;
-  padding: 0.75rem;
-  border-radius: 6px;
-  background: #f5f5f5;
-}
-
 .diagram-fallback-note {
   margin: 0 0 0.3rem;
   padding: 0.4rem 0.6rem;
-  border-radius: 6px;
-  background: #fff4e5;
-  color: #6b3a00;
+  border: 1px solid var(--color-attention-border);
+  border-radius: var(--radius-md);
+  background: var(--color-attention-fill);
+  color: var(--color-attention-text);
   font-size: 0.9em;
 }
 
 .diagram-fallback-reason {
-  color: #444;
+  color: var(--color-text-secondary);
 }
 
 .diagram figcaption {
   margin-top: 0.3rem;
-  color: #444;
+  color: var(--color-text-secondary);
   font-size: 0.9em;
 }

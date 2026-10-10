@@ -171,7 +171,7 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
           >
             Test
           </button>{' '}
-          <small style={{ color: '#555' }}>
+          <small style={{ color: 'var(--color-text-secondary)' }}>
             Runs <code>claude --version</code> and <code>claude auth status</code> with the values
             above (no model call).
           </small>
@@ -285,7 +285,10 @@ function Field({
         style={{ maxWidth: '40ch' }}
         {...input}
       />
-      <small id={`${id}-help`} style={{ color: error ? '#b3261e' : '#555' }}>
+      <small
+        id={`${id}-help`}
+        style={{ color: error ? 'var(--color-error-text)' : 'var(--color-text-secondary)' }}
+      >
         {error ?? help}
       </small>
     </p>

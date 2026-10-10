@@ -34,7 +34,14 @@ export function DesignCanvasDevScreen({ onClose }: { onClose: () => void }) {
           </span>
         )}
       </header>
-      <div style={{ flex: 1, minHeight: 0, borderTop: '1px solid #ddd', display: 'flex' }}>
+      <div
+        style={{
+          flex: 1,
+          minHeight: 0,
+          borderTop: '1px solid var(--color-border-hairline)',
+          display: 'flex'
+        }}
+      >
         {error ? (
           <p role="alert">{error}</p>
         ) : (

@@ -68,7 +68,12 @@ export function QuizResults({
               <td style={{ textAlign: 'right', paddingRight: 16 }}>
                 {notion.earned}/{notion.questionCount}
               </td>
-              <td style={{ textAlign: 'right', color: notion.missed ? '#b3261e' : '#1b7a3a' }}>
+              <td
+                style={{
+                  textAlign: 'right',
+                  color: notion.missed ? 'var(--color-error-text)' : 'var(--color-mastered-text)'
+                }}
+              >
                 {formatPercent(notion.scorePercent)}
               </td>
             </tr>

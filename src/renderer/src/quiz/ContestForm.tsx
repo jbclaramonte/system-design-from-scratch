@@ -53,7 +53,12 @@ export function ContestForm({
           onContested
         )
       }}
-      style={{ border: '1px solid #ccc', borderRadius: 4, padding: '8px 12px', margin: '8px 0' }}
+      style={{
+        border: '1px solid var(--color-border-control)',
+        borderRadius: 'var(--radius-md)',
+        padding: '8px 12px',
+        margin: '8px 0'
+      }}
     >
       <label htmlFor={inputId} style={{ display: 'block' }}>
         Why is this grade wrong? Point at what your answer already says: your answer is re-graded

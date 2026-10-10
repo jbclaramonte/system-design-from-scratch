@@ -61,6 +61,15 @@ gantt
     #25 Topic status during round 1           :done, u1, 2026-10-12, 1d
     #26 Partially correct wording             :done, u2, 2026-10-12, 1d
     #27 Readable generation errors            :done, u3, 2026-10-12, 1d
+
+    section Visual redesign
+    #28 Design system tokens and base styles  :done, crit, v1, 2026-10-13, 2d
+    #29 App shell                             :v2, after v1, 1d
+    #30 Learning Path redesign                :v3, after v2, 2d
+    #31 Dashboard, Settings, About redesign   :v4, after v2, 2d
+    #32 Topic, Lesson, Remediation redesign   :v5, after v2, 2d
+    #33 Quiz redesign                         :v6, after v2, 2d
+    #34 Design exercise and canvas redesign   :v7, after v2, 2d
 ```
 
 ## Dependency table
@@ -94,6 +103,13 @@ gantt
 | #25 | none |
 | #26 | none |
 | #27 | none |
+| #28 | none |
+| #29 | #28 |
+| #30 | #29 |
+| #31 | #29 |
+| #32 | #29 |
+| #33 | #29 |
+| #34 | #29 |
 
 ## Conventions
 

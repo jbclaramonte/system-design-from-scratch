@@ -14,9 +14,9 @@ import {
 } from './feedbackText'
 
 const resultColors: Record<AttemptResult, string> = {
-  correct: '#1b7a3a',
-  partially_correct: '#a35c00',
-  incorrect: '#b3261e'
+  correct: 'var(--color-mastered-text)',
+  partially_correct: 'var(--color-attention-text)',
+  incorrect: 'var(--color-error-text)'
 }
 
 /** Feedback on an answered question: result, then the details of its kind. */
@@ -54,19 +54,19 @@ function ChoiceFeedbackView({ feedback }: { feedback: ChoiceQuestionFeedback }) 
               padding: '4px 8px',
               marginBottom: 4,
               borderLeft: `4px solid ${choice.correct ? resultColors.correct : 'transparent'}`,
-              background: choice.selected && !choice.correct ? '#fdecea' : undefined
+              background: choice.selected && !choice.correct ? 'var(--color-error-fill)' : undefined
             }}
           >
             <span aria-hidden="true">{choice.correct ? '✓ ' : choice.selected ? '✗ ' : '  '}</span>
             {choice.text}
-            <span style={{ fontSize: '0.85em', color: '#555' }}>
+            <span style={{ fontSize: '0.85em', color: 'var(--color-text-secondary)' }}>
               {choice.correct && ' (correct answer)'}
               {choice.selected && ' (your answer)'}
             </span>
           </li>
         ))}
       </ul>
-      <div lang="fr" style={{ background: '#f4f6f8', padding: '8px 12px' }}>
+      <div lang="fr" style={{ background: 'var(--color-surface-elevated)', padding: '8px 12px' }}>
         <strong lang="en">{feedback.type === 'scenario' ? 'Trade-off' : 'Explanation'}: </strong>
         {feedback.explanation}
       </div>
@@ -74,7 +74,11 @@ function ChoiceFeedbackView({ feedback }: { feedback: ChoiceQuestionFeedback }) 
   )
 }
 
-const boxStyle = { background: '#f4f6f8', padding: '8px 12px', marginBottom: 8 }
+const boxStyle = {
+  background: 'var(--color-surface-elevated)',
+  padding: '8px 12px',
+  marginBottom: 8
+}
 
 function ExpectedPoints({ points }: { points: ExpectedPointFeedback[] }) {
   return (
@@ -91,7 +95,7 @@ function ExpectedPoints({ points }: { points: ExpectedPointFeedback[] }) {
         >
           <span aria-hidden="true">{point.covered ? '✓ ' : '✗ '}</span>
           <strong>{point.point}</strong>
-          <span lang="en" style={{ fontSize: '0.85em', color: '#555' }}>
+          <span lang="en" style={{ fontSize: '0.85em', color: 'var(--color-text-secondary)' }}>
             {point.covered ? ' (covered)' : ' (missing)'}
           </span>
           <br />
@@ -121,7 +125,11 @@ function FreeAnswerFeedbackView({ feedback }: { feedback: FreeAnswerQuestionFeed
       <p style={{ marginBottom: 4 }}>Your answer:</p>
       <blockquote
         lang="fr"
-        style={{ margin: '0 0 8px', padding: '4px 12px', borderLeft: '3px solid #ccc' }}
+        style={{
+          margin: '0 0 8px',
+          padding: '4px 12px',
+          borderLeft: '3px solid var(--color-border-active)'
+        }}
       >
         {feedback.answer}
       </blockquote>
@@ -156,7 +164,10 @@ function FreeAnswerFeedbackView({ feedback }: { feedback: FreeAnswerQuestionFeed
         {feedback.modelAnswer}
       </div>
       {feedback.contest && (
-        <details data-testid="contest-history" style={{ fontSize: '0.9em', color: '#333' }}>
+        <details
+          data-testid="contest-history"
+          style={{ fontSize: '0.9em', color: 'var(--color-text-secondary)' }}
+        >
           <summary>
             Grade contested (first grade: {resultLabels[feedback.contest.previous.result]})
           </summary>

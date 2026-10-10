@@ -43,7 +43,7 @@ export function DesignExportDevPanel({
         width: 380,
         padding: 12,
         overflow: 'auto',
-        borderLeft: '1px solid #ddd',
+        borderLeft: '1px solid var(--color-border-hairline)',
         display: 'flex',
         flexDirection: 'column',
         gap: 8
@@ -73,7 +73,7 @@ export function DesignExportDevPanel({
               data-testid="design-export-png"
               alt="Design Scene capture"
               src={`data:image/png;base64,${result.png.base64}`}
-              style={{ width: '100%', border: '1px solid #ddd' }}
+              style={{ width: '100%', border: '1px solid var(--color-border-hairline)' }}
               title={`${result.png.width} x ${result.png.height}`}
             />
           ) : (

@@ -1,0 +1,173 @@
+/*
+ * Design tokens of the renderer (docs/DESIGN.md, vault note docs/Design System.md).
+ * Dark theme only. This file is the only source of colors, sizes, radii and shadows: screen
+ * styles use `var(--...)` and never hard-code a value.
+ */
+
+:root {
+  color-scheme: dark;
+
+  /* Surfaces (layers 0 to 2). */
+  --color-canvas: #06080d;
+  --color-surface-base: #0b0f19;
+  --color-surface-elevated: #111827;
+  --color-surface-subtle: #1f2937;
+  --color-surface-overlay: rgba(11, 15, 25, 0.85);
+  --color-track: #1e293b;
+
+  /* Structural boundaries. */
+  --color-border-hairline: rgba(255, 255, 255, 0.08);
+  --color-border-card: rgba(255, 255, 255, 0.07);
+  --color-border-control: rgba(255, 255, 255, 0.12);
+  --color-border-input: rgba(255, 255, 255, 0.1);
+  --color-border-active: rgba(255, 255, 255, 0.18);
+  --color-border-elevated: rgba(255, 255, 255, 0.14);
+  --color-border-focus: #6366f1;
+  --color-focus-ring: rgba(99, 102, 241, 0.35);
+
+  /* Interaction overlays on any surface. */
+  --color-hover: rgba(255, 255, 255, 0.06);
+  --color-pressed: rgba(255, 255, 255, 0.1);
+  --color-selection: rgba(99, 102, 241, 0.4);
+  --color-scrollbar: rgba(255, 255, 255, 0.18);
+  --color-scrollbar-hover: rgba(255, 255, 255, 0.3);
+
+  /* Text. */
+  --color-text-primary: #f8fafc;
+  --color-text-secondary: #94a3b8;
+  --color-text-muted: #64748b;
+  --color-on-primary: #0b0f19;
+
+  /* Semantic accents. Each role: solid color, readable text color, pill fill, pill border. */
+  --color-mastered: #10b981;
+  --color-mastered-text: #10b981;
+  --color-mastered-fill: rgba(16, 185, 129, 0.12);
+  --color-mastered-border: rgba(16, 185, 129, 0.25);
+  --color-progress: #6366f1;
+  --color-progress-text: #818cf8;
+  --color-progress-fill: rgba(99, 102, 241, 0.12);
+  --color-progress-border: rgba(99, 102, 241, 0.25);
+  --color-attention: #f59e0b;
+  --color-attention-text: #fbbf24;
+  --color-attention-fill: rgba(245, 158, 11, 0.12);
+  --color-attention-border: rgba(245, 158, 11, 0.28);
+  --color-locked: #64748b;
+  --color-locked-text: #64748b;
+  --color-locked-fill: rgba(255, 255, 255, 0.03);
+  --color-locked-border: rgba(255, 255, 255, 0.05);
+  /* Errors and Round Limit: not in the Colors section of DESIGN.md, derived from the same pattern. */
+  --color-error: #f87171;
+  --color-error-text: #fca5a5;
+  --color-error-fill: rgba(248, 113, 113, 0.12);
+  --color-error-border: rgba(248, 113, 113, 0.28);
+
+  /* Links. */
+  --color-link: #818cf8;
+  --color-link-hover: #a5b4fc;
+
+  /* Code surfaces. */
+  --color-code-inline: rgba(255, 255, 255, 0.07);
+
+  /* Notion Map heat grid (Okabe-Ito, colour-blind safe; cells also carry a symbol and the score). */
+  --color-heat-mastered: #0072b2;
+  --color-heat-mastered-text: #ffffff;
+  --color-heat-partial: #f0e442;
+  --color-heat-partial-text: #1a1a1a;
+  --color-heat-low: #c2570a;
+  --color-heat-low-text: #ffffff;
+  --color-heat-untested-a: #111827;
+  --color-heat-untested-b: #1b2433;
+  --color-heat-untested-text: #cbd5e1;
+
+  /* Light "paper" for content drawn for a light background (Mermaid diagrams, tldraw shapes). */
+  --color-paper: #ffffff;
+  --color-paper-text: #1a1a1a;
+
+  /* Radii: micro (tags, badges, inline code, checkboxes), standard (buttons, inputs, list items),
+     cards and sections, modals. Pill only for progress tracks. */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-pill: 9999px;
+
+  /* Spacing (8pt grid). */
+  --space-2xs: 0.125rem;
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2.5rem;
+  --gutter: 1.5rem;
+  --gutter-sm: 1rem;
+  --margin: 2rem;
+
+  /* Fonts (self-hosted by @fontsource-variable, see main.tsx). */
+  --font-sans: 'Geist Variable', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* Typography scale: size / line height / letter spacing / weight. */
+  --type-headline-xl-size: 2.5rem;
+  --type-headline-xl-line: 3rem;
+  --type-headline-xl-tracking: -0.03em;
+  --type-headline-xl-weight: 600;
+  --type-headline-lg-size: 1.75rem;
+  --type-headline-lg-line: 2.25rem;
+  --type-headline-lg-tracking: -0.02em;
+  --type-headline-lg-weight: 600;
+  --type-headline-md-size: 1.375rem;
+  --type-headline-md-line: 1.875rem;
+  --type-headline-md-tracking: -0.015em;
+  --type-headline-md-weight: 600;
+  --type-headline-sm-size: 1.125rem;
+  --type-headline-sm-line: 1.625rem;
+  --type-headline-sm-tracking: -0.01em;
+  --type-headline-sm-weight: 500;
+  --type-body-lg-size: 1rem;
+  --type-body-lg-line: 1.625rem;
+  --type-body-lg-tracking: -0.005em;
+  --type-body-lg-weight: 400;
+  --type-body-md-size: 0.875rem;
+  --type-body-md-line: 1.375rem;
+  --type-body-md-tracking: 0em;
+  --type-body-md-weight: 400;
+  --type-body-sm-size: 0.75rem;
+  --type-body-sm-line: 1.125rem;
+  --type-body-sm-tracking: 0.01em;
+  --type-body-sm-weight: 400;
+  --type-code-inline-size: 0.8125rem;
+  --type-code-inline-line: 1.25rem;
+  --type-code-inline-tracking: -0.01em;
+  --type-code-inline-weight: 400;
+  --type-code-block-size: 0.8125rem;
+  --type-code-block-line: 1.375rem;
+  --type-code-block-tracking: 0em;
+  --type-code-block-weight: 400;
+  --type-label-mono-size: 0.6875rem;
+  --type-label-mono-line: 1rem;
+  --type-label-mono-tracking: 0.04em;
+  --type-label-mono-weight: 500;
+  --type-label-caps-size: 0.625rem;
+  --type-label-caps-line: 0.875rem;
+  --type-label-caps-tracking: 0.08em;
+  --type-label-caps-weight: 600;
+
+  /* Elevation: layer 1 cards use a hairline border only; layers 2 and 3 add shadows. */
+  --shadow-layer-2: inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
+  --shadow-layer-3: 0 20px 40px -12px rgba(0, 0, 0, 0.7);
+  --blur-layer-3: blur(16px);
+
+  /* Glow accents (12px halo at 20 percent of the semantic color). */
+  --glow-mastered: 0 0 12px rgba(16, 185, 129, 0.2);
+  --glow-progress: 0 0 12px rgba(99, 102, 241, 0.2);
+  --glow-attention: 0 0 12px rgba(245, 158, 11, 0.2);
+
+  /* Motion. */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 120ms;
+  --duration-slow: 600ms;
+
+  /* Progress bar. */
+  --progress-height: 4px;
+  --progress-gradient: linear-gradient(90deg, #6366f1, #10b981);
+}

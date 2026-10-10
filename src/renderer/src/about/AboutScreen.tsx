@@ -18,7 +18,7 @@ function ExternalLink({ href, children }: { href: string; children: ReactNode })
 const preStyle = {
   whiteSpace: 'pre-wrap',
   fontSize: '0.85em',
-  background: '#f4f4f4',
+  background: 'var(--color-surface-elevated)',
   padding: 8,
   overflowX: 'auto'
 } as const

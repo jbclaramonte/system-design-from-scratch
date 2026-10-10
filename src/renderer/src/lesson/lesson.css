@@ -5,7 +5,6 @@
   margin: 0;
   padding: 0 1.5rem;
   box-sizing: border-box;
-  font-family: system-ui, sans-serif;
 }
 
 .lesson-nav {
@@ -41,7 +40,7 @@
 }
 
 .lesson-topic-meta {
-  color: #666;
+  color: var(--color-text-secondary);
   font-size: 0.85em;
 }
 
@@ -66,21 +65,23 @@
 
 .lesson-badge {
   padding: 0.1rem 0.5rem;
-  border-radius: 999px;
-  background: #eef;
-  color: #335;
+  border: 1px solid var(--color-progress-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-progress-fill);
+  color: var(--color-progress-text);
   font-size: 0.8em;
 }
 
 .lesson-badge-grounded {
-  background: #e6f4ea;
-  color: #1e5631;
+  border-color: var(--color-mastered-border);
+  background: var(--color-mastered-fill);
+  color: var(--color-mastered-text);
 }
 
 .lesson-badge-ungrounded {
-  background: #fff4e5;
-  color: #8a4b00;
-  border: 1px solid #f0b46a;
+  border-color: var(--color-attention-border);
+  background: var(--color-attention-fill);
+  color: var(--color-attention-text);
 }
 
 .lesson-notions button {
@@ -89,14 +90,14 @@
 }
 
 .lesson-status {
-  color: #555;
+  color: var(--color-text-secondary);
 }
 
 .lesson-spinner {
   display: inline-block;
   width: 0.8em;
   height: 0.8em;
-  border: 2px solid #bbb;
+  border: 2px solid var(--color-text-secondary);
   border-top-color: transparent;
   border-radius: 50%;
   animation: lesson-spin 0.8s linear infinite;
@@ -113,14 +114,16 @@
 .lesson-notice {
   margin: 0.5rem 0;
   padding: 0.75rem;
-  border-radius: 6px;
-  background: #fdecea;
-  color: #611a15;
+  border: 1px solid var(--color-error-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-error-fill);
+  color: var(--color-error-text);
 }
 
 .lesson-notice {
-  background: #f2f2f2;
-  color: #333;
+  border-color: var(--color-border-hairline);
+  background: var(--color-surface-elevated);
+  color: var(--color-text-secondary);
 }
 
 .lesson-error .settings-error-action {
@@ -142,14 +145,9 @@
 
 .lesson-body {
   max-width: 46rem;
-  line-height: 1.6;
-}
-
-.lesson-body pre {
-  overflow-x: auto;
-  padding: 0.75rem;
-  border-radius: 6px;
-  background: #f5f5f5;
+  font-size: var(--type-body-lg-size);
+  line-height: 1.625;
+  letter-spacing: var(--type-body-lg-tracking);
 }
 
 .lesson-table {
@@ -163,7 +161,7 @@
 .lesson-table th,
 .lesson-table td {
   padding: 0.3rem 0.6rem;
-  border: 1px solid #ccc;
+  border: 1px solid var(--color-border-control);
 }
 
 .source-chip {
@@ -175,24 +173,24 @@
 
 .source-chip button {
   padding: 0 0.4em;
-  border: 1px solid #b9c7e6;
-  border-radius: 999px;
-  background: #f0f4fc;
-  color: #2b4a8b;
+  border: 1px solid var(--color-progress-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-progress-fill);
+  color: var(--color-progress-text);
   font: inherit;
   cursor: pointer;
 }
 
 .source-chip-unknown {
   padding: 0 0.4em;
-  border: 1px dashed #d99;
-  border-radius: 999px;
-  color: #a33;
+  border: 1px dashed var(--color-error-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-error-text);
 }
 
 .lesson-sources {
   max-width: 46rem;
   margin-top: 2rem;
   font-size: 0.85em;
-  color: #444;
+  color: var(--color-text-secondary);
 }

@@ -142,14 +142,18 @@ export function QuizPlayer({
       <p>
         {progress} · Question {index + 1} of {quiz.questions.length}
       </p>
-      <h2 ref={headingRef} tabIndex={-1} style={{ fontSize: '1.1em', color: '#555' }}>
+      <h2
+        ref={headingRef}
+        tabIndex={-1}
+        style={{ fontSize: '1.1em', color: 'var(--color-text-secondary)' }}
+      >
         {typeLabels[question.type]}
       </h2>
       {question.scenario && (
         <p
           lang="fr"
           data-testid="question-scenario"
-          style={{ background: '#f4f6f8', padding: '8px 12px' }}
+          style={{ background: 'var(--color-surface-elevated)', padding: '8px 12px' }}
         >
           {question.scenario}
         </p>
@@ -233,8 +237,8 @@ export function QuizPlayer({
                   alignItems: 'baseline',
                   padding: '6px 8px',
                   marginBottom: 4,
-                  border: '1px solid #ccc',
-                  borderRadius: 4,
+                  border: '1px solid var(--color-border-control)',
+                  borderRadius: 'var(--radius-md)',
                   cursor: 'pointer'
                 }}
               >

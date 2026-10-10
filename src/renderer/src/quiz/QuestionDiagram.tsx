@@ -68,7 +68,7 @@ export function DiagramFlagOffer({ questionId, reason }: { questionId: number; r
   return (
     <form
       data-testid="diagram-flag-offer"
-      style={{ background: '#fff4e5', padding: '8px 12px', marginBottom: 8 }}
+      style={{ background: 'var(--color-attention-fill)', padding: '8px 12px', marginBottom: 8 }}
       onSubmit={(event) => {
         event.preventDefault()
         flag()

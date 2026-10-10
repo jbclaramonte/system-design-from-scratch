@@ -8,23 +8,33 @@
 }
 
 .path-progress {
-  height: 0.5rem;
+  height: var(--progress-height);
   max-width: 30rem;
-  border-radius: 999px;
-  background: #eee;
+  border-radius: var(--radius-pill);
+  background: var(--color-track);
   overflow: hidden;
 }
 
 .path-progress-fill {
   height: 100%;
-  background: #2e7d32;
+  border-radius: var(--radius-pill);
+  background: var(--progress-gradient);
+  transition: width var(--duration-slow) var(--ease-out);
 }
 
 .path-continue {
   margin-top: 0.75rem;
   padding: 0.5rem 1rem;
-  font-weight: bold;
-  cursor: pointer;
+  border-color: var(--color-text-primary);
+  background: var(--color-text-primary);
+  color: var(--color-on-primary);
+  font-weight: 700;
+}
+
+.path-continue:hover:not(:disabled) {
+  background: var(--color-text-primary);
+  color: var(--color-on-primary);
+  opacity: 0.92;
 }
 
 .path-section h2 {
@@ -36,7 +46,7 @@
   list-style: none;
   margin: 0;
   padding: 0 0 0 1rem;
-  border-left: 2px solid #ddd;
+  border-left: 1px solid var(--color-border-hairline);
 }
 
 .path-step {
@@ -44,7 +54,7 @@
 }
 
 .path-step[aria-current='step'] > .path-step-row {
-  border-color: #2e7d32;
+  border-color: var(--color-mastered);
   font-weight: bold;
 }
 
@@ -55,9 +65,9 @@
   width: 100%;
   box-sizing: border-box;
   padding: 0.5rem 0.75rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  background: #fff;
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-base);
   font: inherit;
   text-align: left;
 }
@@ -67,8 +77,8 @@ button.path-step-row {
 }
 
 div.path-step-row {
-  color: #777;
-  background: #fafafa;
+  color: var(--color-text-secondary);
+  background: var(--color-canvas);
 }
 
 .path-step-title {
@@ -77,54 +87,51 @@ div.path-step-row {
 
 .path-step-note {
   margin: 0.25rem 0 0.5rem 0.75rem;
-  color: #555;
+  color: var(--color-text-secondary);
   font-size: 0.9em;
 }
 
 .path-rationale {
-  color: #777;
+  color: var(--color-text-secondary);
 }
 
 .path-badge {
   padding: 0.1rem 0.5rem;
-  border-radius: 999px;
-  background: #eee;
-  color: #333;
+  border: 1px solid var(--color-border-control);
+  border-radius: var(--radius-sm);
+  background: var(--color-hover);
+  color: var(--color-text-secondary);
   font-size: 0.8em;
   font-weight: normal;
 }
 
-.path-available {
-  background: #e8f0fe;
-  color: #174ea6;
-}
-
+.path-available,
 .path-in_progress {
-  background: #eef;
-  color: #335;
+  border-color: var(--color-progress-border);
+  background: var(--color-progress-fill);
+  color: var(--color-progress-text);
 }
 
-.path-mastered {
-  background: #e6f4ea;
-  color: #1e5631;
+.path-mastered,
+.path-completed {
+  border-color: var(--color-mastered-border);
+  background: var(--color-mastered-fill);
+  color: var(--color-mastered-text);
 }
 
 .path-limit_reached {
-  background: #fdecea;
-  color: #611a15;
+  border-color: var(--color-error-border);
+  background: var(--color-error-fill);
+  color: var(--color-error-text);
 }
 
 .path-skipped {
-  background: #fff4e5;
-  color: #8a4b00;
+  border-color: var(--color-attention-border);
+  background: var(--color-attention-fill);
+  color: var(--color-attention-text);
 }
 
 .path-unlocked {
   margin: 0;
-  color: #1e5631;
-}
-
-.path-completed {
-  background: #e6f4ea;
-  color: #1e5631;
+  color: var(--color-mastered-text);
 }
