@@ -111,7 +111,7 @@ Tests: `src/main/mastery/service.test.ts` (mastery IPC: locked topic refused wit
 - `TopicScreen` remediation step: a failed round with no missed notion (no Remediation Lesson to read) shows "no missed notion was identified" and a retry button that starts the next round, instead of crashing; `firstRemediationIndex` (`src/renderer/src/mastery/masteryText.ts`, tested) returns null for it.
 - `pathText.ts`: labels and messages (tested).
 
-`src/renderer/src/App.tsx`: a `Screen` union (home, topic, exercise, settings, about, dev screens). The header has Settings and About. In dev builds a collapsed "Developer tools" section lists All topics (the former Learn list, `MasteryView`), Lessons, Quiz, Design canvas, the version and ping, and the Generation panel. Base styles (focus outline, header) in `src/renderer/src/app.css`.
+`src/renderer/src/App.tsx`: renders every screen inside the `AppShell` ([[Design System#App shell]]: header with Curriculum, Dashboard, Settings and About, content container, version footer). The `Screen` union and the active nav item derivation live in `src/renderer/src/shell/navigation.ts`. The nav item "Curriculum" opens the Learning Path (the home screen). In dev builds a collapsed "Developer tools" section under the path lists All topics (the former Learn list, `MasteryView`), Lessons, Quiz, Design canvas, the version and ping, and the Generation panel (styles in `shell/shell.css`). Base styles (focus outline) are in `styles/base.css`.
 
 ## Verification (2026-10-09)
 

@@ -102,6 +102,10 @@
   --gutter-sm: 1rem;
   --margin: 2rem;
 
+  /* App shell: content container width and header height. */
+  --layout-max-width: 1100px;
+  --layout-header-height: 3.5rem;
+
   /* Fonts (self-hosted by @fontsource-variable, see main.tsx). */
   --font-sans: 'Geist Variable', ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono Variable', ui-monospace, 'SF Mono', Menlo, monospace;

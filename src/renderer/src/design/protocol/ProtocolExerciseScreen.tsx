@@ -246,8 +246,13 @@ export function ProtocolExerciseScreen({
       .catch((reason: unknown) => setError(errorMessage(reason)))
   }, [designExerciseId])
 
-  if (error) return <p role="alert">{error}</p>
-  if (!view || !selected) return <p>Loading the design exercise...</p>
+  if (error)
+    return (
+      <p role="alert" className="protocol-status">
+        {error}
+      </p>
+    )
+  if (!view || !selected) return <p className="protocol-status">Loading the design exercise...</p>
 
   const step = selected === 'final_review' ? null : view.steps.find((s) => s.step === selected)!
   const canvas = step !== null && PROTOCOL_STEP_DEFINITIONS[step.step].input === 'canvas'

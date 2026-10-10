@@ -18,6 +18,7 @@ Tokens, fonts and shared base styles of the renderer. The visual spec is `DESIGN
 | `src/renderer/src/styles/design-tokens.css` | CSS custom properties on `:root` (`color-scheme: dark`). The only source of colors, radii, spacing, type scale, elevation and motion. |
 | `src/renderer/src/styles/base.css` | Reset, element styles (headings, links, focus ring, scrollbars, code, tables, form controls, buttons) and the shared classes below. |
 | `src/renderer/src/main.tsx` | Import order: fonts, `design-tokens.css`, `base.css`, then `App` (which imports the screen stylesheets). The order matters: base rules must come before screen rules. |
+| `src/renderer/src/shell/` | The app shell: `AppShell.tsx`, `shell.css`, `navigation.ts` (screens, nav items, layouts; tested). See [[#App shell]]. |
 | `src/renderer/src/*/*.css` | Screen styles next to their components, using tokens only. |
 
 > [!warning] File name
@@ -48,6 +49,7 @@ Names below drop the `--` prefix families: `--color-*`, `--radius-*`, `--space-*
 | Elevation | `shadow-layer-2` (inset top highlight), `shadow-layer-3` + `blur-layer-3` (floating menus), `glow-mastered/progress/attention` |
 | Motion | `ease-out` cubic-bezier(.16, 1, .3, 1), `duration-fast`, `duration-slow` |
 | Progress | `progress-height` 4px, `progress-gradient` indigo to emerald |
+| Layout | `layout-max-width` 1100px (shell container), `layout-header-height` 3.5rem |
 
 Text contrast: `text-primary` and `text-secondary` pass WCAG AA on every surface. `text-muted` is about 4.1:1 on the canvas, so use it for footnotes and structural glyphs only.
 
@@ -70,7 +72,29 @@ Plain markup looks right without a class: `body` (Geist 14px/22px on the canvas)
 | `.label-caps`, `.label-mono` | Metadata in JetBrains Mono: latencies, counts, partition keys, section labels. |
 | `.muted`, `.faint` | Secondary text (`text-secondary`) and footnote text (`text-muted`). |
 
-Existing screen classes (`.path-badge`, `.mastery-badge`, `.lesson-badge`, `.dash-card`, `.path-progress`) already use the tokens with the same looks. Issues #29 to #34 should migrate them to the shared classes above.
+Existing screen classes (`.path-badge`, `.mastery-badge`, `.lesson-badge`, `.dash-card`, `.path-progress`) already use the tokens with the same looks. Issues #30 to #34 should migrate them to the shared classes above.
+
+## App shell
+
+Issue #29. `AppShell` (`src/renderer/src/shell/AppShell.tsx`, `shell.css`) wraps every screen from `App`. It fills the window (`height: 100vh`, flex column): header, content area, footer. Only the content area scrolls, so the header is always in view.
+
+- **Header**: `layout-header-height` high, `surface-base` with a hairline bottom border. Brand mark (inline SVG, decorative) and "System Design" with a muted "from Scratch"; navigation on the right. The brand is not a heading: each screen owns its `h1` (the Learning Path has a visually hidden "Learning Path" `h1`).
+- **Navigation** (`NAV_ITEMS` in `shell/navigation.ts`): Learning Path, Dashboard, Settings, About, with `data-testid` `open-learning-path`, `open-dashboard`, `open-settings`, `open-about`. The first item is the Learning Path home screen (the mock-up says "Curriculum", which the glossary forbids). The active item has `aria-current="page"` and a raised style (hover fill, control border, primary text); others are secondary text with a transparent border. Focus uses the global focus ring.
+- **Active item**: `activeNavItem(screen)` (pure, tested). Topic screens and exercises keep Learning Path; a topic opened from the Dashboard keeps Dashboard; Settings opened from an error highlights Settings (its back button still returns to the screen it came from); dev screens keep Learning Path.
+- **Content container**: `layout-max-width` (1100px) centered, `gutter` side padding. Screens render their own `<main>` and must not add page-level padding, a page-level max width or `height: 100vh`.
+- **Layouts** (`screenLayout(screen)`, `data-layout` on the shell):
+
+| Layout | Screens | Behavior |
+|---|---|---|
+| `page` | Learning Path, Dashboard, Settings, About | Centered container; the content flows and the content area scrolls. |
+| `fill` | Topic (and the dev lesson screens) | Centered container; the screen fills the height (`flex: 1; min-height: 0`) and scrolls its own panes. |
+| `canvas` | Design Exercise, dev canvas | Full width and height, no padding or max width, content area does not scroll. The screen uses `flex: 1; min-height: 0` (no `position: fixed`). |
+
+- **Footer**: quiet, JetBrains Mono `label-mono`, `text-muted`, shows `Version x` (`data-testid="app-version"`).
+- **Scroll**: the content area scrolls back to the top when the screen changes.
+- **Developer tools** (dev builds only): the `.app-dev` section under the Learning Path, restyled with tokens (dashed border, mono summary).
+
+To add a screen: add it to the `Screen` union, give it a nav item and a layout in `navigation.ts`, render it in `App`.
 
 ## Rules for new UI
 

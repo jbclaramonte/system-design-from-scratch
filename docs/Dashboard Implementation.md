@@ -78,7 +78,7 @@ Refresh: the Dashboard screen reloads on every `path:changed` push (sent after `
 
 ## Screen
 
-`src/renderer/src/dashboard/`, opened with the **Dashboard** button of the app header (`src/renderer/src/App.tsx`):
+`src/renderer/src/dashboard/`, opened with the **Dashboard** item of the app header (`src/renderer/src/shell/AppShell.tsx`, see [[Design System#App shell]]):
 
 - `DashboardScreen`: focus moves to the "Dashboard" heading on open. Overview cards; weak points (first 8, "Show all"); the Notion Map; the topics table (status badge, notions mastered as a `progressbar` with a text value, rounds in a disclosure, best, latest, Round Limit, last practiced); the attempt history with a topic filter (a `<select>` that reloads through `dashboard:get`).
 - **Practice** (weak points and topics table) opens the Mastery Loop topic screen, like the Learning Path; its back button returns to the Dashboard. A locked topic keeps a focusable button marked `aria-disabled`, with the lock reason ("Locked. Master X first.") as its description. A weak point's topic is never locked in practice: a topic with progress is never locked ([[Learning Path Implementation#Rules]]).

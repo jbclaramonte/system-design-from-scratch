@@ -1,6 +1,6 @@
 .protocol-screen {
-  position: fixed;
-  inset: 0;
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   background: var(--color-canvas);
@@ -171,4 +171,16 @@
   color: var(--color-link);
   text-decoration: underline;
   cursor: pointer;
+}
+
+/* The Design Exercise uses the full shell area: plain states keep a gutter. */
+.protocol-status,
+.protocol-dev {
+  padding: var(--space-md) var(--gutter);
+}
+
+.protocol-dev {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }

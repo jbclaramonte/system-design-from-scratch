@@ -23,7 +23,7 @@ export function DesignCanvasDevScreen({ onClose }: { onClose: () => void }) {
   return (
     <section
       data-testid="design-canvas-dev"
-      style={{ position: 'fixed', inset: 0, display: 'flex', flexDirection: 'column' }}
+      style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}
     >
       <header style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '6px 12px' }}>
         <button onClick={onClose}>Back</button>

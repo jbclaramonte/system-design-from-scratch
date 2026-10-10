@@ -13,7 +13,7 @@ What the About screen shows, why, and how to keep it right. Context: [[SPEC]] se
 
 ## What the About screen shows
 
-Opened from the **About** button in the home header (`src/renderer/src/about/AboutScreen.tsx`).
+Opened from the **About** item of the app header ([[Design System#App shell]]) (`src/renderer/src/about/AboutScreen.tsx`).
 
 | Section | Content | Why |
 |---|---|---|

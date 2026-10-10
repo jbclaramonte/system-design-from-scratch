@@ -33,7 +33,7 @@ export function ProtocolDevScreen({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <main data-testid="protocol-dev">
+    <main className="protocol-dev" data-testid="protocol-dev">
       <p>
         <button type="button" onClick={onClose}>
           Back

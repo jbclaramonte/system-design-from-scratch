@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import type { PingResponse } from '../../shared/ipc'
 import type { TopicMasterySummary } from '../../shared/mastery'
 import { AboutScreen } from './about/AboutScreen'
-import './app.css'
 import { DashboardScreen } from './dashboard/DashboardScreen'
 import { ProtocolDevScreen } from './design/protocol/ProtocolDevScreen'
 import { ProtocolExerciseScreen } from './design/protocol/ProtocolExerciseScreen'
@@ -16,27 +15,8 @@ import { PathTopicView } from './path/PathTopicView'
 import { QuizScreen } from './quiz/QuizScreen'
 import { OpenSettingsContext } from './settings/openSettings'
 import { SettingsScreen } from './settings/SettingsScreen'
-
-/**
- * The screens of the app. The Learning Path (`home`) is the main screen; every other screen
- * returns to it. To add a screen: add it here, render it in `App`, open it from the header nav.
- */
-type Screen =
-  | { name: 'home' }
-  /** `from`: the screen the back button returns to (the Learning Path by default). */
-  | { name: 'topic'; topic: TopicMasterySummary; from?: 'dashboard' }
-  | { name: 'dashboard' }
-  | { name: 'exercise'; designExerciseId: number }
-  /** `back`: the screen to return to when opened from an error ("Open Settings"). */
-  | { name: 'settings'; back?: Screen }
-  | { name: 'about' }
-  // Dev builds only:
-  | { name: 'dev-topics' }
-  | { name: 'dev-lessons' }
-  | { name: 'dev-quiz' }
-  | { name: 'dev-design-canvas' }
-  | { name: 'dev-design-exercise' }
-  | { name: 'dev-diagrams' }
+import { AppShell } from './shell/AppShell'
+import { activeNavItem, screenLayout, type NavItemId, type Screen } from './shell/navigation'
 
 /** Dev-only tools, in a compact section under the Learning Path. */
 function DevSection({
@@ -93,28 +73,15 @@ function DevSection({
   )
 }
 
-/** Every screen can open the Settings screen (the "Open Settings" button of auth errors). */
+/**
+ * Every screen is rendered inside the `AppShell` (header, navigation, footer). Every screen can
+ * open the Settings screen (the "Open Settings" button of auth errors).
+ */
 export function App() {
   const [screen, setScreen] = useState<Screen>({ name: 'home' })
-  const openSettings = () =>
-    setScreen((current) =>
-      current.name === 'settings' ? current : { name: 'settings', back: current }
-    )
-  return (
-    <OpenSettingsContext.Provider value={openSettings}>
-      <AppScreen screen={screen} setScreen={setScreen} />
-    </OpenSettingsContext.Provider>
-  )
-}
-
-function AppScreen({ screen, setScreen }: { screen: Screen; setScreen: (screen: Screen) => void }) {
   const [version, setVersion] = useState<string | null>(null)
   const [ping, setPing] = useState<PingResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const home = () => setScreen({ name: 'home' })
-  const openTopic = (topic: TopicMasterySummary) => setScreen({ name: 'topic', topic })
-  const openExercise = (designExerciseId: number) =>
-    setScreen({ name: 'exercise', designExerciseId })
 
   useEffect(() => {
     Promise.all([window.api.getAppVersion(), window.api.ping({ message: 'hello' })])
@@ -124,6 +91,55 @@ function AppScreen({ screen, setScreen }: { screen: Screen; setScreen: (screen: 
       })
       .catch((reason: unknown) => setError(String(reason)))
   }, [])
+
+  const openSettings = () =>
+    setScreen((current) =>
+      current.name === 'settings' ? current : { name: 'settings', back: current }
+    )
+  const navigate = (item: NavItemId) => {
+    switch (item) {
+      case 'learning-path':
+        return setScreen({ name: 'home' })
+      case 'dashboard':
+        return setScreen({ name: 'dashboard' })
+      case 'settings':
+        // Keep the way back when Settings was opened from an error.
+        return setScreen((current) =>
+          current.name === 'settings' ? current : { name: 'settings' }
+        )
+      case 'about':
+        return setScreen({ name: 'about' })
+    }
+  }
+
+  return (
+    <OpenSettingsContext.Provider value={openSettings}>
+      <AppShell
+        activeItem={activeNavItem(screen)}
+        layout={screenLayout(screen)}
+        version={version}
+        scrollKey={screen.name === 'topic' ? `topic-${screen.topic.id}` : screen.name}
+        onNavigate={navigate}
+      >
+        <AppScreen screen={screen} setScreen={setScreen} devInfo={{ version, ping, error }} />
+      </AppShell>
+    </OpenSettingsContext.Provider>
+  )
+}
+
+function AppScreen({
+  screen,
+  setScreen,
+  devInfo
+}: {
+  screen: Screen
+  setScreen: (screen: Screen) => void
+  devInfo: { version: string | null; ping: PingResponse | null; error: string | null }
+}) {
+  const home = () => setScreen({ name: 'home' })
+  const openTopic = (topic: TopicMasterySummary) => setScreen({ name: 'topic', topic })
+  const openExercise = (designExerciseId: number) =>
+    setScreen({ name: 'exercise', designExerciseId })
 
   switch (screen.name) {
     case 'topic':
@@ -176,28 +192,10 @@ function AppScreen({ screen, setScreen }: { screen: Screen; setScreen: (screen: 
   }
 
   return (
-    <main className="app-home">
-      <header className="app-header">
-        <h1>System Design from Scratch</h1>
-        <nav aria-label="App">
-          <button data-testid="open-dashboard" onClick={() => setScreen({ name: 'dashboard' })}>
-            Dashboard
-          </button>
-          <button data-testid="open-settings" onClick={() => setScreen({ name: 'settings' })}>
-            Settings
-          </button>
-          <button data-testid="open-about" onClick={() => setScreen({ name: 'about' })}>
-            About
-          </button>
-        </nav>
-      </header>
+    <main>
+      <h1 className="visually-hidden">Learning Path</h1>
       <LearningPathScreen onOpenTopic={openTopic} onOpenExercise={openExercise} />
-      {import.meta.env.DEV && (
-        <DevSection open={setScreen} version={version} ping={ping} error={error} />
-      )}
-      <footer className="app-footer" data-testid="app-version">
-        Version {version ?? '...'}
-      </footer>
+      {import.meta.env.DEV && <DevSection open={setScreen} {...devInfo} />}
     </main>
   )
 }

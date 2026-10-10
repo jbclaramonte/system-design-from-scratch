@@ -24,10 +24,7 @@ export function QuizScreen({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <main
-      data-testid="quiz-screen"
-      style={{ maxWidth: '72ch', margin: '0 auto', padding: 16, lineHeight: 1.5 }}
-    >
+    <main data-testid="quiz-screen" style={{ maxWidth: '72ch', margin: '0 auto', lineHeight: 1.5 }}>
       <header style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
         <button onClick={onClose}>Back</button>
         {step.name !== 'pick' && (

@@ -156,7 +156,7 @@ export function AboutScreen({ onClose }: { onClose: () => void }) {
 
   if (!about) {
     return (
-      <main style={{ padding: 16 }}>
+      <main>
         {header}
         {error ? <p role="alert">{error}</p> : <p>Loading...</p>}
       </main>
@@ -168,7 +168,7 @@ export function AboutScreen({ onClose }: { onClose: () => void }) {
   return (
     <main
       data-testid="about-screen"
-      style={{ maxWidth: '80ch', margin: '0 auto', padding: 16, lineHeight: 1.5 }}
+      style={{ maxWidth: '80ch', margin: '0 auto', lineHeight: 1.5 }}
     >
       {header}
       <p data-testid="about-app">

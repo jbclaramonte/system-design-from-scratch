@@ -54,7 +54,7 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
   }, [])
 
   if (!draft) {
-    return <main style={{ padding: 16 }}>{error ? <p role="alert">{error}</p> : 'Loading...'}</main>
+    return <main>{error ? <p role="alert">{error}</p> : 'Loading...'}</main>
   }
 
   const values = fromDraft(draft)
@@ -91,7 +91,7 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
   return (
     <main
       data-testid="settings-screen"
-      style={{ maxWidth: '72ch', margin: '0 auto', padding: 16, lineHeight: 1.5 }}
+      style={{ maxWidth: '72ch', margin: '0 auto', lineHeight: 1.5 }}
     >
       <header style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
         <button type="button" onClick={onClose}>

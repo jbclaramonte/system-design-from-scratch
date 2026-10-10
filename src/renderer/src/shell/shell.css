@@ -1,0 +1,166 @@
+/* App shell: header, navigation, content container and footer. Tokens only. */
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background: var(--color-canvas);
+}
+
+/* Header and footer share the width of the content container. */
+.shell-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  width: 100%;
+  max-width: var(--layout-max-width);
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+}
+
+.shell-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  flex: none;
+  border-bottom: 1px solid var(--color-border-hairline);
+  background: var(--color-surface-base);
+}
+
+.shell-header .shell-bar {
+  height: var(--layout-header-height);
+  justify-content: space-between;
+}
+
+.shell-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-width: 0;
+  color: var(--color-text-primary);
+}
+
+.shell-brand-mark {
+  flex: none;
+}
+
+.shell-brand-name {
+  overflow: hidden;
+  font-size: var(--type-headline-sm-size);
+  font-weight: var(--type-headline-sm-weight);
+  letter-spacing: var(--type-headline-sm-tracking);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.shell-brand-sub {
+  color: var(--color-text-muted);
+  font-size: var(--type-body-md-size);
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.shell-nav {
+  display: flex;
+  flex: none;
+  gap: var(--space-xs);
+}
+
+.shell-nav-item {
+  padding: 0.3rem 0.75rem;
+  border-color: transparent;
+  color: var(--color-text-secondary);
+}
+
+.shell-nav-item[aria-current='page'] {
+  border-color: var(--color-border-control);
+  background: var(--color-hover);
+  color: var(--color-text-primary);
+}
+
+.shell-content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* page: the content flows and the content area scrolls. */
+.shell-container {
+  width: 100%;
+  max-width: var(--layout-max-width);
+  margin: 0 auto;
+  padding: var(--space-lg) var(--gutter) var(--space-xl);
+}
+
+/* fill: the screen fills the content area and scrolls its own panes. */
+.shell[data-layout='fill'] .shell-container {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  padding-bottom: 0;
+}
+
+/* canvas: full width and height, no container. */
+.shell[data-layout='canvas'] .shell-content {
+  overflow: hidden;
+}
+
+.shell[data-layout='canvas'] .shell-container {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+.shell-footer {
+  flex: none;
+  border-top: 1px solid var(--color-border-hairline);
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--type-label-mono-size);
+  letter-spacing: var(--type-label-mono-tracking);
+}
+
+.shell-footer .shell-bar {
+  height: 2rem;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Developer tools (dev builds only), under the Learning Path. */
+.app-dev {
+  margin-top: var(--space-xl);
+  padding-top: var(--space-sm);
+  border-top: 1px dashed var(--color-border-active);
+  color: var(--color-text-secondary);
+}
+
+.app-dev summary {
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: var(--type-label-mono-size);
+  letter-spacing: var(--type-label-mono-tracking);
+  text-transform: uppercase;
+}
+
+.app-dev-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin: var(--space-sm) 0;
+}
