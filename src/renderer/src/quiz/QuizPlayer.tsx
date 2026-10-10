@@ -3,6 +3,7 @@ import type { QuestionFeedback, RoundResult, RoundStart } from '../../../shared/
 import { ContestForm } from './ContestForm'
 import { errorMessage } from './errorMessage'
 import { FreeAnswerForm } from './FreeAnswerForm'
+import { QuestionDiagram } from './QuestionDiagram'
 import { QuestionFeedbackView } from './QuestionFeedbackView'
 import {
   allGradableAnswered,
@@ -152,6 +153,14 @@ export function QuizPlayer({
         >
           {question.scenario}
         </p>
+      )}
+      {question.diagram && (
+        <QuestionDiagram
+          key={question.id}
+          questionId={question.id}
+          source={question.diagram}
+          title={question.prompt}
+        />
       )}
       {!question.gradable ? (
         <>

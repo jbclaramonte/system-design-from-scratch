@@ -3,7 +3,7 @@
 import type { z } from 'zod'
 import type { GenerationKind, Json } from '../../../shared/generation'
 import { fitExcerptsToBudget, type Excerpt } from '../../corpus/lookup'
-import type { GenerationPrompt } from '../service'
+import type { ContentFinalizer, GenerationPrompt } from '../service'
 
 /** What a prompt builder returns: everything `GenerationService.generate` needs but scheduling. */
 export interface PromptBuild<T extends Json = Json> {
@@ -14,6 +14,8 @@ export interface PromptBuild<T extends Json = Json> {
   schema?: z.ZodType<T>
   /** Section ids of the excerpts actually in the prompt. Empty: ungrounded. */
   groundedSourceSections: string[]
+  /** Post-processing of the output before it is stored (the Mermaid Diagram repair). */
+  finalize?: ContentFinalizer
 }
 
 /** What a builder needs to know about the topic. */
@@ -57,6 +59,56 @@ export const LANGUAGE_RULES = `Language:
 - Do not mix in English sentences.`
 
 export const AUDIENCE_RULES = `Audience: a complete beginner in system design who knows basic programming. Define every technical term the first time it appears, prefer short sentences, and give one concrete example for each abstract idea.`
+
+/**
+ * How to write a Mermaid Diagram the app can draw (see docs/Mermaid Diagrams.md): supported
+ * types, plain-text labels, size, and grounding. Shared by every prompt that may ask for a
+ * diagram; where and how many is up to the prompt (`diagramPlacementRules` for lessons).
+ * Changing it means bumping the version of every prompt that includes it.
+ */
+export const DIAGRAM_RULES = `Diagrams (Mermaid):
+- Write each diagram as a fenced block that starts with \`\`\`mermaid on its own line and ends with \`\`\` on its own line.
+- Use only these diagram types: flowchart (LR or TD) for an architecture or a data flow, sequenceDiagram for a request flow between components over time, stateDiagram-v2 for states and transitions, erDiagram for a data model, classDiagram only if nothing else fits. Nothing else (no pie, gantt, mindmap, timeline, journey, C4...).
+- Keep it small and readable: at most about 12 nodes (or participants), one idea per diagram, short labels of 1 to 4 words. Labels follow the language rules: system design jargon in English, everyday words in French.
+- Plain text only: no HTML tags, no <br>, no Markdown inside labels, no emojis, no click or link lines, no %%{init}%% or other configuration, no style, classDef, class or linkStyle lines, no front matter.
+- Node ids are short ASCII words (C, LB, S1, DB). Put the visible text in a label; wrap a label in double quotes when it contains punctuation, parentheses, accents next to symbols, slashes or colons, for example S1["Serveur (lecture seule)"]. Never use double quotes inside a label. Avoid ; and # in any text.
+- Label every arrow that carries data or a request (-->|requête|, ->>: lecture).
+- A diagram shows only what the surrounding text says, and never contradicts it. It follows the same grounding rules as the text: no component, product, number or guarantee that the text does not state.
+- Valid examples:
+\`\`\`mermaid
+flowchart LR
+  C[Client] -->|requête| LB[Load balancer]
+  LB -->|requête| S1[Serveur 1]
+  LB -->|requête| S2[Serveur 2]
+  S1 -->|lecture| DB[(Base de données)]
+  S2 -->|lecture| DB
+\`\`\`
+\`\`\`mermaid
+sequenceDiagram
+  participant C as Client
+  participant S as Serveur
+  participant K as Cache
+  C->>S: requête
+  S->>K: lecture de la clé
+  K-->>S: absente (cache miss)
+\`\`\``
+
+/**
+ * Where and how many diagrams a lesson-like text gets: `max` diagrams at most (`min` at
+ * least), each right after the paragraph it illustrates, introduced by one sentence.
+ */
+export function diagramPlacementRules({
+  min,
+  max,
+  when
+}: {
+  min: number
+  max: number
+  when: string
+}): string {
+  const count = min === 0 ? `at most ${max}` : min === max ? `${max}` : `${min} to ${max}`
+  return `Diagram placement: include ${count} Mermaid diagram${max > 1 ? 's' : ''} ${when}. Put each one right after the paragraph it illustrates, introduced by one sentence that says what to look at. A diagram adds a view of the text, it never replaces the explanation.`
+}
 
 /** `[source: <section id>]`, the inline citation format of every grounded text. */
 export const citation = (sectionId: string) => `[source: ${sectionId}]`

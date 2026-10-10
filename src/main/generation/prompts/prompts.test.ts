@@ -5,6 +5,7 @@ import {
   cacheNotions,
   cacheOutline,
   fixtureCorpus,
+  SCENARIO_DIAGRAM,
   validQuiz
 } from '../testing/contentFixtures'
 import {
@@ -14,6 +15,9 @@ import {
   buildQuizGeneration,
   buildRemediationLessonGeneration,
   cleanExcerptMarkdown,
+  diagramAnswerLeak,
+  QUIZ_DIAGRAM_RULES,
+  QUIZ_PROMPT_VERSION,
   LANGUAGE_RULES,
   findCitations,
   findNotionMarkers,
@@ -35,6 +39,9 @@ import {
 } from './designFeedback'
 import { buildFreeAnswerGradingGeneration } from './freeAnswerGrading'
 import { buildProtocolStepLessonGeneration } from './protocolStepLesson'
+import { checkDiagramSource } from '../../../shared/diagramSource'
+import { findMermaidBlocks, repairDiagrams } from '../diagrams'
+import { DIAGRAM_RULES, diagramPlacementRules } from './common'
 
 const corpus = fixtureCorpus()
 const cache: TopicBrief = { slug: 'cache', title: 'Cache', inFoundationsModule: false }
@@ -395,6 +402,96 @@ describe('quiz prompt and schema', () => {
     expect(groundedQuiz).not.toContain(UNGROUNDED_RULES)
   })
 
+  describe('question diagrams', () => {
+    /** The quiz with the first scenario question's diagram set to `diagram`. */
+    const withDiagram = (diagram: string) =>
+      mutate((q) => {
+        const scenario = q.questions[2]!
+        if (scenario.type === 'scenario') scenario.diagram = diagram
+      })
+
+    it('accepts a valid diagram on scenario and choice questions, and no diagram', () => {
+      expect(errorOf(validQuiz())).toBeNull()
+      expect(
+        errorOf(
+          mutate((q) => {
+            const first = q.questions[0]!
+            if (first.type === 'single_choice') first.diagram = 'sequenceDiagram\n  C->>S: requête'
+          })
+        )
+      ).toBeNull()
+      expect(
+        errorOf(
+          mutate((q) => q.questions.forEach((x) => delete (x as { diagram?: string }).diagram))
+        )
+      ).toBeNull()
+    })
+
+    it('rejects forbidden content, unsupported types and oversized diagrams', () => {
+      expect(errorOf(withDiagram(`${SCENARIO_DIAGRAM}\n  click S "https://x"`))).toMatch(
+        /click interactions\. Fix the diagram/
+      )
+      expect(errorOf(withDiagram('flowchart LR\n  A[<b>Client</b>] --> B'))).toMatch(/HTML tags/)
+      expect(
+        errorOf(withDiagram('%%{init: {"theme": "dark"}}%%\nflowchart LR\n  A --> B'))
+      ).toMatch(/configuration directive/)
+      expect(errorOf(withDiagram('pie\n  "a" : 1'))).toMatch(/"pie" is not supported/)
+      expect(errorOf(withDiagram(''))).not.toBeNull()
+      const eleven = Array.from({ length: 10 }, (_, i) => `  N${i} --> N${i + 1}`).join('\n')
+      expect(errorOf(withDiagram(`flowchart LR\n${eleven}`))).toMatch(/at most 10 nodes/)
+    })
+
+    it('rejects a diagram that gives the answer away', () => {
+      const correct = validQuiz().questions[2]!
+      if (correct.type !== 'scenario') throw new Error('fixture')
+      const answer = correct.choices.find((c) => c.correct)!.text // "Choix 1"
+      expect(errorOf(withDiagram(`flowchart LR\n  A[Client] --> B["${answer}"]`))).toMatch(
+        /contains the correct choice "Choix 1"/
+      )
+      // Wrong choices may appear; case, accents and punctuation are ignored for the leak check.
+      expect(errorOf(withDiagram('flowchart LR\n  A[Client] --> B["Choix 2"]'))).toBeNull()
+      expect(errorOf(withDiagram('flowchart LR\n  A[Client] --> B[Bonne réponse]'))).toMatch(
+        /"bonne reponse"/
+      )
+      expect(errorOf(withDiagram('flowchart LR\n  A[Client] -->|correct| B[Cache]'))).toMatch(
+        /"correct"/
+      )
+      // Whole words only: "Choix 1" is not found in "Choix 12", "correct" not in "incorrectement".
+      const choices = [{ text: 'Choix 1', correct: true }]
+      expect(
+        diagramAnswerLeak('flowchart LR\n  A[Choix 12] --> B[incorrectement]', choices)
+      ).toBeNull()
+      expect(diagramAnswerLeak('flowchart LR\n  A["CHOIX, 1"] --> B', choices)).not.toBeNull()
+    })
+
+    it('asks for diagrams on architecture and flow scenarios, without the answer', () => {
+      const build = buildQuizGeneration(cache, cacheNotions, grounding)
+      expect(QUIZ_PROMPT_VERSION).toBe('quiz-7')
+      expect(build.prompt.version).toBe('quiz-7')
+      expect(build.prompt.user).toContain(QUIZ_DIAGRAM_RULES)
+      expect(QUIZ_DIAGRAM_RULES).toContain('involves components')
+      expect(QUIZ_DIAGRAM_RULES).toContain('not its answer')
+      expect(QUIZ_DIAGRAM_RULES).toContain('Answerable from the lesson')
+      expect(QUIZ_DIAGRAM_RULES).toContain('at most 8 nodes')
+      expect(QUIZ_DIAGRAM_RULES).toContain('never the flow of one of the choices')
+      // A free-answer-only quiz gets no diagram rules.
+      const free = buildQuizGeneration(cache, cacheNotions, grounding, {
+        count: 1,
+        types: ['free_answer']
+      })
+      expect(free.prompt.user).not.toContain('Diagrams (optional')
+    })
+  })
+
+  it('states that every notion must be tagged when there is room, as the schema checks', () => {
+    expect(buildQuizGeneration(cache, cacheNotions, grounding).prompt.user).toContain(
+      'Tag every notion listed on at least one question (all 4, this is checked)'
+    )
+    expect(buildQuizGeneration(cache, cacheNotions, grounding, { count: 2 }).prompt.user).toContain(
+      'at least 2 different notions'
+    )
+  })
+
   it('includes the lesson by hash in the cache input', () => {
     const build = buildQuizGeneration(cache, cacheNotions, grounding, { lessonMarkdown: '# Leçon' })
     expect(build.prompt.user).toContain('<lesson>\n# Leçon\n</lesson>')
@@ -453,5 +550,56 @@ describe('language rule', () => {
     expect(LANGUAGE_RULES).toMatch(/load balancer, sharding, cache/)
     expect(LANGUAGE_RULES).toMatch(/serveur, client, requête, réponse, mémoire, disque, réseau/)
     expect(LANGUAGE_RULES).toContain('Bad: "le server renvoie une response"')
+  })
+})
+
+describe('diagram rules', () => {
+  const builds = {
+    lesson: buildLessonGeneration(cache, cacheNotions, grounding),
+    ungroundedLesson: buildLessonGeneration(http, cacheNotions, ungrounded),
+    remediationLesson: buildRemediationLessonGeneration(cache, cacheNotions[0]!, grounding, {
+      angle: 'concrete_example'
+    }),
+    protocolStepLesson: buildProtocolStepLessonGeneration('high_level_design', grounding)
+  }
+
+  it.each(Object.entries(builds))('are in the %s prompt, with the repair hook', (_, build) => {
+    expect(build.prompt.system).toContain(DIAGRAM_RULES)
+    expect(build.prompt.user).toMatch(/Diagram placement: include .* Mermaid diagram/)
+    expect(build.finalize).toBe(repairDiagrams)
+  })
+
+  it('ask for 1 to 3 diagrams per lesson, at most 1 per remediation, at most 2 per step', () => {
+    expect(builds.lesson.prompt.user).toContain('include 1 to 3 Mermaid diagrams')
+    expect(builds.remediationLesson.prompt.user).toContain('include at most 1 Mermaid diagram')
+    expect(builds.remediationLesson.prompt.user).toContain('from the angle above')
+    expect(builds.protocolStepLesson.prompt.user).toContain('include at most 2 Mermaid diagrams')
+    expect(builds.protocolStepLesson.prompt.user).toContain('typical high-level design')
+    expect(diagramPlacementRules({ min: 2, max: 2, when: 'x' })).toContain('include 2 Mermaid')
+  })
+
+  it('name the supported types, the forbidden content and the grounding', () => {
+    expect(DIAGRAM_RULES).toContain('```mermaid')
+    expect(DIAGRAM_RULES).toMatch(/flowchart .*sequenceDiagram .*stateDiagram-v2 .*erDiagram/s)
+    expect(DIAGRAM_RULES).toMatch(/no HTML tags, no <br>/)
+    expect(DIAGRAM_RULES).toMatch(/no click/)
+    expect(DIAGRAM_RULES).toMatch(/%%\{init\}%%/)
+    expect(DIAGRAM_RULES).toMatch(/no style, classDef, class or linkStyle/)
+    expect(DIAGRAM_RULES).toMatch(/at most about 12 nodes/)
+    expect(DIAGRAM_RULES).toMatch(/same grounding rules as the text/)
+  })
+
+  it('give examples that pass the renderer checks', () => {
+    const examples = findMermaidBlocks(DIAGRAM_RULES)
+    expect(examples.map((block) => checkDiagramSource(block.source))).toEqual([
+      { ok: true, type: 'flowchart' },
+      { ok: true, type: 'sequenceDiagram' }
+    ])
+  })
+
+  it('leave the other prompts alone', () => {
+    const outline = buildNotionOutlineGeneration(cache, grounding)
+    expect(outline.prompt.system).not.toContain(DIAGRAM_RULES)
+    expect(outline.finalize).toBeUndefined()
   })
 })

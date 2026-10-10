@@ -8,6 +8,7 @@ import { migrations } from '../db/migrations'
 import {
   createQuiz,
   flagQuestion,
+  getQuestion,
   getRound,
   listAttemptsByNotion,
   listAttemptsByRound,
@@ -163,6 +164,47 @@ describe('loadQuiz', () => {
     expect(serialized).not.toContain('modelAnswer')
     expect(serialized).not.toContain('Réponse modèle')
     expect(serialized).not.toContain('Point attendu')
+  })
+
+  it('sends a question Diagram before the answer, still without the answer key', () => {
+    const topic = createTopic(db, { slug: 'lb', title: 'Load balancer', position: 0 })
+    const [notion] = createNotions(db, [{ topicId: topic.id, slug: 'lb', title: 'LB' }])
+    const diagram = 'flowchart LR\n  C[Client] --> LB[Load balancer]\n  LB --> S1[Serveur 1]'
+    const quiz = createQuiz(db, {
+      topicId: topic.id,
+      grounded: true,
+      questions: [
+        {
+          position: 0,
+          type: 'scenario',
+          prompt: 'Que se passe-t-il si Serveur 1 tombe ?',
+          body: {
+            scenario: 'Situation.',
+            diagram,
+            choices: [
+              { text: 'Le load balancer envoie les requêtes ailleurs', correct: true },
+              { text: 'Tout tombe', correct: false },
+              { text: 'Rien ne change', correct: false }
+            ],
+            explanation: 'Explication secrète',
+            sourceSections: []
+          },
+          notionIds: [notion!.id]
+        }
+      ]
+    })
+
+    const [question] = service.loadQuiz(quiz.id).questions
+    expect(question).toMatchObject({ type: 'scenario', diagram, scenario: 'Situation.' })
+    const serialized = JSON.stringify(question)
+    expect(serialized).not.toContain('correct')
+    expect(serialized).not.toContain('Explication secrète')
+    // A question without a Diagram sends null.
+    expect(service.loadQuiz(seed().quiz.id).questions.map((q) => q.diagram)).toEqual([
+      null,
+      null,
+      null
+    ])
   })
 
   it('throws on an unknown quiz', () => {
@@ -457,6 +499,37 @@ describe('listing', () => {
         gradableQuestionCount: 3
       }
     ])
+  })
+})
+
+describe('flagQuestion', () => {
+  it('flags a question in play with a trimmed reason, and it stays playable', () => {
+    const { quiz, q0 } = seed()
+    service.flagQuestion(q0, '  diagram could not be drawn (parse_error: x)  ')
+
+    expect(getQuestion(db, q0)).toMatchObject({
+      flagReason: 'diagram could not be drawn (parse_error: x)',
+      replacedByQuestionId: null
+    })
+    expect(getQuestion(db, q0)!.flaggedAt).not.toBeNull()
+    const { round } = service.startRound(quiz.id)
+    expect(
+      service.submitAnswer(round.id, { questionId: q0, answer: { selected: [1] } }).result
+    ).toBe('correct')
+  })
+
+  it('refuses unknown or replaced questions and long reasons', () => {
+    const { q0 } = seed()
+    expect(() => service.flagQuestion(999, 'x')).toThrow(/does not exist/)
+    expect(() => service.flagQuestion(q0, 'x'.repeat(501))).toThrow(/at most 500/)
+    flagQuestion(db, q0, 'faux')
+    replaceQuestion(db, q0, {
+      type: 'single_choice',
+      prompt: 'Q0 bis',
+      body: { choices: choices(true, false, false), explanation: 'E', sourceSections: [] },
+      notionIds: getQuestion(db, q0)!.notionIds
+    })
+    expect(() => service.flagQuestion(q0, 'x')).toThrow(/was replaced/)
   })
 })
 

@@ -54,8 +54,8 @@ gantt
 
     section Diagrams
     #22 Mermaid rendering in markdown         :done, crit, g1, 2026-10-12, 2d
-    #23 Diagrams in lessons and step lessons  :g2, after g1, 3d
-    #24 Diagrams in quiz scenarios            :g3, after g1, 3d
+    #23 Diagrams in lessons and step lessons  :done, g2, after g1, 3d
+    #24 Diagrams in quiz scenarios            :done, g3, after g1, 3d
 ```
 
 ## Dependency table

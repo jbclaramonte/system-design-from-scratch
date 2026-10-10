@@ -3,6 +3,7 @@
 import { createHash } from 'node:crypto'
 import { z } from 'zod'
 import { questionTypes, type Json, type QuestionType } from '../../db/types'
+import { checkDiagramSource, diagramNodeCount } from '../../../shared/diagramSource'
 import {
   assembleExcerpts,
   AUDIENCE_RULES,
@@ -16,10 +17,11 @@ import {
   type PromptBuild,
   type TopicBrief
 } from './common'
+import { dropUnparsableQuizDiagrams } from '../diagrams'
 import { sourceSectionsSchema } from './notionOutline'
 
 /** Bump with any change to the prompt or schema below. */
-export const QUIZ_PROMPT_VERSION = 'quiz-4'
+export const QUIZ_PROMPT_VERSION = 'quiz-7'
 
 export const DEFAULT_QUESTION_COUNT = 6
 export const QUIZ_EXCERPT_TOKENS = 8000
@@ -61,6 +63,52 @@ const choiceSchema = z.object({ text: z.string().min(1), correct: z.boolean() })
 
 const normalize = (text: string) => text.toLowerCase().replace(/\s+/g, ' ').trim()
 
+/** Most nodes (flowchart) or participants (sequence) of a question's diagram. */
+export const QUIZ_DIAGRAM_MAX_NODES = 10
+
+/** Words that point at the answer key; a question's diagram must not contain them. */
+const ANSWER_WORDS = ['correct', 'correcte', 'right answer', 'bonne reponse', 'reponse correcte']
+
+/** Lower case, no accents, every run of non-alphanumerics as one space, padded with spaces. */
+const words = (text: string) =>
+  ` ${text
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()} `
+
+/**
+ * Why a question's diagram gives the answer away, or null. Deliberately simple, on the whole
+ * source (node labels, arrow labels, ids, title): it contains the text of a correct choice as
+ * whole words, or a word such as "correct" or "bonne réponse". Accents and punctuation ignored.
+ */
+export function diagramAnswerLeak(
+  diagram: string,
+  choices: readonly { text: string; correct: boolean }[]
+): string | null {
+  const source = words(diagram)
+  const choice = choices.find(
+    ({ text, correct }) => correct && words(text).trim() && source.includes(words(text))
+  )
+  if (choice) return `The diagram contains the correct choice "${choice.text}".`
+  const word = ANSWER_WORDS.find((answerWord) => source.includes(` ${answerWord} `))
+  return word ? `The diagram contains "${word}": it must not point at the answer.` : null
+}
+
+/** Why a question's diagram is refused (app checks, quiz size, answer leak), or null. */
+export function quizDiagramError(
+  diagram: string,
+  choices: readonly { text: string; correct: boolean }[]
+): string | null {
+  const check = checkDiagramSource(diagram)
+  if (!check.ok) return check.error.message
+  if (diagramNodeCount(diagram) > QUIZ_DIAGRAM_MAX_NODES) {
+    return `A question's diagram has at most ${QUIZ_DIAGRAM_MAX_NODES} nodes.`
+  }
+  return diagramAnswerLeak(diagram, choices)
+}
+
 /** Schema of one question per type; `notions` and `sourceSections` limited to the given ids. */
 function questionVariants(rules: QuizRules) {
   const base = {
@@ -70,11 +118,20 @@ function questionVariants(rules: QuizRules) {
   }
   const choices = z.array(choiceSchema).min(3).max(5)
   const explanation = z.string().min(1)
+  // Mermaid source without fences, checked in `quizSchema` (`quizDiagramError`).
+  const diagram = z.string().min(1).optional()
   return {
-    single_choice: z.object({ type: z.literal('single_choice'), ...base, choices, explanation }),
+    single_choice: z.object({
+      type: z.literal('single_choice'),
+      ...base,
+      diagram,
+      choices,
+      explanation
+    }),
     multiple_choice: z.object({
       type: z.literal('multiple_choice'),
       ...base,
+      diagram,
       choices,
       explanation
     }),
@@ -82,6 +139,7 @@ function questionVariants(rules: QuizRules) {
       type: z.literal('scenario'),
       ...base,
       scenario: z.string().min(1),
+      diagram,
       choices,
       explanation
     }),
@@ -103,8 +161,9 @@ export type QuizContent = {
 /**
  * Quiz output schema. Beyond the shape, it rejects inconsistent answer keys (single choice and
  * scenario: exactly one correct choice; multiple choice: at least two correct and one wrong),
- * duplicate choices or prompts, prompts to avoid, unknown notion tags, and a quiz that misses
- * a type or a target notion it had room for.
+ * duplicate choices or prompts, prompts to avoid, unknown notion tags, a quiz that misses a type
+ * or a target notion it had room for, and a diagram the app would refuse, too big for a
+ * question, or giving the answer away (`quizDiagramError`).
  */
 export function quizSchema(rules: QuizRules): z.ZodType<QuizContent> {
   const variants = questionVariants(rules)
@@ -149,6 +208,13 @@ export function quizSchema(rules: QuizRules): z.ZodType<QuizContent> {
         }
         if (new Set(q.choices.map((c) => normalize(c.text))).size !== q.choices.length) {
           issue([index, 'choices'], 'Duplicate choice text.')
+        }
+        const diagramError = q.diagram === undefined ? null : quizDiagramError(q.diagram, q.choices)
+        if (diagramError) {
+          issue(
+            [index, 'diagram'],
+            `${diagramError} Fix the diagram; drop it only if it cannot be fixed.`
+          )
         }
       })
 
@@ -228,6 +294,23 @@ const typeRules: Record<QuestionType, string> = {
     '`free_answer`: a question answered in 1 to 3 sentences (explain why, compare, predict what happens). `expectedPoints`: 1 to 3 short points a correct answer must contain, used later by a grader. `modelAnswer`: a model answer in 1 to 3 sentences. No `choices`.'
 }
 
+/**
+ * When and how a choice question gets a `diagram`. Quiz-specific: a JSON field, not a fenced
+ * block, smaller than a lesson's diagrams, and it must not give the answer away.
+ */
+export const QUIZ_DIAGRAM_RULES = `Diagrams (optional \`diagram\` field, Mermaid source without \`\`\` fences):
+- Every \`scenario\` question whose situation involves components (client, server, cache, database, load balancer, CDN...) or a request flow gets a \`diagram\` of that situation: in a system design quiz that is most scenarios. Elsewhere it is optional: add one to a \`single_choice\` or \`multiple_choice\` question only if it really helps to understand the question. Never on \`free_answer\`.
+- The diagram shows the situation of the question, not its answer: no label, arrow or title may contain the text of a correct choice, the words "correct" or "bonne réponse", or mark the component the question is about with a hint. Draw the system as it is before the change the question asks about; if a correct choice is a component name (for example "CDN"), leave that component out of the diagram. When the question asks which strategy or pattern to pick, draw only what exists before the choice, never the flow of one of the choices (for example, no Application -> Cache -> Database write chain when write-through is a choice).
+- Answerable from the lesson: only components, flows and numbers that the question text or the lesson state. No new product, component or number.
+- Types: \`flowchart LR\` or \`flowchart TD\` for an architecture, \`sequenceDiagram\` for a request flow over time. Nothing else.
+- Small: at most 8 nodes (or participants), short labels of 1 to 4 words, system design jargon in English and everyday words in French.
+- Plain text only: no HTML tags or <br>, no Markdown, no emojis, no click lines, no %%{init}%%, no style, classDef or linkStyle lines, no front matter. Node ids are short ASCII words (C, LB, S1, DB); wrap a label with punctuation, parentheses or a slash in double quotes, for example S1["Serveur (lecture seule)"]. Label the arrows that carry requests or data.
+- Example (scenario "le cache tombe en panne, que se passe-t-il ?"):
+flowchart LR
+  C[Client] -->|requête| S[Serveur web]
+  S -->|lecture| K[Cache]
+  S -->|lecture| DB[(Database)]`
+
 const SYSTEM = `You write quizzes for a French system design learning app. Your questions are graded automatically from the answer key you provide, so the key must be unambiguous and correct.
 
 ${LANGUAGE_RULES}
@@ -252,7 +335,9 @@ export function buildQuizGeneration(
     `Notions (tag questions with these slugs only):\n${notionList(listed)}`,
     targeted
       ? `This is a new round after a failed quiz. Write fresh questions mainly on the notions the learner missed: ${rules.targetNotions.map((s) => `\`${s}\``).join(', ')}. ${reminder.length ? `Add ${rules.minReminderQuestions === rules.maxReminderQuestions ? 'exactly' : `${rules.minReminderQuestions} to`} ${rules.maxReminderQuestions} reminder question(s), tagged ONLY with already acquired notions: ${reminder.map((s) => `\`${s}\``).join(', ')}.` : ''}`
-      : `Cover as many notions as possible (every notion if there is room).`,
+      : rules.count >= rules.targetNotions.length
+        ? `Tag every notion listed on at least one question (all ${rules.targetNotions.length}, this is checked): plan which question tests which notion before writing.`
+        : `Cover as many notions as possible: at least ${rules.count} different notions.`,
     options.replaces &&
       `This question replaces one the learner flagged as faulty. Flagged question: "${options.replaces.prompt}". ${options.replaces.reason ? `Learner's reason: "${options.replaces.reason}". ` : ''}Test the same notions with a different, correct and unambiguous question that avoids that flaw.`,
     `Question types allowed: ${rules.types.map((t) => `\`${t}\``).join(', ')}.${rules.count >= rules.types.length ? ' Use each allowed type at least once, then favor `single_choice` and `scenario`.' : ''}
@@ -264,6 +349,7 @@ ${rules.types.map((type) => `- ${typeRules[type]}`).join('\n')}`,
 - Test understanding (why, when, what happens if...), not memorization of wording or numbers. Every question must be answerable by a beginner who read ${options.lessonMarkdown ? 'the lesson below' : 'a lesson covering these notions'}, using only the facts of the ${rules.sectionIds.length ? 'excerpts' : 'lesson'}.
 - Distractors: plausible for a beginner (common misconceptions, real terms of the topic used in the wrong place), similar in length and style to the correct choice. No "toutes les réponses" or "aucune de ces réponses", no trick wording, no double negation. Vary the position of correct choices.
 - \`explanation\` (choice questions): 1 to 3 French sentences on why the correct choice(s) are right and why the most tempting wrong one is wrong. It is shown after the answer.`,
+    rules.types.some((type) => type !== 'free_answer') && QUIZ_DIAGRAM_RULES,
     rules.avoidPrompts.length > 0 &&
       `Do not repeat or paraphrase these earlier questions:\n${rules.avoidPrompts.map((p) => `- ${p}`).join('\n')}`,
     groundingRules(block.sectionIds).replace(
@@ -293,7 +379,8 @@ ${rules.types.map((type) => `- ${typeRules[type]}`).join('\n')}`,
     },
     prompt: { version: QUIZ_PROMPT_VERSION, system: SYSTEM, user },
     schema: quizSchema(rules),
-    groundedSourceSections: block.sectionIds
+    groundedSourceSections: block.sectionIds,
+    finalize: dropUnparsableQuizDiagrams
   }
 }
 

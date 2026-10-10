@@ -75,6 +75,7 @@ sequenceDiagram
 - Only `lesson`, `remediation_lesson`, `quiz` and `protocol_step_lesson` are cached (the kinds of the `content_cache` table, see [[Data Model]]). Grading and design feedback depend on the learner's answer and are generated every time.
 - A hit returns at once with `fromCache: true` and `usage: null`. A cached structured entry that no longer matches its schema is regenerated.
 - Successful results are stored with `grounded` and `source_sections`. Failed and cancelled runs are never stored.
+- `request.finalize` (optional) post-processes a valid output before it is stored and sent with `done`; it may run one extra structured CLI call through `FinalizeTools.complete` (same CLI settings and signal, one attempt, not cached, null on failure). Used by the lesson-like prompts for the Mermaid Diagram validation (mermaid's parser runs in the main process, loaded lazily) and repair, see [[Prompts#Diagrams]] and [[Mermaid Diagrams#Parser in the main process]].
 - Identical in-flight requests (same key) share one CLI call; late joiners get the events so far replayed. A request that cancels leaves the shared call running for the others; the call is killed when the last one leaves.
 
 ## Queue

@@ -3,6 +3,8 @@
 import {
   assembleExcerpts,
   AUDIENCE_RULES,
+  DIAGRAM_RULES,
+  diagramPlacementRules,
   excerptSection,
   groundingRules,
   joinParts,
@@ -13,9 +15,10 @@ import {
   type PromptBuild,
   type TopicBrief
 } from './common'
+import { repairDiagrams } from '../diagrams'
 
 /** Bump with any change to the prompt below. */
-export const LESSON_PROMPT_VERSION = 'lesson-3'
+export const LESSON_PROMPT_VERSION = 'lesson-4'
 
 export const LESSON_EXCERPT_TOKENS = 8000
 
@@ -38,6 +41,8 @@ ${LANGUAGE_RULES}
 
 ${AUDIENCE_RULES}
 
+${DIAGRAM_RULES}
+
 Output only the lesson, in Markdown: no preamble, no closing remark, no code fence around it.`
 
 export function buildLessonGeneration(
@@ -54,7 +59,12 @@ export function buildLessonGeneration(
 2. For each notion, in the order above: a \`## <notion title>\` heading, then the marker line \`${notionMarker('<slug>')}\` with the notion slug, then the explanation: what it is, how it works step by step, when to use it, and its main drawback or trade-off. Short paragraphs, bullet lists, and a small concrete example (a request flow, an online shop, numbers) when it helps.
 3. A last \`## ${RECAP_HEADING}\` section with exactly one bullet per notion, in order: \`- **<notion title>** : <one sentence to remember>\`.
 
-Length: about 150 to 250 words per notion. Use **bold** for key terms; no tables; no images.`,
+Length: about 150 to 250 words per notion. Use **bold** for key terms; no tables; no images other than the Mermaid diagrams.`,
+    diagramPlacementRules({
+      min: 1,
+      max: 3,
+      when: 'in the whole lesson, where the explanation needs a picture: an architecture, a request flow, a data flow or a failure scenario'
+    }),
     groundingRules(block.sectionIds),
     excerptSection(block)
   )
@@ -68,6 +78,7 @@ Length: about 150 to 250 words per notion. Use **bold** for key terms; no tables
       corpusVersion: grounding.corpusVersion
     },
     prompt: { version: LESSON_PROMPT_VERSION, system: SYSTEM, user },
-    groundedSourceSections: block.sectionIds
+    groundedSourceSections: block.sectionIds,
+    finalize: repairDiagrams
   }
 }

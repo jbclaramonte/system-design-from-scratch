@@ -1,4 +1,5 @@
 export * from './cliRunner'
+export * from './diagrams'
 export * from './errors'
 export * from './ipc'
 export * from './pipelines'

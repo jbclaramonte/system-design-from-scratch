@@ -88,6 +88,27 @@ Then mermaid itself: `parse_error` (`mermaid.parse`), `render_error` (`mermaid.r
 - Width: mermaid draws at most at its natural width and shrinks to the container down to 70 % of that width (`svgMinWidth`, CSS variable `--diagram-min-width`); wider diagrams scroll horizontally inside their frame instead of overflowing the lesson.
 - Contrast: dark text (`#1a1a1a`) on `#f0f4fc` nodes and `#fff4e5` notes.
 
+## Generation side (#23)
+
+Lessons, [[Remediation Lesson|Remediation Lessons]] and [[Protocol Step Lesson|Protocol Step Lessons]] ask the model for diagrams (`DIAGRAM_RULES` and `diagramPlacementRules` in `src/main/generation/prompts/common.ts`, see [[Prompts#Diagrams]]). Two lines of defence:
+
+1. **Pipeline** (`src/main/generation/diagrams.ts`): once the text is final, `validateDiagramsInMarkdown` runs `parseDiagramSource` on every top-level ```` ```mermaid ```` block: `checkDiagramSource`, then mermaid's own parser. Invalid blocks get ONE structured repair call for all of them (with the error code and the parser's message, at most 200 characters); a repaired source that passes the same validation replaces its block, the others stay as written and a hidden `<!-- diagram-invalid: <n> <code> -->` line is appended. The [[Content Cache]] and the `done` event carry the repaired text.
+2. **Renderer** (this note): whatever still fails (a render error, a block the repair could not fix) falls back to the code block.
+
+### Parser in the main process
+
+`parseDiagramSource(source, { parse?, timeoutMs? })` returns `{ ok: true }` or `{ ok: false, code, error }` (`code` from `DiagramErrorCode`: the `checkDiagramSource` codes, `parse_error`, `timeout`) and never throws. Exported for other pipelines (the quiz does not use it yet).
+
+- **mermaid without a DOM**: `src/main/generation/mermaidParser.ts` imports `dompurify`, stubs the methods mermaid calls on it (`addHook`, `removeHook(s)`, `removeAllHooks`, `sanitize` as identity; DOMPurify built without a window has none), then imports `mermaid` and initializes it (`securityLevel: 'strict'`, `logLevel: 'fatal'`, the `DIAGRAM_LIMITS` text and edge limits). Only `mermaid.parse` runs: nothing is rendered or inserted anywhere, and the renderer keeps the real DOMPurify. The same code runs in Electron's main process and in plain Node under Vitest.
+- **Bundling**: `dompurify` is a direct dependency (same version as mermaid's), so electron-vite keeps both `mermaid` and `dompurify` external in the main build and they resolve to one module each at run time; a duplicated, bundled `dompurify` would not be the instance mermaid uses. The loader is its own lazy chunk (`out/main/mermaidParser-<hash>.js`, no import from the app), loaded on the first diagram.
+- **Serialization and timeout**: mermaid keeps global parser state, so parses run one at a time (a promise queue). Each waits at most `DIAGRAM_PARSE_TIMEOUT_MS` (5 s) and then returns `timeout`; a synchronous parse cannot be interrupted, the timeout only covers asynchronous stalls.
+- **Fallback**: if mermaid cannot be loaded, the error is logged once and diagrams are only checked by `checkDiagramSource` (a broken parser must not mark every diagram invalid).
+- Alternatives set aside: `@mermaid-js/parser` covers only the newer Langium grammars (no flowchart or sequence diagram); a DOM emulation (jsdom, happy-dom) would add a large dependency for nothing mermaid's parser needs.
+
+## Quiz questions (#24)
+
+A choice question's `diagram` (Mermaid source, no fences) is drawn by `QuestionDiagram` (`src/renderer/src/quiz/`) with `MermaidDiagram`, titled with the question prompt, before and after answering. Its `onDiagramError` offers to flag the question (`quiz:flagQuestion`). The main process validates it at generation with the same `checkDiagramSource` (from `src/shared/diagramSource.ts`), a 10-node cap and an answer-leak check: see [[Quiz Engine#Quiz Diagrams (#24)]].
+
 ## API for #23 and #24
 
 ```tsx
@@ -111,9 +132,15 @@ import type { DiagramErrorEvent } from '../markdown/diagramSource'
 - Unit tests (`src/renderer/src/markdown/markdown.test.ts`, server-side rendering with `react-dom/server`, no DOM): fence detection on streamed partial content, the hidden fence opening, the placeholder then the Diagram, the checks and limits, the fallback markup, memo keys, ids, labels.
 - Built app (`file://`, dev screen temporarily ungated for the check, scratch `--user-data-dir`) and Vite dev server, driven over the Chrome DevTools protocol on Diagrams (dev): the five supported types drawn (screenshots checked: readable labels, app colours, no `foreignObject`), the wide flowchart scrolls (scroll width 1,466 px in a 734 px frame), the invalid source falls back with "Parse error on line 2: Expecting ..., got 'TAGEND'", the click, HTML, pie and 45-node fixtures fall back, 5 `onDiagramError` events and 5 warnings. Stream by slider with streaming on: hidden while the opening line streams, placeholder from `` ```mermaid `` to the last character before the closing fence, Diagram once it closes. No CSP violation, no request outside `file://`, nothing left in the body.
 - Not checked: a real generated lesson with a Diagram (no prompt asks for one before #23), screen readers.
+- #23 (2026-10-09): the diagrams of three real generated lessons and one real repair pass `checkDiagramSource` and mermaid's parser in Node, see [[samples/diagrams]]. Not drawn in the app for that run.
+- #23 parser in main (2026-10-10): unit tests parse with the real mermaid under Vitest; after `npm run build`, the built `mermaidParser` chunk was required from an Electron main process (`process.type` `browser`, scratch `--user-data-dir`): a quoted label, a sequence diagram and an ER diagram parse, an unquoted parenthesis in a flowchart label fails with "Parse error on line 2". The built app also started on a scratch profile (database seeded) and was stopped.
 
 ## Related
 
 - [[Diagram]], [[Lesson View]], [[Lesson]], [[Remediation Lesson]], [[Protocol Step Lesson]]
 - [[Attribution and Licenses]] (mermaid and its dependencies in the third-party list)
 - [[Design Canvas Integration]] (the other CSP and offline-asset notes)
+
+## Quiz diagrams and the main-process parser
+
+A scenario question's `diagram` is optional, so it is not repaired like a lesson diagram. After the quiz passes its schema (light checks and answer-leak check), `dropUnparsableQuizDiagrams` (`finalize` hook of the quiz Generation, `src/main/generation/diagrams.ts`) runs mermaid's own parser on each diagram and drops the ones it rejects: the question stays playable without its diagram. Known weakness: a diagram can still give the answer away structurally (for example by drawing the chain of the correct strategy); the text-based leak check cannot catch that, see `docs/samples/quiz-diagrams.md`.

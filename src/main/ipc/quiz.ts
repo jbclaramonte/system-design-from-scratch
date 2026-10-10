@@ -31,6 +31,7 @@ const contestRequest = roundRequest.extend({
   justification: z.string().max(10_000)
 })
 const gradingRequest = roundRequest.extend({ questionId: id })
+const flagRequest = z.object({ questionId: id, reason: z.string().max(10_000) })
 
 export interface QuizIpc {
   listTopics(): IpcResponse<'quiz:listTopics'>
@@ -49,6 +50,7 @@ export interface QuizIpc {
     client: GenerationClient
   ): Promise<IpcResponse<'quiz:contestGrade'>>
   cancelGrading(request: IpcRequest<'quiz:cancelGrading'>): void
+  flagQuestion(request: IpcRequest<'quiz:flagQuestion'>): void
 }
 
 /**
@@ -133,6 +135,10 @@ export function createQuizIpc(
     cancelGrading(request) {
       const { roundId, questionId } = gradingRequest.parse(request)
       gradings.get(`${roundId}:${questionId}`)?.abort()
+    },
+    flagQuestion(request) {
+      const { questionId, reason } = flagRequest.parse(request)
+      service.flagQuestion(questionId, reason)
     }
   }
 }

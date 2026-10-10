@@ -10,6 +10,7 @@ import { installFakeCli, type FakeCli } from '../generation/testing/fakeCli'
 import { createFreeAnswerGrader } from '../quiz/freeAnswerGrader'
 import { localGraders } from '../quiz/grading'
 import { createQuizService } from '../quiz/service'
+import { checkDiagramSource } from '../../shared/diagramSource'
 import { createQuizIpc } from './quiz'
 
 let db: Database
@@ -49,6 +50,26 @@ describe('createQuizIpc', () => {
     expect(result.round).toMatchObject({ number: 1, passed: false })
     expect(result.round.scorePercent).toBeCloseTo(66.667, 3)
     expect(listAttemptsByRound(db, round.id)).toHaveLength(3)
+  })
+
+  it('sends the fixture Diagrams and flags a question with its reason', () => {
+    const ipc = quizIpc()
+    const { quizId } = ipc.createDevQuiz()
+    const [single, , scenario] = ipc.loadQuiz({ quizId }).questions
+
+    expect(scenario!.diagram).toMatch(/^flowchart LR/)
+    // Passes the source checks, fails in mermaid: the player's fallback and flag offer.
+    expect(single!.diagram).toContain('[Cache (Redis)]')
+    expect(checkDiagramSource(single!.diagram!).ok).toBe(true)
+    expect(checkDiagramSource(scenario!.diagram!).ok).toBe(true)
+    ipc.flagQuestion({ questionId: single!.id, reason: 'diagram could not be drawn' })
+    expect(
+      db
+        .prepare('SELECT flag_reason AS reason FROM questions WHERE id = $id')
+        .get<{ reason: string }>({ id: single!.id })
+    ).toEqual({ reason: 'diagram could not be drawn' })
+    expect(() => ipc.flagQuestion({ questionId: 0, reason: 'x' })).toThrow()
+    expect(() => ipc.flagQuestion({ questionId: single!.id } as never)).toThrow()
   })
 
   it('refuses a Round of a topic the guard reports locked', () => {

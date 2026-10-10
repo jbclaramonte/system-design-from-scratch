@@ -75,7 +75,7 @@ Declared in `src/shared/ipc.ts`, types in `src/shared/topic.ts` and `src/shared/
 - Retry remounts the screen with a new request. Leaving the screen cancels a running request. A `not_logged_in` error also shows "Open Settings" (`SettingsErrorAction`, see [[Generation Service#Errors]]).
 - `embedded` (default `false`): inside the topic screen of the [[Mastery Loop Implementation|Mastery Loop]], `LessonScreen` shows neither the topic title nor the Outside the primer badge, which the topic screen's heading and progress line already show (#21). The standalone Lessons (dev) screen keeps both.
 
-Not done: syntax highlighting (no highlighter bundled). Mermaid Diagrams are rendered (#22, mermaid loaded lazily) but the lesson prompt does not ask for them yet (#23).
+Not done: syntax highlighting (no highlighter bundled). Mermaid Diagrams are rendered (#22, mermaid loaded lazily) and the lesson prompts ask for them (#23). Diagrams are checked and repaired in the main process after the stream ends (see [[Mermaid Diagrams#Generation side (#23)]]), so the text of the `done` event can differ from the streamed text in its ```` ```mermaid ```` blocks: the reducer already replaces the streamed text with `done`'s content, which is what the [[Content Cache]] and the `lessons` row hold. The repair adds a few seconds between the end of the stream and `done`, shown as still generating.
 
 ## Verification (2026-10-09)
 

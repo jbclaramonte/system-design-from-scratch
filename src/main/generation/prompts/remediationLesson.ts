@@ -4,6 +4,8 @@ import { remediationAngles, type RemediationAngle } from '../../../shared/master
 import {
   assembleExcerpts,
   AUDIENCE_RULES,
+  DIAGRAM_RULES,
+  diagramPlacementRules,
   excerptSection,
   groundingRules,
   joinParts,
@@ -13,9 +15,10 @@ import {
   type PromptBuild,
   type TopicBrief
 } from './common'
+import { repairDiagrams } from '../diagrams'
 
 /** Bump with any change to the prompt below. */
-export const REMEDIATION_LESSON_PROMPT_VERSION = 'remediation-lesson-4'
+export const REMEDIATION_LESSON_PROMPT_VERSION = 'remediation-lesson-5'
 
 export const REMEDIATION_EXCERPT_TOKENS = 3000
 
@@ -50,6 +53,8 @@ ${LANGUAGE_RULES}
 
 ${AUDIENCE_RULES}
 
+${DIAGRAM_RULES}
+
 Output only the remediation lesson, in Markdown: no preamble, no closing remark, no code fence around it.`
 
 export function buildRemediationLessonGeneration(
@@ -69,6 +74,11 @@ export function buildRemediationLessonGeneration(
     missed.length > 0 &&
       `The learner got these questions wrong. Address the misunderstanding they reveal, without quoting or answering them directly:\n${missed.map((prompt) => `- ${prompt}`).join('\n')}`,
     `Structure: a \`## ${notion.title}\` heading, the explanation (200 to 350 words, short paragraphs), then a \`**${TAKEAWAYS_HEADING}**\` line followed by 2 or 3 bullets. Stay on this notion only; mention another notion only to contrast it in one sentence.`,
+    diagramPlacementRules({
+      min: 0,
+      max: 1,
+      when: 'only if a picture makes the missed notion clearer from the angle above (for example the scenario followed step by step, or the two notions side by side); otherwise none'
+    }),
     groundingRules(block.sectionIds),
     excerptSection(block)
   )
@@ -84,6 +94,7 @@ export function buildRemediationLessonGeneration(
       corpusVersion: grounding.corpusVersion
     },
     prompt: { version: REMEDIATION_LESSON_PROMPT_VERSION, system: SYSTEM, user },
-    groundedSourceSections: block.sectionIds
+    groundedSourceSections: block.sectionIds,
+    finalize: repairDiagrams
   }
 }

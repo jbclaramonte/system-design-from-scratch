@@ -47,7 +47,29 @@ export interface GenerationRequest<T extends Json = Json> {
   priority?: GenerationPriority
   signal?: AbortSignal
   timeoutMs?: number
+  /**
+   * Post-processing of a valid output, run before it is stored and sent with `done` (the
+   * Mermaid Diagram repair of lessons, see `repairDiagrams`). Not part of the Content Cache key.
+   */
+  finalize?: ContentFinalizer
 }
+
+/** One extra CLI call a `finalize` hook may run: structured, one attempt, never cached. */
+export interface FinalizeCall<T extends Json = Json> {
+  prompt: GenerationPrompt
+  schema: z.ZodType<T>
+  timeoutMs?: number
+}
+
+export interface FinalizeTools {
+  /**
+   * Runs a call with the Generation's CLI settings and signal. Null when the call fails or its
+   * output is invalid; a cancellation is rethrown.
+   */
+  complete<T extends Json>(call: FinalizeCall<T>): Promise<T | null>
+}
+
+export type ContentFinalizer = (content: Json, tools: FinalizeTools) => Promise<Json>
 
 export type GenerationResult<T extends Json = Json> = Omit<GenerationOutput, 'content'> & {
   content: T
@@ -387,7 +409,12 @@ export class GenerationService {
         }
       })
       const validation = validateOutput(result, request.schema)
-      if (validation.ok) return this.store(request, key, validation.value, result)
+      if (validation.ok) {
+        const content = request.finalize
+          ? await request.finalize(validation.value, this.finalizeTools(bin, env, signal))
+          : validation.value
+        return this.store(request, key, content, result)
+      }
       if (attempt >= MAX_ATTEMPTS) {
         throw new GenerationError(
           'invalid_output',
@@ -396,6 +423,34 @@ export class GenerationService {
       }
       feedback = validation.error
       job.emit({ type: 'retry', reason: validation.error })
+    }
+  }
+
+  private finalizeTools(bin: string, env: NodeJS.ProcessEnv, signal: AbortSignal): FinalizeTools {
+    return {
+      complete: async <T extends Json>(call: FinalizeCall<T>): Promise<T | null> => {
+        try {
+          const result = await this.runner({
+            bin,
+            prompt: call.prompt.user,
+            systemPrompt: call.prompt.system,
+            model: this.cli.model,
+            effort: this.cli.effort,
+            jsonSchema: toJsonSchema(call.schema) ?? undefined,
+            signal,
+            timeoutMs: call.timeoutMs ?? this.cli.timeoutMs,
+            killGraceMs: this.cli.killGraceMs,
+            env
+          })
+          const validation = validateOutput(result, call.schema)
+          return validation.ok ? (validation.value as T) : null
+        } catch (error) {
+          if (signal.aborted || toGenerationError(error).code === 'cancelled') {
+            throw new GenerationError('cancelled')
+          }
+          return null
+        }
+      }
     }
   }
 

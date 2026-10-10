@@ -111,6 +111,7 @@ const handlers: IpcHandlers = {
     throw new Error('no round')
   },
   'quiz:cancelGrading': () => undefined,
+  'quiz:flagQuestion': () => undefined,
   'protocol:openDevExercise': () => ({ id: 1, slug: 'dev-protocol-1', title: 'Dev' }),
   'protocol:getExercise': () => {
     throw new Error('no exercise')
@@ -170,6 +171,7 @@ describe('registerHandlers', () => {
       'quiz:completeRound',
       'quiz:contestGrade',
       'quiz:createDevQuiz',
+      'quiz:flagQuestion',
       'quiz:listQuizzes',
       'quiz:listTopics',
       'quiz:load',

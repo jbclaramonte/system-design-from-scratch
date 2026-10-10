@@ -192,7 +192,63 @@ if (process.env['FAKE_CLAUDE_LOG']) {
   )
 }
 
-const scenario = /scenario:([\w-]+)/.exec(stdin)?.[1] ?? 'text'
+/**
+ * Lessons with Mermaid Diagrams (`diagram-lesson-<mode>`): one valid block, then two that fail the
+ * renderer checks (HTML in a label, an unsupported type). The lead-in sentences carry
+ * `mode:<mode>`, which the repair call sees: `fixable` gets valid sources back, `broken` sources
+ * that still fail. `diagram-lesson-valid` only has valid blocks.
+ */
+const diagramLesson = (mode: string) =>
+  mode === 'valid'
+    ? '# Cache\n\nLe flux :\n\n```mermaid\nflowchart LR\n  C[Client] -->|requête| S[Serveur]\n```\n\nFin.'
+    : [
+        '# Cache',
+        '',
+        'Le flux :',
+        '',
+        '```mermaid',
+        'flowchart LR',
+        '  C[Client] -->|requête| S[Serveur]',
+        '```',
+        '',
+        `Le cache, mode:${mode}.`,
+        '```mermaid',
+        'flowchart LR',
+        '  S[Serveur<br>web] --> K[Cache]',
+        '```',
+        '',
+        `La répartition, mode:${mode}.`,
+        '',
+        '```mermaid',
+        'pie',
+        '  "hit" : 80',
+        '```',
+        '',
+        'Fin.'
+      ].join('\n')
+
+function diagramRepair() {
+  const mode = /mode:(\w+)/.exec(stdin)?.[1] ?? 'fixable'
+  const ids = [...stdin.matchAll(/<diagram id="(\d+)">/g)].map((match) => Number(match[1]))
+  return {
+    diagrams: ids.map((id) => ({
+      id,
+      source:
+        mode === 'fixable'
+          ? `\`\`\`mermaid\nflowchart LR\n  S["Serveur web"] -->|lecture ${id}| K[Cache]\n\`\`\``
+          : 'flowchart LR\n  S[Serveur<br>web] --> K[Cache]'
+    }))
+  }
+}
+
+const jsonSchemaArg = process.argv.includes('--json-schema')
+  ? process.argv[process.argv.indexOf('--json-schema') + 1]!
+  : null
+const isDiagramRepair = jsonSchemaArg !== null && jsonSchemaArg.includes('"diagrams"')
+
+const scenario = isDiagramRepair
+  ? 'diagram-repair'
+  : (/scenario:([\w-]+)/.exec(stdin)?.[1] ?? 'text')
 const isRetry = stdin.includes('previous output was invalid')
 
 switch (scenario) {
@@ -223,6 +279,22 @@ switch (scenario) {
     end('done')
     await sleep(60_000)
     break
+  case 'diagram-lesson-valid':
+  case 'diagram-lesson-fixable':
+  case 'diagram-lesson-broken': {
+    const lesson = diagramLesson(scenario.slice('diagram-lesson-'.length))
+    init()
+    await text([lesson.slice(0, 40), lesson.slice(40)])
+    end(lesson)
+    break
+  }
+  case 'diagram-repair': {
+    const output = diagramRepair()
+    init()
+    structured(output)
+    end('', { structured_output: output })
+    break
+  }
   case 'json':
     init()
     structured(validQuiz)

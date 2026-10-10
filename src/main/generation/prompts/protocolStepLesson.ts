@@ -8,6 +8,8 @@ import { PROTOCOL_STEP_DEFINITIONS, type ProtocolStep } from '../../../shared/pr
 import {
   assembleExcerpts,
   AUDIENCE_RULES,
+  DIAGRAM_RULES,
+  diagramPlacementRules,
   excerptSection,
   groundingRules,
   joinParts,
@@ -15,9 +17,10 @@ import {
   type GroundingInput,
   type PromptBuild
 } from './common'
+import { repairDiagrams } from '../diagrams'
 
 /** Bump with any change to the prompt below. */
-export const PROTOCOL_STEP_LESSON_PROMPT_VERSION = 'protocol-step-lesson-2'
+export const PROTOCOL_STEP_LESSON_PROMPT_VERSION = 'protocol-step-lesson-3'
 
 /** Excerpt budget of one Protocol Step Lesson. */
 export const PROTOCOL_STEP_LESSON_EXCERPT_TOKENS = 2500
@@ -60,6 +63,8 @@ ${LANGUAGE_RULES}
 
 ${AUDIENCE_RULES}
 
+${DIAGRAM_RULES}
+
 Output: Markdown only, no preamble, no closing remark.`
 
 /** The French title of the lesson is left to the model; the step is named in English here. */
@@ -84,6 +89,11 @@ export function buildProtocolStepLessonGeneration(
 4. \`### Piège fréquent\`: one beginner mistake, in one or two sentences.
 5. \`**À retenir**\`: one sentence.
 150 to 250 words in total. Use one small running example (a link-shortening service) for illustration only; do not solve the exercise.`,
+    diagramPlacementRules({
+      min: 0,
+      max: 2,
+      when: 'only where a picture helps this step on the running example (for example a typical high-level design, or the data model); none for a step that is just a list'
+    }),
     groundingRules(block.sectionIds),
     excerptSection(block)
   )
@@ -95,7 +105,8 @@ export function buildProtocolStepLessonGeneration(
       corpusVersion: grounding.corpusVersion
     },
     prompt: { version: PROTOCOL_STEP_LESSON_PROMPT_VERSION, system: SYSTEM, user },
-    groundedSourceSections: block.sectionIds
+    groundedSourceSections: block.sectionIds,
+    finalize: repairDiagrams
   }
 }
 

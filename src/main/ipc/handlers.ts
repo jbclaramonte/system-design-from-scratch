@@ -83,6 +83,7 @@ export function createHandlers({
     'quiz:submitFreeAnswer': (request, event) => quiz.submitFreeAnswer(request, event.sender),
     'quiz:contestGrade': (request, event) => quiz.contestGrade(request, event.sender),
     'quiz:cancelGrading': (request) => quiz.cancelGrading(request),
+    'quiz:flagQuestion': (request) => quiz.flagQuestion(request),
     'protocol:openDevExercise': (request) => protocol.openDevExercise(request),
     'protocol:getExercise': (request) => protocol.getExercise(request),
     'protocol:saveDraft': (request) => protocol.saveDraft(request),

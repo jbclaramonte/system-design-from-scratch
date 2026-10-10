@@ -7,6 +7,7 @@ import {
   completeRound as storeRoundOutcome,
   createRound,
   findOpenRound,
+  flagQuestion,
   getQuestion,
   getQuiz,
   getRound,
@@ -22,6 +23,7 @@ import { getSettings } from '../db/repositories/settings'
 import type { Attempt, Question, Quiz, Round } from '../db/types'
 import {
   CONTEST_JUSTIFICATION_MAX_LENGTH,
+  FLAG_REASON_MAX_LENGTH,
   type FreeAnswerGradingRecord,
   type NotionRef,
   type QuestionFeedback,
@@ -82,6 +84,11 @@ export interface QuizService {
   completeRound(roundId: number, answers?: readonly SubmittedAnswer[]): RoundResult
   /** Result of a completed round. */
   getRoundResult(roundId: number): RoundResult
+  /**
+   * Flags a question in play as faulty (`flagQuestion`), for example when its Diagram could not
+   * be drawn. It stays playable; `regenerateQuestion` can replace it later.
+   */
+  flagQuestion(questionId: number, reason: string): void
 }
 
 const toRoundView = (round: Round): RoundView => ({
@@ -138,6 +145,7 @@ export function createQuizService(
       type: question.type,
       prompt: question.prompt,
       scenario: choiceBody?.scenario ?? null,
+      diagram: choiceBody?.diagram ?? null,
       // Texts only: the `correct` flags stay in the main process until the answer is graded.
       choices: choiceBody?.choices.map((choice) => choice.text) ?? [],
       notions: question.notionIds.flatMap((id) => notions.get(id) ?? []),
@@ -413,6 +421,19 @@ export function createQuizService(
       if (!round) throw new Error(`Round ${roundId} does not exist.`)
       if (round.completedAt === null) throw new Error(`Round ${round.number} is not completed.`)
       return result(round, getSettings(db).masteryThreshold)
+    },
+
+    flagQuestion(questionId, rawReason) {
+      const question = getQuestion(db, questionId)
+      if (!question) throw new Error(`Question ${questionId} does not exist.`)
+      if (question.replacedByQuestionId !== null) {
+        throw new Error(`Question ${questionId} was replaced.`)
+      }
+      const reason = rawReason.trim()
+      if (reason.length > FLAG_REASON_MAX_LENGTH) {
+        throw new InvalidAnswerError(`A reason is at most ${FLAG_REASON_MAX_LENGTH} characters.`)
+      }
+      flagQuestion(db, questionId, reason || null)
     }
   }
   return service

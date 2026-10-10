@@ -121,6 +121,7 @@ const toRequest = <T extends Json>(
   prompt: build.prompt,
   schema: build.schema,
   groundedSourceSections: build.groundedSourceSections,
+  finalize: build.finalize,
   priority: options.priority,
   signal: options.signal
 })

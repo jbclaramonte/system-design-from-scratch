@@ -182,11 +182,14 @@ describe('runCli', () => {
   })
 
   it('times out, then escalates to SIGKILL when SIGTERM is ignored', async () => {
-    const { promise } = call('stubborn', { timeoutMs: 400, killGraceMs: 200 })
+    // Generous timings: under a loaded machine the fake CLI needs a while to start and to
+    // install its SIGTERM handler, and to log its pid.
+    const { promise } = call('stubborn', { timeoutMs: 3000, killGraceMs: 300 })
 
     const error = await failure(promise)
 
     expect(error.code).toBe('timeout')
+    await expect.poll(() => fake.calls().length, { timeout: 10_000 }).toBeGreaterThan(0)
     expect(isAlive(fake.calls()[0]!.pid)).toBe(false)
   })
 

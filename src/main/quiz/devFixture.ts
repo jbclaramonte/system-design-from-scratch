@@ -1,6 +1,8 @@
 // Dev-only fixture quiz, so the quiz screens can be played without topic seeding (#8) or a real
 // Generation. Lives on its own topic, never on a real one: adding notions to a real topic would
-// stand in for its Notion Outline.
+// stand in for its Notion Outline. The scenario question carries a Diagram; the single-choice one
+// carries a Diagram that passes the source checks but that mermaid cannot parse (the fallback and
+// the flag offer of the player).
 import type { Database } from '../db'
 import { createQuiz, type NewQuestion } from '../db/repositories/assessment'
 import {
@@ -40,6 +42,8 @@ const QUESTIONS: FixtureQuestion[] = [
     notions: ['cache-aside'],
     body: {
       sourceSections: [],
+      // Parentheses inside [...] without quotes: a mermaid parse error.
+      diagram: 'flowchart LR\n  A[Application] --> K[Cache (Redis)]\n  A --> DB[(Database)]',
       choices: [
         { text: 'Elle renvoie une erreur au client.', correct: false },
         {
@@ -76,6 +80,12 @@ const QUESTIONS: FixtureQuestion[] = [
       sourceSections: [],
       scenario:
         'Ton site de recettes reçoit 100 lectures pour 1 écriture. Une recette modifiée peut rester ancienne quelques minutes. Tu veux un cache qui ne garde que les recettes réellement consultées.',
+      diagram: [
+        'flowchart LR',
+        '  C[Navigateur] -->|requête| S[Serveur web]',
+        '  S -->|requête| K[Cache]',
+        '  S -->|requête| DB[(Database)]'
+      ].join('\n'),
       choices: [
         { text: 'Write-through', correct: false },
         { text: 'Cache-aside avec un TTL de quelques minutes', correct: true },

@@ -53,6 +53,9 @@ export const FREE_ANSWER_MAX_LENGTH = 1200
 /** Longest justification accepted when the learner contests a free-answer grade. */
 export const CONTEST_JUSTIFICATION_MAX_LENGTH = 500
 
+/** Longest reason accepted when the learner flags a question as faulty. */
+export const FLAG_REASON_MAX_LENGTH = 500
+
 /** Answer sent by the renderer. */
 export type QuestionAnswer = ChoiceAnswer | FreeAnswer
 
@@ -71,6 +74,11 @@ export interface QuestionView {
   prompt: string
   /** Situation of a scenario question, French. */
   scenario: string | null
+  /**
+   * Mermaid source of the question's Diagram (choice questions only), or null. Checked at
+   * generation never to contain the text of a correct choice (see docs/Quiz Engine.md).
+   */
+  diagram: string | null
   /** Choice texts in display order; the answer refers to them by index. Empty for free answers. */
   choices: string[]
   notions: NotionRef[]

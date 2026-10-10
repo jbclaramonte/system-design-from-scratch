@@ -1,5 +1,5 @@
 // Fixtures for the prompt and pipeline tests: a small corpus (the primer fixture), a Notion
-// Outline of its cache topic, and a valid quiz on it.
+// Outline of its cache topic, and a valid quiz on it (one scenario question with a Diagram).
 import { FIXTURE_SHA, PRIMER_FIXTURE } from '../../corpus/fixtures'
 import { buildCorpus } from '../../corpus/ingest'
 import { createCorpus } from '../../corpus/lookup'
@@ -55,6 +55,10 @@ const choices = (correct: number[], count = 4) =>
     correct: correct.includes(i)
   }))
 
+/** Diagram of the first scenario question of `validQuiz`. */
+export const SCENARIO_DIAGRAM =
+  'flowchart LR\n  C[Client] -->|requête| S[Serveur]\n  S -->|lecture| K[Cache]\n  S -->|écriture| DB[(Database)]'
+
 export const validQuiz = (): QuizContent => ({
   questions: [
     {
@@ -77,6 +81,7 @@ export const validQuiz = (): QuizContent => ({
       type: 'scenario',
       prompt: 'Quelle stratégie choisis-tu ?',
       scenario: 'Une boutique lit beaucoup et écrit peu ; les données doivent rester à jour.',
+      diagram: SCENARIO_DIAGRAM,
       notions: ['write-through', 'cache-aside'],
       sourceSections: ['cache/when-to-update-the-cache'],
       choices: choices([0], 3),

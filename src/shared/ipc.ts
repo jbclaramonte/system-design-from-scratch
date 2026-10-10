@@ -177,6 +177,8 @@ export interface IpcChannels {
   }
   /** Cancels the free-answer grading (or contest re-grade) of a question in progress. */
   'quiz:cancelGrading': { request: { roundId: number; questionId: number }; response: void }
+  /** Flags a question in play as faulty with a reason (for example its Diagram could not be drawn). */
+  'quiz:flagQuestion': { request: { questionId: number; reason: string }; response: void }
   /** Dev only (rejected in a packaged app): gets or creates the fixture exercise playing index n. */
   'protocol:openDevExercise': { request: ProtocolDevExerciseRequest; response: DesignExerciseRef }
   /** A Design Exercise with its Protocol Steps (active or locked), submissions, Hints, review. */
@@ -254,6 +256,7 @@ export const apiChannels = {
   submitFreeAnswer: 'quiz:submitFreeAnswer',
   contestGrade: 'quiz:contestGrade',
   cancelGrading: 'quiz:cancelGrading',
+  flagQuestion: 'quiz:flagQuestion',
   openDevProtocolExercise: 'protocol:openDevExercise',
   getProtocolExercise: 'protocol:getExercise',
   saveProtocolDraft: 'protocol:saveDraft',

@@ -30,7 +30,9 @@ export class InvalidAnswerError extends Error {
 const choiceBodySchema = z.object({
   choices: z.array(z.object({ text: z.string(), correct: z.boolean() })).min(2),
   explanation: z.string(),
-  scenario: z.string().optional()
+  scenario: z.string().optional(),
+  /** Mermaid source shown with the question (#24). */
+  diagram: z.string().optional()
 })
 export type ChoiceBody = z.infer<typeof choiceBodySchema>
 

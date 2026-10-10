@@ -12,7 +12,7 @@ import {
 import { getCachedContent } from '../db/repositories/contentCache'
 import { createNotions, createTopic, listNotionsByTopic } from '../db/repositories/learningContent'
 import type { Topic } from '../db/types'
-import type { CliCallOptions } from './cliRunner'
+import { DEFAULT_TIMEOUT_MS, type CliCallOptions } from './cliRunner'
 import {
   ensureNotionOutline,
   prepareLesson,
@@ -23,7 +23,13 @@ import {
   type PipelineDeps
 } from './pipelines'
 import { GenerationService, type CliRunner } from './service'
-import { CACHE_SECTIONS, cacheOutline, fixtureCorpus, validQuiz } from './testing/contentFixtures'
+import {
+  CACHE_SECTIONS,
+  cacheOutline,
+  fixtureCorpus,
+  SCENARIO_DIAGRAM,
+  validQuiz
+} from './testing/contentFixtures'
 import { installFakeCli, type FakeCli } from './testing/fakeCli'
 
 const corpus = fixtureCorpus()
@@ -160,6 +166,8 @@ describe('quiz, remediation and flag-and-regenerate pipelines', () => {
 
     expect(calls).toHaveLength(2) // outline, then quiz
     expect(calls[1]!.jsonSchema).toBeDefined()
+    // No override: a hung quiz call fails with the runner's typed timeout after 120 s.
+    expect(calls[1]!.timeoutMs ?? DEFAULT_TIMEOUT_MS).toBe(120_000)
     const notions = listNotionsByTopic(db, cache.id)
     const questions = listQuestions(db, quiz.id)
     expect(quiz).toMatchObject({ grounded: true, sourceSections: CACHE_SECTIONS })
@@ -171,6 +179,9 @@ describe('quiz, remediation and flag-and-regenerate pipelines', () => {
       sourceSections: ['cache/client-caching']
     })
     expect(questions[3]!.body).toHaveProperty('expectedPoints')
+    // The Diagram is stored in the question body, as generated.
+    expect(questions[2]!.body).toMatchObject({ diagram: SCENARIO_DIAGRAM })
+    expect(questions[0]!.body).not.toHaveProperty('diagram')
     deps.service.dispose()
   })
 
@@ -181,6 +192,8 @@ describe('quiz, remediation and flag-and-regenerate pipelines', () => {
 
     const request = prepareRemediationLesson(deps, cacheAside!.id, { angle: 'concrete_example' })
     const result = await deps.service.generate(request).result
+
+    expect(request.finalize).toBeDefined() // Mermaid Diagram repair, see diagrams.test.ts
 
     expect(result).toMatchObject({
       grounded: true,
@@ -203,6 +216,8 @@ describe('quiz, remediation and flag-and-regenerate pipelines', () => {
             { text: 'Remplir le cache', correct: true },
             { text: 'Vider le cache', correct: false }
           ],
+          diagram:
+            'sequenceDiagram\n  participant A as Application\n  participant K as Cache\n  A->>K: lecture de la clé\n  K-->>A: absente',
           explanation: 'Lecture du stockage puis écriture dans le cache.'
         }
       ]
@@ -224,12 +239,15 @@ describe('quiz, remediation and flag-and-regenerate pipelines', () => {
     expect(prompt).toContain('flagged as faulty')
     expect(prompt).toContain('Deux réponses semblent justes.')
     expect(prompt).toContain(`- ${faulty.prompt}`) // previous prompts to avoid
+    expect(prompt).toContain('Diagrams (optional `diagram` field')
     expect(replacement).toMatchObject({
       type: 'multiple_choice',
       position: faulty.position,
       notionIds: faulty.notionIds,
       prompt: 'Quelles étapes suit cache-aside sur un cache miss ?'
     })
+    // A replacement question may carry a Diagram.
+    expect(replacement.body).toMatchObject({ diagram: expect.stringContaining('sequenceDiagram') })
     expect(listQuestions(db, quiz.id)[1]!.id).toBe(replacement.id)
     expect(listQuestionHistory(db, quiz.id)).toHaveLength(7)
     expect(getQuestion(db, faulty.id)).toMatchObject({
