@@ -1,10 +1,16 @@
 import { getAssetUrlsByImport } from '@tldraw/assets/imports.vite'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import { createShapeId, getSnapshot, Tldraw, type Editor, type TLEditorSnapshot } from 'tldraw'
 import 'tldraw/tldraw.css'
+import './designCanvas.css'
 import { iconUrlsByName } from './assetUrls'
 import { componentShapeUtils } from './componentShapes'
-import { COMPONENT_LOOKS, COMPONENT_TYPES, type ComponentType } from './componentTypes'
+import {
+  COMPONENT_LOOKS,
+  COMPONENT_TYPES,
+  componentColors,
+  type ComponentType
+} from './componentTypes'
 import { createDebouncedSave } from './debouncedSave'
 import { deserializeScene, serializeScene } from './sceneSnapshot'
 
@@ -102,49 +108,56 @@ export function DesignCanvas({
     }
   }
 
-  if (load.status === 'loading') return <p>Loading the design scene...</p>
+  if (load.status === 'loading')
+    return <p className="design-canvas-status">Loading the design scene...</p>
   if (load.status === 'error')
-    return <p role="alert">Could not load the design scene: {load.message}</p>
+    return (
+      <p role="alert" className="design-canvas-status">
+        Could not load the design scene: {load.message}
+      </p>
+    )
 
   return (
-    <div style={{ display: 'flex', height: '100%' }}>
-      <div
-        data-testid="design-palette"
-        style={{
-          width: 160,
-          padding: 12,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 6,
-          borderRight: '1px solid var(--color-border-hairline)'
-        }}
-      >
-        <strong>Components</strong>
+    <div className="design-canvas">
+      <aside className="design-palette" data-testid="design-palette" aria-label="Components">
+        <p className="design-palette-title label-caps">Components</p>
         {COMPONENT_TYPES.map((type) => (
           <button
             key={type}
+            type="button"
+            className="design-palette-button btn-sm"
             data-testid={`add-${type}`}
+            data-component={type}
+            style={{ '--swatch': componentColors(type, 'dark').stroke } as CSSProperties}
             disabled={!editor}
             onClick={() => editor && addComponent(editor, type)}
           >
             + {COMPONENT_LOOKS[type].label}
           </button>
         ))}
+        <span className="design-palette-divider" aria-hidden />
         <button
+          type="button"
+          className="design-palette-button btn-sm"
           data-testid="tool-arrow"
           disabled={!editor}
           onClick={() => editor?.setCurrentTool('arrow')}
         >
           Arrow
         </button>
-        {saveError && <p role="alert">Autosave failed: {saveError}</p>}
-      </div>
-      <div style={{ flex: 1, position: 'relative' }}>
+        {saveError && (
+          <p role="alert" className="design-palette-error">
+            Autosave failed: {saveError}
+          </p>
+        )}
+      </aside>
+      <div className="design-surface">
         <Tldraw
           licenseKey={licenseKey}
           assetUrls={assetUrls}
           shapeUtils={componentShapeUtils}
           snapshot={load.snapshot}
+          colorScheme="dark"
           onMount={onMount}
         />
       </div>

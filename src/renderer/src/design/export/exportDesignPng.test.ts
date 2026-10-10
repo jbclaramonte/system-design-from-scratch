@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest'
-import { bytesToBase64, fitWithin } from './exportDesignPng'
+import type { Editor } from 'tldraw'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { bytesToBase64, exportDesignPng, fitWithin } from './exportDesignPng'
 
 describe('fitWithin', () => {
   it('keeps an image that already fits', () => {
@@ -22,5 +23,55 @@ describe('bytesToBase64', () => {
 
     expect(bytesToBase64(bytes)).toBe(Buffer.from(bytes).toString('base64'))
     expect(bytesToBase64(new Uint8Array())).toBe('')
+  })
+})
+
+describe('exportDesignPng on the dark Design Canvas', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('asks tldraw for light mode, then flattens the capture on opaque white', async () => {
+    const toImage = vi.fn().mockResolvedValue({ blob: new Blob(['png']) })
+    const editor = {
+      getCurrentPageShapeIds: () => new Set(['shape:a']),
+      getCurrentPageBounds: () => ({ w: 400, h: 300 }),
+      toImage
+    } as unknown as Editor
+
+    const operations: string[] = []
+    const context = {
+      set fillStyle(value: string) {
+        operations.push(`fillStyle=${value}`)
+      },
+      fillRect: (...args: number[]) => operations.push(`fillRect(${args.join(',')})`),
+      drawImage: () => operations.push('drawImage')
+    }
+    vi.stubGlobal('createImageBitmap', async () => ({ width: 464, height: 364, close: () => {} }))
+    vi.stubGlobal(
+      'OffscreenCanvas',
+      class {
+        getContext = () => context
+        convertToBlob = async () => new Blob([Uint8Array.of(1, 2, 3)], { type: 'image/png' })
+      }
+    )
+
+    const png = await exportDesignPng(editor)
+
+    expect(toImage.mock.calls[0]![1]).toMatchObject({
+      format: 'png',
+      darkMode: false,
+      background: false
+    })
+    // White is painted first, the transparent capture is drawn over it.
+    expect(operations).toEqual(['fillStyle=#ffffff', 'fillRect(0,0,464,364)', 'drawImage'])
+    expect(png).toMatchObject({ width: 464, height: 364, base64: 'AQID' })
+  })
+
+  it('exports nothing for an empty page', async () => {
+    const editor = {
+      getCurrentPageShapeIds: () => new Set(),
+      getCurrentPageBounds: () => undefined
+    } as unknown as Editor
+
+    expect(await exportDesignPng(editor)).toBeNull()
   })
 })

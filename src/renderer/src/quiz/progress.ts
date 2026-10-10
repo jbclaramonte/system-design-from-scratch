@@ -44,3 +44,7 @@ export function toggleChoice(
 /** A percentage for display: whole numbers as is, others with one decimal. */
 export const formatPercent = (value: number): string =>
   `${Number.isInteger(value) ? value : value.toFixed(1)}%`
+
+/** Share of the questions answered, 0 to 100, for the Round progress bar. */
+export const answeredPercent = (answered: number, total: number): number =>
+  total <= 0 ? 0 : Math.min(100, Math.round((answered * 100) / total))

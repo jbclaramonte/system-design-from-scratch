@@ -5,6 +5,7 @@ import {
   type QuestionView
 } from '../../../shared/quiz'
 import { GradingStatus } from './GradingStatus'
+import './quiz.css'
 import { useGrading } from './useGrading'
 
 /** Ctrl+Enter (Cmd+Enter on macOS) sends a text area's form; Enter alone adds a line. */
@@ -50,47 +51,38 @@ export function FreeAnswerForm({
 
   return (
     <form
+      className="quiz-stack"
       onSubmit={(event) => {
         event.preventDefault()
         submit()
       }}
     >
-      <label htmlFor={inputId} lang="fr" style={{ display: 'block', fontSize: '1.15em' }}>
-        {question.prompt}
-      </label>
-      <p
-        id={`${inputId}-hint`}
-        style={{ fontSize: '0.85em', color: 'var(--color-text-secondary)', margin: '4px 0' }}
-      >
-        Answer in one to a few sentences, in your own words. Ctrl+Enter (⌘+Enter) to send.
-      </p>
-      <textarea
-        id={inputId}
-        data-testid="free-answer-text"
-        lang="fr"
-        rows={5}
-        maxLength={FREE_ANSWER_MAX_LENGTH}
-        value={text}
-        readOnly={pending}
-        aria-describedby={`${inputId}-hint ${inputId}-count`}
-        onChange={(event) => {
-          setText(event.target.value)
-          onDraftChange(event.target.value)
-        }}
-        onKeyDown={submitOnModEnter}
-        style={{ width: '100%', boxSizing: 'border-box', font: 'inherit', padding: 8 }}
-      />
-      <p
-        id={`${inputId}-count`}
-        style={{
-          fontSize: '0.85em',
-          color: 'var(--color-text-secondary)',
-          margin: 0,
-          textAlign: 'right'
-        }}
-      >
-        {text.length}/{FREE_ANSWER_MAX_LENGTH}
-      </p>
+      <div className="quiz-field">
+        <label htmlFor={inputId} lang="fr" className="quiz-prompt">
+          {question.prompt}
+        </label>
+        <p id={`${inputId}-hint`} className="muted">
+          Answer in one to a few sentences, in your own words. Ctrl+Enter (⌘+Enter) to send.
+        </p>
+        <textarea
+          id={inputId}
+          data-testid="free-answer-text"
+          lang="fr"
+          rows={5}
+          maxLength={FREE_ANSWER_MAX_LENGTH}
+          value={text}
+          readOnly={pending}
+          aria-describedby={`${inputId}-hint ${inputId}-count`}
+          onChange={(event) => {
+            setText(event.target.value)
+            onDraftChange(event.target.value)
+          }}
+          onKeyDown={submitOnModEnter}
+        />
+        <p id={`${inputId}-count`} className="quiz-field-foot label-mono">
+          {text.length}/{FREE_ANSWER_MAX_LENGTH}
+        </p>
+      </div>
       <GradingStatus
         pending={pending}
         error={error}
@@ -98,8 +90,13 @@ export function FreeAnswerForm({
         failureHint="Nothing was recorded: retry, or answer later."
         onCancel={cancel}
       />
-      <p style={{ display: 'flex', gap: 8 }}>
-        <button type="submit" data-testid="submit-answer" disabled={pending || empty}>
+      <div className="quiz-actions">
+        <button
+          type="submit"
+          className="btn-primary"
+          data-testid="submit-answer"
+          disabled={pending || empty}
+        >
           {error && error.code !== 'cancelled' && error.code !== 'refused'
             ? 'Retry'
             : 'Check answer'}
@@ -107,7 +104,7 @@ export function FreeAnswerForm({
         <button type="button" data-testid="answer-later" disabled={pending} onClick={onAnswerLater}>
           Answer later
         </button>
-      </p>
+      </div>
     </form>
   )
 }

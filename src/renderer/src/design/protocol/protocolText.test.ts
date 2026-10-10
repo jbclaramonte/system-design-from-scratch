@@ -4,7 +4,16 @@ import type {
   ProtocolStepView,
   SubmissionView
 } from '../../../../shared/protocol'
-import { checklistScore, defaultStep, hintButtonLabel, stepStatus } from './protocolText'
+import {
+  checklistPercent,
+  checklistScore,
+  defaultStep,
+  finalReviewState,
+  hintButtonLabel,
+  progressLabel,
+  reviewProgress,
+  stepState
+} from './protocolText'
 
 const submission = (status: SubmissionView['status']): SubmissionView => ({
   id: 1,
@@ -30,12 +39,52 @@ const step = (overrides: Partial<ProtocolStepView>): ProtocolStepView => ({
 
 describe('protocol text', () => {
   it('describes the state of a step', () => {
-    expect(stepStatus(step({ active: false, unlockedAt: 3 }))).toBe('Locked: unlocks at exercise 3')
-    expect(stepStatus(step({}))).toBe('Not submitted yet')
-    expect(stepStatus(step({ submissions: [submission('failed')] }))).toMatch(/failed/)
-    expect(stepStatus(step({ submissions: [submission('reviewed'), submission('failed')] }))).toBe(
-      'Reviewed (1 submission)'
-    )
+    expect(stepState(step({ active: false, unlockedAt: 3 }))).toEqual({
+      kind: 'locked',
+      label: 'Locked',
+      chip: 'locked',
+      detail: 'Unlocks at exercise 3'
+    })
+    expect(stepState(step({}))).toMatchObject({ kind: 'todo', label: 'To do' })
+    expect(stepState(step({ submissions: [submission('pending')] }))).toMatchObject({
+      kind: 'submitted',
+      chip: 'attention'
+    })
+    expect(stepState(step({ submissions: [submission('failed')] }))).toMatchObject({
+      kind: 'failed',
+      chip: 'error',
+      detail: 'Submit again'
+    })
+    expect(
+      stepState(step({ submissions: [submission('reviewed'), submission('failed')] }))
+    ).toEqual({
+      kind: 'reviewed',
+      label: 'Reviewed',
+      chip: 'mastered',
+      detail: '1 submission reviewed'
+    })
+  })
+
+  it('counts reviewed steps among the active ones', () => {
+    const view = {
+      steps: [
+        step({ submissions: [submission('reviewed')] }),
+        step({ step: 'estimations', submissions: [submission('failed')] }),
+        step({ step: 'api', active: false })
+      ]
+    }
+    expect(reviewProgress(view)).toEqual({ reviewed: 1, total: 2, percent: 50 })
+    expect(progressLabel({ reviewed: 1, total: 2 })).toBe('1 of 2 steps reviewed')
+    expect(reviewProgress({ steps: [] })).toEqual({ reviewed: 0, total: 0, percent: 0 })
+  })
+
+  it('describes the final review entry', () => {
+    expect(finalReviewState({ canRequestFinalReview: false, finalReview: null })).toMatchObject({
+      kind: 'locked',
+      detail: 'After every active step is reviewed'
+    })
+    expect(finalReviewState({ canRequestFinalReview: true, finalReview: null }).label).toBe('Ready')
+    expect(finalReviewState({ canRequestFinalReview: true, finalReview: {} }).label).toBe('Done')
   })
 
   it('opens the first active step still to review', () => {
@@ -55,6 +104,11 @@ describe('protocol text', () => {
     expect(hintButtonLabel(1)).toBe('Hint 1/3 (nudge)')
     expect(hintButtonLabel(3)).toBe('Hint 3/3 (near-solution)')
     expect(hintButtonLabel(null)).toBe('No Hint left')
+  })
+
+  it('gives the share of met checklist items', () => {
+    expect(checklistPercent([])).toBe(0)
+    expect(checklistPercent([{ verdict: 'met' }, { verdict: 'missing' }])).toBe(50)
   })
 
   it('counts met checklist items', () => {

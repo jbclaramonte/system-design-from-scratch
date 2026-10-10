@@ -7,13 +7,20 @@ import {
   T,
   Vec,
   resizeBox,
+  useColorMode,
   useEditor,
   useValue,
   type TLResizeInfo,
   type TLShape,
   type TLShapePartial
 } from 'tldraw'
-import { COMPONENT_LOOKS, loadBalancerPoints, type ComponentType } from './componentTypes'
+import {
+  COMPONENT_LOOKS,
+  componentColors,
+  loadBalancerPoints,
+  type ComponentColorMode,
+  type ComponentType
+} from './componentTypes'
 
 /**
  * tldraw custom shapes for the component types of the Design Canvas. Every type has the same
@@ -40,9 +47,22 @@ declare module 'tldraw' {
 
 type ComponentShape = TLShape<ComponentType>
 
-/** SVG body per type. Shared by the live component and by the SVG/PNG export. */
-function Body({ type, w, h }: { type: ComponentType; w: number; h: number }) {
-  const { fill, stroke } = COMPONENT_LOOKS[type]
+/**
+ * SVG body per type. Shared by the live component (color mode of the editor, dark on the Design
+ * Canvas) and by the SVG/PNG export (always `light`, so the LLM sees dark strokes on white).
+ */
+function Body({
+  type,
+  w,
+  h,
+  mode
+}: {
+  type: ComponentType
+  w: number
+  h: number
+  mode: ComponentColorMode
+}) {
+  const { fill, stroke } = componentColors(type, mode)
   const common = { fill, stroke, strokeWidth: 2.5 }
   switch (type) {
     case 'client':
@@ -148,13 +168,14 @@ abstract class ComponentShapeUtil<S extends ComponentShape> extends ShapeUtil<S>
 
   /**
    * SVG used by image export. The live component uses an HTML label, which would go through
-   * foreignObject on export; a plain <text> is more robust for PNG rasterization.
+   * foreignObject on export; a plain <text> is more robust for PNG rasterization. Always the
+   * light palette, whatever the editor theme: exports stay dark on white.
    */
   override toSvg(shape: S) {
     const { w, h, text } = shape.props
     return (
       <g>
-        <Body type={this.componentType} w={w} h={h} />
+        <Body type={this.componentType} w={w} h={h} mode="light" />
         <text
           x={w / 2}
           y={h / 2}
@@ -162,7 +183,7 @@ abstract class ComponentShapeUtil<S extends ComponentShape> extends ShapeUtil<S>
           dominantBaseline="central"
           fontSize={16}
           fontFamily="sans-serif"
-          fill="#1d1d1d"
+          fill={componentColors(this.componentType, 'light').text}
         >
           {text}
         </text>
@@ -177,11 +198,12 @@ function ComponentView({ shape }: { shape: ComponentShape }) {
     editor,
     shape.id
   ])
+  const mode = useColorMode()
   const { w, h, text } = shape.props
   return (
     <HTMLContainer style={{ width: w, height: h }}>
       <svg width={w} height={h} style={{ position: 'absolute', overflow: 'visible' }}>
-        <Body type={shape.type} w={w} h={h} />
+        <Body type={shape.type} w={w} h={h} mode={mode} />
       </svg>
       <PlainTextLabel
         shapeId={shape.id}
@@ -193,7 +215,7 @@ function ComponentView({ shape }: { shape: ComponentShape }) {
         lineHeight={1.3}
         textAlign="center"
         verticalAlign="middle"
-        labelColor="#1d1d1d"
+        labelColor={componentColors(shape.type, mode).text}
         wrap
         showTextOutline={false}
         padding={8}

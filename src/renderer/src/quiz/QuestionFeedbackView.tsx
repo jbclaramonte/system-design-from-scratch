@@ -5,6 +5,7 @@ import type {
   FreeAnswerQuestionFeedback,
   QuestionFeedback
 } from '../../../shared/quiz'
+import { choiceMark, type ChoiceState } from './choiceMark'
 import {
   choiceFeedbackMessage,
   choiceTally,
@@ -12,11 +13,22 @@ import {
   resultLabels,
   type FeedbackMessage
 } from './feedbackText'
+import './quiz.css'
 
-const resultColors: Record<AttemptResult, string> = {
-  correct: 'var(--color-mastered-text)',
-  partially_correct: 'var(--color-attention-text)',
-  incorrect: 'var(--color-error-text)'
+/** Status chip of a verdict: label text always shown, the color only adds to it. */
+const resultChips: Record<AttemptResult, string> = {
+  correct: 'chip-mastered',
+  partially_correct: 'chip-attention',
+  incorrect: 'chip-error'
+}
+
+/** Status chip of a marked choice. */
+const stateChips: Record<ChoiceState, string> = {
+  correct: 'chip-mastered',
+  wrong: 'chip-error',
+  missed: 'chip-attention',
+  answer: 'chip-mastered',
+  neutral: ''
 }
 
 /** Feedback on an answered question: result, then the details of its kind. */
@@ -28,78 +40,98 @@ export function QuestionFeedbackView({ feedback }: { feedback: QuestionFeedback 
   )
 }
 
-/** The verdict line: the label, then what happened in plain words. */
+/** The verdict line: the chip with the label, then what happened in plain words. */
 function Verdict({ result, message }: { result: AttemptResult; message: FeedbackMessage }) {
   return (
-    <p style={{ fontWeight: 'bold', color: resultColors[result] }} data-testid="feedback-verdict">
-      {message.label}
-      {message.detail && <span style={{ fontWeight: 'normal' }}>: {message.detail}</span>}
+    <p className="quiz-verdict" data-testid="feedback-verdict">
+      <span className={`chip chip-dot ${resultChips[result]}`}>{message.label}</span>
+      {message.detail && (
+        <span className="quiz-verdict-detail">
+          <span className="visually-hidden">: </span>
+          {message.detail}
+        </span>
+      )}
     </p>
+  )
+}
+
+/** A card with a caps label and its content. */
+function Note({
+  title,
+  lang,
+  attention,
+  testId,
+  children
+}: {
+  title: string
+  /** Language of the content (the title stays English). */
+  lang?: string
+  attention?: boolean
+  testId?: string
+  children: React.ReactNode
+}) {
+  return (
+    <section
+      className={`card quiz-note${attention ? ' quiz-note-attention' : ''}`}
+      data-testid={testId}
+    >
+      <h4 className="label-caps">{title}</h4>
+      <div lang={lang}>{children}</div>
+    </section>
   )
 }
 
 /** A choice question: every choice marked, and the stored explanation. */
 function ChoiceFeedbackView({ feedback }: { feedback: ChoiceQuestionFeedback }) {
   return (
-    <div data-testid="question-feedback" data-result={feedback.result}>
+    <div className="quiz-feedback" data-testid="question-feedback" data-result={feedback.result}>
       <Verdict
         result={feedback.result}
         message={choiceFeedbackMessage(choiceTally(feedback.choices))}
       />
-      <ul lang="fr" style={{ paddingLeft: 0, listStyle: 'none' }}>
-        {feedback.choices.map((choice, index) => (
-          <li
-            key={index}
-            style={{
-              padding: '4px 8px',
-              marginBottom: 4,
-              borderLeft: `4px solid ${choice.correct ? resultColors.correct : 'transparent'}`,
-              background: choice.selected && !choice.correct ? 'var(--color-error-fill)' : undefined
-            }}
-          >
-            <span aria-hidden="true">{choice.correct ? '✓ ' : choice.selected ? '✗ ' : '  '}</span>
-            {choice.text}
-            <span style={{ fontSize: '0.85em', color: 'var(--color-text-secondary)' }}>
-              {choice.correct && ' (correct answer)'}
-              {choice.selected && ' (your answer)'}
-            </span>
-          </li>
-        ))}
+      <ul lang="fr" className="quiz-marks">
+        {feedback.choices.map((choice, index) => {
+          const mark = choiceMark(choice, feedback.type)
+          return (
+            <li key={index} className="quiz-mark" data-state={mark.state}>
+              <span className="quiz-mark-glyph" aria-hidden="true">
+                {mark.glyph}
+              </span>
+              <span className="quiz-mark-text">{choice.text}</span>
+              <span className="quiz-mark-tags" lang="en">
+                {choice.selected && <span className="chip">Your answer</span>}
+                {mark.label && (
+                  <span className={`chip ${stateChips[mark.state]}`}>{mark.label}</span>
+                )}
+              </span>
+            </li>
+          )
+        })}
       </ul>
-      <div lang="fr" style={{ background: 'var(--color-surface-elevated)', padding: '8px 12px' }}>
-        <strong lang="en">{feedback.type === 'scenario' ? 'Trade-off' : 'Explanation'}: </strong>
+      <Note title={feedback.type === 'scenario' ? 'Trade-off' : 'Explanation'} lang="fr">
         {feedback.explanation}
-      </div>
+      </Note>
     </div>
   )
 }
 
-const boxStyle = {
-  background: 'var(--color-surface-elevated)',
-  padding: '8px 12px',
-  marginBottom: 8
-}
-
 function ExpectedPoints({ points }: { points: ExpectedPointFeedback[] }) {
   return (
-    <ul lang="fr" style={{ paddingLeft: 0, listStyle: 'none' }}>
+    <ul lang="fr" className="quiz-marks">
       {points.map((point, index) => (
-        <li
-          key={index}
-          data-covered={String(point.covered)}
-          style={{
-            padding: '4px 8px',
-            marginBottom: 4,
-            borderLeft: `4px solid ${point.covered ? resultColors.correct : resultColors.incorrect}`
-          }}
-        >
-          <span aria-hidden="true">{point.covered ? '✓ ' : '✗ '}</span>
-          <strong>{point.point}</strong>
-          <span lang="en" style={{ fontSize: '0.85em', color: 'var(--color-text-secondary)' }}>
-            {point.covered ? ' (covered)' : ' (missing)'}
+        <li key={index} className="quiz-mark quiz-point" data-covered={String(point.covered)}>
+          <span className="quiz-mark-glyph" aria-hidden="true">
+            {point.covered ? '✓' : '!'}
           </span>
-          <br />
-          {point.justification}
+          <span className="quiz-point-body">
+            <strong>{point.point}</strong>
+            <span className="quiz-point-justification">{point.justification}</span>
+          </span>
+          <span className="quiz-mark-tags" lang="en">
+            <span className={`chip ${point.covered ? 'chip-mastered' : 'chip-attention'}`}>
+              {point.covered ? 'Covered' : 'Missing'}
+            </span>
+          </span>
         </li>
       ))}
     </ul>
@@ -113,7 +145,12 @@ function ExpectedPoints({ points }: { points: ExpectedPointFeedback[] }) {
 function FreeAnswerFeedbackView({ feedback }: { feedback: FreeAnswerQuestionFeedback }) {
   const covered = feedback.expectedPoints.filter((point) => point.covered).length
   return (
-    <div data-testid="question-feedback" data-result={feedback.result} data-kind="free_answer">
+    <div
+      className="quiz-feedback"
+      data-testid="question-feedback"
+      data-result={feedback.result}
+      data-kind="free_answer"
+    >
       <Verdict
         result={feedback.result}
         message={freeAnswerFeedbackMessage(
@@ -122,52 +159,42 @@ function FreeAnswerFeedbackView({ feedback }: { feedback: FreeAnswerQuestionFeed
           feedback.expectedPoints.length
         )}
       />
-      <p style={{ marginBottom: 4 }}>Your answer:</p>
-      <blockquote
-        lang="fr"
-        style={{
-          margin: '0 0 8px',
-          padding: '4px 12px',
-          borderLeft: '3px solid var(--color-border-active)'
-        }}
-      >
-        {feedback.answer}
-      </blockquote>
-      <p style={{ marginBottom: 4 }}>Expected points:</p>
-      <ExpectedPoints points={feedback.expectedPoints} />
+      <div className="quiz-stack">
+        <h4 className="label-caps quiz-section-label">Your answer</h4>
+        <blockquote lang="fr" className="quiz-answer">
+          {feedback.answer}
+        </blockquote>
+      </div>
+      <div className="quiz-stack">
+        <h4 className="label-caps quiz-section-label">Expected points</h4>
+        <ExpectedPoints points={feedback.expectedPoints} />
+      </div>
       {feedback.misconceptions.length > 0 && (
-        <div style={boxStyle}>
-          <strong>Misconceptions:</strong>
-          <ul lang="fr" style={{ margin: 0 }}>
+        <Note title="Misconceptions" lang="fr" attention>
+          <ul>
             {feedback.misconceptions.map((item, index) => (
               <li key={index}>{item}</li>
             ))}
           </ul>
-        </div>
+        </Note>
       )}
-      <div lang="fr" style={boxStyle}>
-        <strong lang="en">Explanation: </strong>
+      <Note title="Explanation" lang="fr">
         {feedback.explanation}
-      </div>
+      </Note>
       {feedback.toReview.length > 0 && (
-        <div style={boxStyle}>
-          <strong>To review:</strong>
-          <ul lang="fr" style={{ margin: 0 }}>
+        <Note title="To review" lang="fr">
+          <ul>
             {feedback.toReview.map((item, index) => (
               <li key={index}>{item}</li>
             ))}
           </ul>
-        </div>
+        </Note>
       )}
-      <div lang="fr" data-testid="model-answer" style={boxStyle}>
-        <strong lang="en">Model answer: </strong>
+      <Note title="Model answer" lang="fr" testId="model-answer">
         {feedback.modelAnswer}
-      </div>
+      </Note>
       {feedback.contest && (
-        <details
-          data-testid="contest-history"
-          style={{ fontSize: '0.9em', color: 'var(--color-text-secondary)' }}
-        >
+        <details className="quiz-contest-history" data-testid="contest-history">
           <summary>
             Grade contested (first grade: {resultLabels[feedback.contest.previous.result]})
           </summary>

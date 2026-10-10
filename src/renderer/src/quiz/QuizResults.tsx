@@ -3,6 +3,14 @@ import type { RoundResult } from '../../../shared/quiz'
 import { OutsidePrimerBadge } from '../lesson/OutsidePrimerBadge'
 import { formatPercent } from './progress'
 import { QuestionFeedbackView } from './QuestionFeedbackView'
+import './quiz.css'
+
+const typeLabels = {
+  single_choice: 'Single choice',
+  multiple_choice: 'Multiple choice',
+  scenario: 'Scenario',
+  free_answer: 'Free answer'
+} as const
 
 /**
  * Results of a completed Round: score vs the Mastery Threshold, per-notion breakdown, answers.
@@ -17,81 +25,119 @@ export function QuizResults({
 }) {
   const { round, masteryThreshold, notionScores, questions, skippedQuestionIds } = result
   const headingRef = useRef<HTMLHeadingElement>(null)
+  const score = round.scorePercent ?? 0
+  const passed = round.passed === true
 
   useEffect(() => {
     headingRef.current?.focus()
   }, [])
 
   return (
-    <section data-testid="quiz-results">
-      <h2 ref={headingRef} tabIndex={-1}>
-        Round {round.number}: {round.passed ? 'passed' : 'not passed yet'}
-      </h2>
-      {outsidePrimer && (
-        <p>
-          <OutsidePrimerBadge testId="quiz-results-ungrounded" /> Questions and answer keys were
-          generated from general knowledge, not checked against the primer.
-        </p>
-      )}
-      <p data-testid="round-score" data-passed={String(round.passed)}>
-        Score <strong>{formatPercent(round.scorePercent ?? 0)}</strong>, Mastery Threshold{' '}
-        {formatPercent(masteryThreshold)}.
-        {skippedQuestionIds.length > 0 &&
-          ` ${skippedQuestionIds.length} question(s) not counted: no grader was available for them.`}
-      </p>
+    <section className="quiz-results" data-testid="quiz-results">
+      <header className="quiz-results-head">
+        <h2 className="quiz-results-title" ref={headingRef} tabIndex={-1}>
+          Round {round.number}
+          <span className="visually-hidden">: </span>
+          <span className={`chip chip-dot ${passed ? 'chip-mastered' : 'chip-attention'}`}>
+            {passed ? 'passed' : 'not passed yet'}
+          </span>
+        </h2>
+        {outsidePrimer && (
+          <p className="muted">
+            <OutsidePrimerBadge testId="quiz-results-ungrounded" /> Questions and answer keys were
+            generated from general knowledge, not checked against the primer.
+          </p>
+        )}
+      </header>
 
-      <h3>By notion</h3>
-      <table data-testid="notion-scores" style={{ borderCollapse: 'collapse' }}>
-        <thead>
-          <tr>
-            <th scope="col" style={{ textAlign: 'left', paddingRight: 16 }}>
-              Notion
-            </th>
-            <th scope="col" style={{ textAlign: 'right', paddingRight: 16 }}>
-              Questions
-            </th>
-            <th scope="col" style={{ textAlign: 'right' }}>
-              Score
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {notionScores.map((notion) => (
-            <tr key={notion.id} data-missed={String(notion.missed)}>
-              <th
-                scope="row"
-                lang="fr"
-                style={{ textAlign: 'left', fontWeight: 'normal', paddingRight: 16 }}
-              >
-                {notion.title}
-              </th>
-              <td style={{ textAlign: 'right', paddingRight: 16 }}>
-                {notion.earned}/{notion.questionCount}
-              </td>
-              <td
-                style={{
-                  textAlign: 'right',
-                  color: notion.missed ? 'var(--color-error-text)' : 'var(--color-mastered-text)'
-                }}
-              >
-                {formatPercent(notion.scorePercent)}
-              </td>
-            </tr>
+      <div
+        className="card card-elevated quiz-score"
+        data-testid="round-score"
+        data-passed={String(round.passed)}
+      >
+        <div className="quiz-score-figures">
+          <p className="quiz-score-figure">
+            <span className="label-caps">Score</span>
+            <strong className="quiz-score-value">{formatPercent(score)}</strong>
+          </p>
+          <p className="quiz-score-figure quiz-score-figure-end">
+            <span className="label-caps">Mastery Threshold</span>
+            <strong className="quiz-score-threshold label-mono">
+              {formatPercent(masteryThreshold)}
+            </strong>
+          </p>
+        </div>
+        <div className="quiz-score-bar" aria-hidden="true">
+          <div className={`progress${passed ? ' progress-complete' : ''}`}>
+            <div className="progress-fill" style={{ width: `${Math.min(100, score)}%` }} />
+          </div>
+          <span
+            className="quiz-score-marker"
+            style={{ left: `${Math.min(100, masteryThreshold)}%` }}
+          />
+        </div>
+        {skippedQuestionIds.length > 0 && (
+          <p className="quiz-score-note">
+            {skippedQuestionIds.length} question(s) not counted: no grader was available for them.
+          </p>
+        )}
+      </div>
+
+      <section className="quiz-stack" aria-labelledby="quiz-by-notion">
+        <h3 id="quiz-by-notion">By notion</h3>
+        <div className="card quiz-notions">
+          <table data-testid="notion-scores">
+            <thead>
+              <tr>
+                <th scope="col">Notion</th>
+                <th scope="col" className="quiz-num">
+                  Questions
+                </th>
+                <th scope="col" className="quiz-num">
+                  Score
+                </th>
+                <th scope="col">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {notionScores.map((notion) => (
+                <tr key={notion.id} data-missed={String(notion.missed)}>
+                  <th scope="row" lang="fr">
+                    {notion.title}
+                  </th>
+                  <td className="quiz-num">
+                    {notion.earned}/{notion.questionCount}
+                  </td>
+                  <td className="quiz-num">{formatPercent(notion.scorePercent)}</td>
+                  <td>
+                    <span className={`chip ${notion.missed ? 'chip-attention' : 'chip-mastered'}`}>
+                      {notion.missed ? 'Missed' : 'All correct'}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="quiz-stack" aria-labelledby="quiz-answers">
+        <h3 id="quiz-answers">Answers</h3>
+        <ol className="quiz-answers">
+          {questions.map((feedback, index) => (
+            <li key={feedback.questionId} className="card quiz-answer-item">
+              <div className="quiz-answer-head">
+                <span className="label-caps">Question {index + 1}</span>
+                <span className="chip">{typeLabels[feedback.type]}</span>
+              </div>
+              <p lang="fr" className="quiz-prompt">
+                {feedback.prompt}
+              </p>
+              <QuestionFeedbackView feedback={feedback} />
+            </li>
           ))}
-        </tbody>
-      </table>
-
-      <h3>Answers</h3>
-      <ol style={{ paddingLeft: 20 }}>
-        {questions.map((feedback) => (
-          <li key={feedback.questionId} style={{ marginBottom: 16 }}>
-            <p lang="fr" style={{ fontWeight: 'bold', marginBottom: 4 }}>
-              {feedback.prompt}
-            </p>
-            <QuestionFeedbackView feedback={feedback} />
-          </li>
-        ))}
-      </ol>
+        </ol>
+      </section>
     </section>
   )
 }

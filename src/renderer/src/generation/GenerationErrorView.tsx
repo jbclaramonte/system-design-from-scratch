@@ -5,6 +5,7 @@ import {
   truncateDetails,
   type DisplayedErrorCode
 } from './generationErrorText'
+import './generation.css'
 
 /**
  * The raw message, folded: a read-only text area (select all on focus) and a Copy button. The
@@ -38,17 +39,24 @@ function TechnicalDetails({ message }: { message: string }) {
         rows={6}
         aria-label="Technical details"
         data-testid="error-details-text"
-        style={{ width: '100%', fontFamily: 'monospace' }}
+        className="generation-details-text"
         onFocus={(event) => event.currentTarget.select()}
       />
-      <button type="button" data-testid="error-details-copy" onClick={copyText}>
-        Copy
-      </button>{' '}
-      {copy && (
-        <span role="status">
-          {copy === 'copied' ? 'Copied.' : 'Selected: press Cmd+C (Ctrl+C) to copy.'}
-        </span>
-      )}
+      <div className="generation-details-actions">
+        <button
+          type="button"
+          className="btn-sm"
+          data-testid="error-details-copy"
+          onClick={copyText}
+        >
+          Copy
+        </button>
+        {copy && (
+          <span role="status" className="muted">
+            {copy === 'copied' ? 'Copied.' : 'Selected: press Cmd+C (Ctrl+C) to copy.'}
+          </span>
+        )}
+      </div>
     </details>
   )
 }
@@ -84,6 +92,7 @@ export function GenerationErrorView({
   const openSettings = useOpenSettings()
   const text = generationErrorText(code, message)
   const cancelled = code === 'cancelled'
+  const showSettings = text.openSettings && !!openSettings
 
   useEffect(() => {
     if (!cancelled) console.error(`Generation error (${code}): ${message}`)
@@ -101,19 +110,23 @@ export function GenerationErrorView({
         {text.advice}
         {hint && ` ${hint}`}
       </p>
-      {text.openSettings && openSettings && (
-        <span className="settings-error-action" data-testid="settings-error-action">
-          <button type="button" data-testid="open-settings-from-error" onClick={openSettings}>
-            Open Settings
-          </button>
-        </span>
+      {(showSettings || onRetry || children) && (
+        <div className="generation-error-actions">
+          {showSettings && (
+            <span className="settings-error-action" data-testid="settings-error-action">
+              <button type="button" data-testid="open-settings-from-error" onClick={openSettings}>
+                Open Settings
+              </button>
+            </span>
+          )}
+          {onRetry && (
+            <button type="button" onClick={onRetry} data-testid={retryTestId}>
+              Retry
+            </button>
+          )}
+          {children}
+        </div>
       )}
-      {onRetry && (
-        <button type="button" onClick={onRetry} data-testid={retryTestId}>
-          Retry
-        </button>
-      )}{' '}
-      {children}
       {!cancelled && code !== 'refused' && message.trim() && <TechnicalDetails message={message} />}
     </div>
   )

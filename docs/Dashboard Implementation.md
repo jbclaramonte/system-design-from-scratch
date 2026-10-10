@@ -86,7 +86,9 @@ Refresh: the Dashboard screen reloads on every `path:changed` push (sent after `
 - Empty state (no round and no attempt): what the Dashboard will show, and a button back to the Learning Path.
 - `dashboardText.ts`: labels, heat levels, descriptions, durations (tested).
 
-The app has light styling only; the Dashboard follows it (no dark theme exists yet).
+### Visual design
+
+Issue #31, on the dark [[Design System]] (tokens and shared classes only, no literal colors). The Dashboard has a hero card for the Learning Path (mono count, `progress` bar, `aria-valuetext`) and four stat cards (mono numbers, caps labels); the Mastery Threshold note keeps its value in mono. Weak points are cards in a grid: a score chip (red below 50%, amber above, with the dot and the written "Latest 20%"), a neutral topic chip, the reason and a small Practice button. The Notion Map shows each topic in a card; a cell is a dark elevated button with a stripe of its heat color on the left and a score badge filled with the Okabe-Ito color, so the hues stay distinguishable on the dark background while the symbol (✓, ◐, ✗, ○) and the score stay written in the badge; the legend uses the same badges. The Topics table sits in a card (mono caps column heads, status chips from `stepStatusChip`, a shared `progress` bar, a red "Round Limit reached" chip); the history rounds are bordered cards with status and result chips (`roundStatusChip`, `resultChip`, pure and tested in `dashboardText.test.ts`). Settings groups its fields in two cards: "Claude Code" (CLI path, Claude config directory, the Test button and its result with a Failed/OK chip and a Logged in/Not logged in chip) and "Mastery Loop" (Mastery Threshold, Round Limit, questions per quiz), each field with a label and helper text (the error replaces it in red), a primary Save button and a green "Saved" confirmation. About shows the app and its license in a header card, the Primer attribution and the tldraw notice (amber border, "Source-available" chip) as cards, license notices folded in disclosures, and the third-party packages as a filterable list of disclosures with a license chip.
 
 ## Verification (2026-10-09)
 

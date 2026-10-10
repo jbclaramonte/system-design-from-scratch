@@ -4,7 +4,7 @@ import '../lesson/lesson.css'
 import { OutsidePrimerBadge } from '../lesson/OutsidePrimerBadge'
 import { errorMessage } from '../quiz/errorMessage'
 import './mastery.css'
-import { masteryLabels } from './masteryText'
+import { masteryChip, masteryLabels } from './masteryText'
 import { TopicScreen } from './TopicScreen'
 
 function TopicList({ onOpen }: { onOpen: (topic: TopicMasterySummary) => void }) {
@@ -27,9 +27,7 @@ function TopicList({ onOpen }: { onOpen: (topic: TopicMasterySummary) => void })
           <button type="button" onClick={() => onOpen(topic)} data-topic={topic.slug}>
             <span className="lesson-topic-title">{topic.title}</span>
             {!topic.grounded && <OutsidePrimerBadge />}
-            <span className={`mastery-badge mastery-${topic.mastery}`}>
-              {masteryLabels[topic.mastery]}
-            </span>
+            <span className={masteryChip[topic.mastery]}>{masteryLabels[topic.mastery]}</span>
           </button>
         </li>
       ))}

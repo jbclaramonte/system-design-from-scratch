@@ -16,10 +16,10 @@ export function HeatLegend({ threshold }: { threshold: number }) {
     <ul className="dash-legend" aria-label="Notion Map legend">
       {heatLegend(threshold).map(({ level, label }) => (
         <li key={level}>
-          <span className={`dash-swatch heat-${level}`} aria-hidden="true">
+          <span className={`dash-swatch label-mono heat-${level}`} aria-hidden="true">
             {heatSymbols[level]}
-          </span>{' '}
-          {label}
+          </span>
+          <span>{label}</span>
         </li>
       ))}
     </ul>
@@ -29,7 +29,7 @@ export function HeatLegend({ threshold }: { threshold: number }) {
 function CellDetails({ cell }: { cell: NotionMapCell }) {
   return (
     <div className="dash-cell-details" data-testid="notion-details">
-      <strong>{cell.title}</strong>
+      <strong lang="fr">{cell.title}</strong>
       <ul>
         <li>
           Latest score: {percentOrDash(cell.latestScorePercent)} (
@@ -62,7 +62,7 @@ export function NotionMapGrid({ map }: { map: NotionMapTopic }) {
   const selected = map.notions.find((cell) => cell.id === selectedId) ?? null
   const headingId = `notion-map-${map.topicId}`
   return (
-    <section className="dash-map-topic" aria-labelledby={headingId} data-topic={map.slug}>
+    <section className="card dash-map-topic" aria-labelledby={headingId} data-topic={map.slug}>
       <h3 id={headingId}>{map.title}</h3>
       <ul className="dash-grid" aria-label={`Notions of ${map.title}`}>
         {map.notions.map((cell) => {
@@ -71,7 +71,7 @@ export function NotionMapGrid({ map }: { map: NotionMapTopic }) {
             <li key={cell.id}>
               <button
                 type="button"
-                className={`dash-cell heat-${level}`}
+                className="dash-cell"
                 aria-label={cellDescription(cell)}
                 aria-pressed={cell.id === selectedId}
                 title={cellDescription(cell)}
@@ -79,8 +79,10 @@ export function NotionMapGrid({ map }: { map: NotionMapTopic }) {
                 data-level={level}
                 onClick={() => setSelectedId(cell.id === selectedId ? null : cell.id)}
               >
-                <span className="dash-cell-title">{cell.title}</span>
-                <span className="dash-cell-score" aria-hidden="true">
+                <span className="dash-cell-title" lang="fr">
+                  {cell.title}
+                </span>
+                <span className={`dash-cell-score label-mono heat-${level}`} aria-hidden="true">
                   {heatSymbols[level]} {percentOrDash(cell.latestScorePercent)}
                 </span>
               </button>

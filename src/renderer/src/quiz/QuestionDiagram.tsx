@@ -3,6 +3,7 @@ import type { DiagramErrorEvent } from '../markdown/diagramSource'
 import { MermaidDiagram } from '../markdown/MermaidDiagram'
 import { FLAG_REASON_MAX_LENGTH } from '../../../shared/quiz'
 import { errorMessage } from './errorMessage'
+import './quiz.css'
 
 /** Start of the reason pre-filled when the learner flags a question whose Diagram failed. */
 export const DIAGRAM_FLAG_REASON = 'diagram could not be drawn'
@@ -33,7 +34,7 @@ export function QuestionDiagram({
     []
   )
   return (
-    <div data-testid="question-diagram">
+    <div className="quiz-diagram" data-testid="question-diagram">
       <MermaidDiagram source={source} title={title} onDiagramError={onDiagramError} />
       {failure && <DiagramFlagOffer questionId={questionId} reason={diagramFlagReason(failure)} />}
     </div>
@@ -49,7 +50,7 @@ export function DiagramFlagOffer({ questionId, reason }: { questionId: number; r
 
   if (flagged) {
     return (
-      <p role="status" data-testid="question-flagged">
+      <p className="quiz-flag-done" role="status" data-testid="question-flagged">
         Question flagged as faulty. You can still answer it.
       </p>
     )
@@ -67,30 +68,31 @@ export function DiagramFlagOffer({ questionId, reason }: { questionId: number; r
 
   return (
     <form
+      className="quiz-flag"
       data-testid="diagram-flag-offer"
-      style={{ background: 'var(--color-attention-fill)', padding: '8px 12px', marginBottom: 8 }}
       onSubmit={(event) => {
         event.preventDefault()
         flag()
       }}
     >
-      <p style={{ marginTop: 0 }}>
+      <p>
         You can still answer this question. Flag it as faulty so that it can be replaced by one with
         a working diagram.
       </p>
-      <label style={{ display: 'block', marginBottom: 8 }}>
-        Reason{' '}
+      <label>
+        Reason
         <input
           data-testid="flag-reason"
           value={text}
           maxLength={FLAG_REASON_MAX_LENGTH}
           onChange={(event) => setText(event.target.value)}
-          style={{ width: '100%' }}
         />
       </label>
-      <button type="submit" data-testid="flag-question" disabled={busy || !text.trim()}>
-        Flag this question
-      </button>
+      <div className="quiz-actions">
+        <button type="submit" data-testid="flag-question" disabled={busy || !text.trim()}>
+          Flag this question
+        </button>
+      </div>
       {error && <p role="alert">{error}</p>}
     </form>
   )

@@ -6,6 +6,7 @@ import {
 } from '../../../shared/quiz'
 import { submitOnModEnter } from './FreeAnswerForm'
 import { GradingStatus } from './GradingStatus'
+import './quiz.css'
 import { useGrading } from './useGrading'
 
 /**
@@ -29,16 +30,17 @@ export function ContestForm({
 
   if (!open) {
     return (
-      <p>
+      <div className="quiz-actions">
         <button type="button" data-testid="contest-grade" onClick={() => setOpen(true)}>
           Contest this grade
         </button>
-      </p>
+      </div>
     )
   }
 
   return (
     <form
+      className="card quiz-contest"
       data-testid="contest-form"
       onSubmit={(event) => {
         event.preventDefault()
@@ -53,31 +55,26 @@ export function ContestForm({
           onContested
         )
       }}
-      style={{
-        border: '1px solid var(--color-border-control)',
-        borderRadius: 'var(--radius-md)',
-        padding: '8px 12px',
-        margin: '8px 0'
-      }}
     >
-      <label htmlFor={inputId} style={{ display: 'block' }}>
-        Why is this grade wrong? Point at what your answer already says: your answer is re-graded
-        once with this justification, and the new grade replaces this one. Ctrl+Enter (⌘+Enter) to
-        send.
-      </label>
-      <textarea
-        id={inputId}
-        data-testid="contest-justification"
-        lang="fr"
-        rows={3}
-        maxLength={CONTEST_JUSTIFICATION_MAX_LENGTH}
-        value={justification}
-        readOnly={pending}
-        onChange={(event) => setJustification(event.target.value)}
-        onKeyDown={submitOnModEnter}
-        autoFocus
-        style={{ width: '100%', boxSizing: 'border-box', font: 'inherit', padding: 8 }}
-      />
+      <div className="quiz-field">
+        <label htmlFor={inputId}>
+          Why is this grade wrong? Point at what your answer already says: your answer is re-graded
+          once with this justification, and the new grade replaces this one. Ctrl+Enter (⌘+Enter) to
+          send.
+        </label>
+        <textarea
+          id={inputId}
+          data-testid="contest-justification"
+          lang="fr"
+          rows={3}
+          maxLength={CONTEST_JUSTIFICATION_MAX_LENGTH}
+          value={justification}
+          readOnly={pending}
+          onChange={(event) => setJustification(event.target.value)}
+          onKeyDown={submitOnModEnter}
+          autoFocus
+        />
+      </div>
       <GradingStatus
         pending={pending}
         error={error}
@@ -85,14 +82,19 @@ export function ContestForm({
         failureHint="The first grade still stands: retry, or keep it."
         onCancel={cancel}
       />
-      <p style={{ display: 'flex', gap: 8, marginBottom: 0 }}>
-        <button type="submit" data-testid="send-contest" disabled={pending || empty}>
+      <div className="quiz-actions">
+        <button
+          type="submit"
+          className="btn-primary"
+          data-testid="send-contest"
+          disabled={pending || empty}
+        >
           Re-grade my answer
         </button>
         <button type="button" disabled={pending} onClick={() => setOpen(false)}>
           Keep this grade
         </button>
-      </p>
+      </div>
     </form>
   )
 }

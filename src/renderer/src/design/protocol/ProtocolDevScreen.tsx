@@ -35,8 +35,8 @@ export function ProtocolDevScreen({ onClose }: { onClose: () => void }) {
   return (
     <main className="protocol-dev" data-testid="protocol-dev">
       <p>
-        <button type="button" onClick={onClose}>
-          Back
+        <button type="button" className="btn-ghost btn-sm" onClick={onClose}>
+          <span aria-hidden>←</span> Back
         </button>
       </p>
       <h2>Design exercise (dev)</h2>
@@ -44,21 +44,25 @@ export function ProtocolDevScreen({ onClose }: { onClose: () => void }) {
         Fixture exercise: the primer&apos;s Pastebin (or Bit.ly) solution. Pick the exercise it
         plays:
       </p>
-      <ul>
+      <ul className="protocol-dev-list">
         {PROTOCOL_UNLOCK_PLAN.map(({ exerciseIndex, adds }) => (
-          <li key={exerciseIndex}>
+          <li key={exerciseIndex} className="card">
             <button
               type="button"
               data-testid={`open-protocol-exercise-${exerciseIndex}`}
               onClick={() => open(exerciseIndex)}
             >
               Exercise {exerciseIndex}
-            </button>{' '}
-            adds {adds.map(stepTitle).join(', ')}
+            </button>
+            <span className="muted">adds {adds.map(stepTitle).join(', ')}</span>
           </li>
         ))}
       </ul>
-      {error && <p role="alert">{error}</p>}
+      {error && (
+        <p role="alert" className="protocol-notice protocol-notice-error">
+          {error}
+        </p>
+      )}
     </main>
   )
 }

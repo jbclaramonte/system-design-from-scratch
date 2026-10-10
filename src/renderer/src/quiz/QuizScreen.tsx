@@ -4,6 +4,7 @@ import { errorMessage } from './errorMessage'
 import { QuizPicker } from './QuizPicker'
 import { QuizPlayer } from './QuizPlayer'
 import { QuizResults } from './QuizResults'
+import './quiz.css'
 
 type Step =
   | { name: 'pick' }
@@ -24,15 +25,15 @@ export function QuizScreen({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <main data-testid="quiz-screen" style={{ maxWidth: '72ch', margin: '0 auto', lineHeight: 1.5 }}>
-      <header style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+    <main data-testid="quiz-screen">
+      <header className="quiz-screen-head">
         <button onClick={onClose}>Back</button>
         {step.name !== 'pick' && (
           <button data-testid="quiz-back-to-list" onClick={() => setStep({ name: 'pick' })}>
             Quiz list
           </button>
         )}
-        <h1 style={{ fontSize: '1.4em', margin: 0 }}>Quiz</h1>
+        <h1>Quiz</h1>
       </header>
       {error && <p role="alert">{error}</p>}
       {step.name === 'pick' && <QuizPicker onStart={start} />}

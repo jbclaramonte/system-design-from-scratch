@@ -4,7 +4,7 @@ import './lesson.css'
 export function OutsidePrimerBadge({ testId }: { testId?: string }) {
   return (
     <span
-      className="lesson-badge lesson-badge-ungrounded"
+      className="chip chip-attention"
       data-testid={testId}
       title="Foundations Module: generated from general knowledge, not checked against the primer"
     >

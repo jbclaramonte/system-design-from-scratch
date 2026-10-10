@@ -193,7 +193,6 @@ function AppScreen({
 
   return (
     <main>
-      <h1 className="visually-hidden">Learning Path</h1>
       <LearningPathScreen onOpenTopic={openTopic} onOpenExercise={openExercise} />
       {import.meta.env.DEV && <DevSection open={setScreen} {...devInfo} />}
     </main>

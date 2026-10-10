@@ -1,30 +1,46 @@
+/* Dashboard: stat cards, weak points, Notion Map, topics table, history. Tokens only. */
+
 .dash-screen {
-  line-height: 1.4;
+  padding-bottom: var(--space-xl);
 }
 
 .dash-header {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
 }
 
 .dash-header h1 {
-  font-size: 1.4rem;
+  margin: 0;
 }
 
-.dash-screen h2 {
-  font-size: 1.1rem;
-  margin: 1.5rem 0 0.5rem;
+.dash-section {
+  margin-top: var(--space-xl);
+}
+
+.dash-section > h2 {
+  margin: 0 0 var(--space-sm);
 }
 
 .dash-screen h3 {
-  font-size: 1rem;
-  margin: 1rem 0 0.4rem;
+  margin: 0 0 var(--space-md);
 }
 
 .dash-note {
+  margin: var(--space-sm) 0;
   color: var(--color-text-secondary);
-  font-size: 0.9em;
+  font-size: var(--type-body-sm-size);
+  line-height: var(--type-body-sm-line);
+}
+
+.dash-error {
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--color-error-border);
+  border-radius: var(--radius-md);
+  background: var(--color-error-fill);
+  color: var(--color-error-text);
 }
 
 .dash-visually-hidden {
@@ -36,88 +52,140 @@
   white-space: nowrap;
 }
 
-/* Overview */
+/* Overview: a hero card for the Learning Path, then the stat cards. */
 
 .dash-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-md);
   margin: 0;
 }
 
 .dash-card {
-  padding: 0.6rem 0.8rem;
-  border: 1px solid var(--color-border-card);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface-base);
-}
-
-.dash-card dt {
-  color: var(--color-text-secondary);
-  font-size: 0.85em;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin: 0;
 }
 
 .dash-card dd {
   margin: 0;
 }
 
+.dash-hero {
+  grid-column: 1 / -1;
+  gap: var(--space-sm);
+}
+
+.dash-hero-of {
+  color: var(--color-text-secondary);
+  font-size: var(--type-headline-sm-size);
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.dash-hero .progress {
+  margin-top: var(--space-sm);
+}
+
 .dash-card-value {
-  font-size: 1.4rem;
-  font-weight: bold;
+  font-family: var(--font-mono);
+  font-size: var(--type-headline-lg-size);
+  line-height: var(--type-headline-lg-line);
+  font-weight: 600;
+  letter-spacing: var(--type-headline-lg-tracking);
 }
 
 .dash-card-detail {
+  min-height: var(--type-body-sm-line);
   color: var(--color-text-secondary);
-  font-size: 0.85em;
+  font-size: var(--type-body-sm-size);
+  line-height: var(--type-body-sm-line);
 }
 
-/* Weak points */
+/* Weak points: one card per notion. */
 
 .dash-weak-list {
-  margin: 0 0 0.5rem;
-  padding-left: 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  gap: var(--space-md);
+  margin: var(--space-md) 0;
+  padding: 0;
+  list-style: none;
 }
 
 .dash-weak {
-  margin-bottom: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-sm);
 }
 
-.dash-weak-row {
+.dash-weak-chips {
   display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.dash-weak-chips .dash-weak-topic {
+  max-width: 100%;
+  font-size: var(--type-label-mono-size);
+  letter-spacing: var(--type-label-mono-tracking);
+  text-transform: none;
+  white-space: normal;
+}
+
+.dash-weak-title {
+  font-size: var(--type-body-lg-size);
+  line-height: var(--type-body-lg-line);
 }
 
 .dash-weak-reason {
-  font-size: 0.9em;
+  flex: 1;
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-sm-size);
+  line-height: var(--type-body-sm-line);
 }
 
-.dash-practice-locked button[aria-disabled='true'] {
-  cursor: not-allowed;
-  opacity: 0.6;
+.dash-practice-locked {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-xs);
+}
+
+.dash-practice-locked .dash-note {
+  max-width: 10rem;
+  margin: 0;
 }
 
 /*
  * Notion Map heat grid. Okabe-Ito colours (distinguishable with the common colour vision
- * deficiencies); the cell also writes its score and a symbol, so colour is never the only cue.
+ * deficiencies) fill the score badge of a cell; the badge also writes a symbol and the score, so
+ * colour is never the only cue. The cell itself stays a dark card with a stripe of the same hue.
  */
 
 .heat-mastered {
+  --heat: var(--color-heat-mastered);
   background: var(--color-heat-mastered);
   color: var(--color-heat-mastered-text);
 }
 
 .heat-partial {
+  --heat: var(--color-heat-partial);
   background: var(--color-heat-partial);
   color: var(--color-heat-partial-text);
 }
 
 .heat-low {
+  --heat: var(--color-heat-low);
   background: var(--color-heat-low);
   color: var(--color-heat-low-text);
 }
 
 .heat-untested {
+  --heat: var(--color-heat-untested-text);
   background: repeating-linear-gradient(
     45deg,
     var(--color-heat-untested-a) 0 6px,
@@ -129,25 +197,38 @@
 .dash-legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem 1.25rem;
-  margin: 0.25rem 0 0.5rem;
+  gap: var(--space-sm) var(--space-lg);
+  margin: var(--space-md) 0;
   padding: 0;
   list-style: none;
-  font-size: 0.9em;
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-sm-size);
+  line-height: var(--type-body-sm-line);
+}
+
+.dash-legend li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
 }
 
 .dash-swatch {
   display: inline-block;
-  width: 1.5em;
+  min-width: 1.75rem;
+  padding: 0 var(--space-xs);
   border: 1px solid var(--color-border-active);
   border-radius: var(--radius-sm);
   text-align: center;
 }
 
+.dash-map-topic + .dash-map-topic {
+  margin-top: var(--space-md);
+}
+
 .dash-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
-  gap: 0.4rem;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: var(--space-sm);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -156,21 +237,41 @@
 .dash-cell {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: var(--space-sm);
   width: 100%;
-  min-height: 4rem;
-  padding: 0.4rem 0.5rem;
-  border: 1px solid var(--color-border-active);
+  height: 100%;
+  min-height: 4.5rem;
+  padding: var(--space-sm) var(--space-sm) var(--space-sm) var(--space-md);
+  border-color: var(--color-border-card);
   border-radius: var(--radius-md);
-  font: inherit;
-  font-size: 0.85em;
+  background: var(--color-surface-elevated);
+  box-shadow: inset 3px 0 0 var(--heat, var(--color-border-active));
+  font-weight: 400;
   text-align: left;
-  cursor: pointer;
+}
+
+.dash-cell[data-level='mastered'] {
+  --heat: var(--color-heat-mastered);
+}
+
+.dash-cell[data-level='partial'] {
+  --heat: var(--color-heat-partial);
+}
+
+.dash-cell[data-level='low'] {
+  --heat: var(--color-heat-low);
+}
+
+.dash-cell[data-level='untested'] {
+  --heat: var(--color-heat-untested-text);
 }
 
 .dash-cell[aria-pressed='true'] {
-  outline: 3px solid var(--color-text-primary);
-  outline-offset: 1px;
+  border-color: var(--color-border-focus);
+  background: var(--color-surface-subtle);
+  outline: 1px solid var(--color-border-focus);
 }
 
 .dash-cell-title {
@@ -178,108 +279,184 @@
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
+  font-size: var(--type-body-md-size);
+  line-height: var(--type-body-md-line);
+  text-align: left;
 }
 
 .dash-cell-score {
-  font-weight: bold;
-  font-size: 1.1em;
+  padding: 0 var(--space-sm);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
 }
 
 .dash-cell-details {
-  margin-top: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  border-left: 3px solid var(--color-border-active);
-  background: var(--color-surface-base);
-  font-size: 0.9em;
+  margin-top: var(--space-md);
+  padding: var(--space-md);
+  border: 1px solid var(--color-border-elevated);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-elevated);
+  font-size: var(--type-body-md-size);
 }
 
 .dash-cell-details ul {
-  margin: 0.25rem 0 0;
+  margin: var(--space-sm) 0 0;
   padding-left: 1.25rem;
+  color: var(--color-text-secondary);
 }
 
 /* Topics and history tables */
 
 .dash-table-wrap {
+  padding: 0;
   overflow-x: auto;
 }
 
 .dash-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.9em;
+  font-size: var(--type-body-md-size);
 }
 
 .dash-table th,
 .dash-table td {
-  padding: 0.35rem 0.5rem;
+  padding: var(--space-sm) var(--space-sm);
   border-bottom: 1px solid var(--color-border-hairline);
   text-align: left;
-  vertical-align: top;
+  vertical-align: middle;
+}
+
+.dash-table tbody tr:last-child > * {
+  border-bottom: 0;
 }
 
 .dash-table thead th {
   border-bottom: 1px solid var(--color-border-active);
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--type-label-caps-size);
+  font-weight: var(--type-label-caps-weight);
+  letter-spacing: var(--type-label-caps-tracking);
+  line-height: var(--type-label-caps-line);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.dash-table th:first-child,
+.dash-table td:first-child {
+  padding-left: var(--space-md);
+}
+
+.dash-table th:last-child,
+.dash-table td:last-child {
+  padding-right: var(--space-md);
+}
+
+.dash-table tbody th {
+  min-width: 9rem;
+  font-weight: 600;
+}
+
+.dash-table summary {
+  white-space: nowrap;
 }
 
 .dash-progress-cell {
   display: flex;
+  white-space: nowrap;
   align-items: center;
-  gap: 0.4rem;
+  gap: var(--space-sm);
 }
 
 .dash-progress {
-  width: 5rem;
-  height: var(--progress-height);
-  border-radius: var(--radius-pill);
-  background: var(--color-track);
-  overflow: hidden;
+  width: 4rem;
+  flex: none;
 }
 
-.dash-progress-fill {
-  height: 100%;
-  background: var(--progress-gradient);
+.dash-table summary {
+  cursor: pointer;
 }
 
 .dash-rounds {
-  margin: 0.25rem 0;
+  margin: var(--space-xs) 0;
   padding-left: 1.25rem;
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-sm-size);
 }
 
 .dash-filter {
-  display: inline-block;
-  margin-bottom: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
 }
 
 .dash-history {
+  display: grid;
+  gap: var(--space-sm);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .dash-history-round {
-  margin-bottom: 0.4rem;
-  padding: 0.3rem 0.5rem;
-  border: 1px solid var(--color-border-hairline);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-base);
 }
 
 .dash-history-round summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm) var(--space-md);
+  padding: var(--space-sm) var(--space-md);
   cursor: pointer;
 }
 
-.dash-result-correct {
-  color: var(--color-mastered-text);
+.dash-history-title {
+  font-weight: 600;
 }
 
-.dash-result-partially_correct {
-  color: var(--color-attention-text);
+.dash-history-round details[open] > summary {
+  border-bottom: 1px solid var(--color-border-hairline);
 }
 
-.dash-result-incorrect {
-  color: var(--color-error-text);
+.dash-history-round .dash-table th,
+.dash-history-round .dash-table td {
+  vertical-align: top;
+}
+
+.dash-history-empty {
+  padding: var(--space-sm) var(--space-md);
 }
 
 .dash-empty {
   max-width: 40rem;
+}
+
+.dash-empty h2 {
+  margin-top: 0;
+}
+
+.dash-empty ul {
+  color: var(--color-text-secondary);
+}
+
+.dash-empty button {
+  margin-top: var(--space-sm);
+}
+
+@media (max-width: 52rem) {
+  .dash-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.dash-limit-reached {
+  color: var(--color-error-text);
+}
+
+.dash-table td .label-mono {
+  white-space: nowrap;
 }

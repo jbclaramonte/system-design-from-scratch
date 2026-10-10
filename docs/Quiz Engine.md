@@ -19,7 +19,7 @@ Plays a [[Quiz]] as one [[Round]], grades single-choice, multiple-choice and sce
 | Quiz service (rounds, attempts, guards) | `src/main/quiz/service.ts` (`createQuizService`) |
 | IPC (`quiz:*` channels, request validation, grading cancellation) | `src/main/ipc/quiz.ts` |
 | Dev fixture quiz | `src/main/quiz/devFixture.ts` |
-| Screens | `src/renderer/src/quiz/` (`QuizScreen`, `QuizPicker`, `QuizPlayer`, `QuestionDiagram`, `FreeAnswerForm`, `ContestForm`, `QuizResults`) |
+| Screens | `src/renderer/src/quiz/` (`QuizScreen`, `QuizPicker`, `QuizPlayer`, `QuestionDiagram`, `FreeAnswerForm`, `ContestForm`, `GradingStatus`, `QuestionFeedbackView`, `QuizResults`), styles in `quiz.css`, choice states in `choiceMark.ts` |
 | Repository additions | `nextRoundNumber`, `findOpenRound`, `updateAttemptGrading` in `src/main/db/repositories/assessment.ts` |
 
 ## Answer keys stay in the main process
@@ -95,9 +95,21 @@ A learner who thinks the grade is wrong can contest it **once per question**, wh
 
 ## Player
 
-One question at a time, with feedback right after each answer: a complete beginner gets the explanation while the question is fresh, the focus stays on one idea, and each answer is recorded as soon as it is given (an interrupted round resumes where it stopped). Native radio buttons (single choice, scenario) and checkboxes (multiple choice) in a `fieldset` / `legend`, so the keyboard works without custom handling (arrows / Space to select, Enter to submit); the focus moves to each new question heading and to the Next button after feedback. French content is marked `lang="fr"`, in a column of about 72 characters that wraps freely.
+One question at a time, with feedback right after each answer: a complete beginner gets the explanation while the question is fresh, the focus stays on one idea, and each answer is recorded as soon as it is given (an interrupted round resumes where it stopped). Native radio buttons (single choice, scenario) and checkboxes (multiple choice) in a `fieldset` / `legend`, so the keyboard works without custom handling (arrows / Space to select, Enter to submit); the focus moves to each new question heading and to the Next button after feedback. French content is marked `lang="fr"` and wraps freely in the reading column (see [[#Visual design (#33)]]).
 
 Free answers (`FreeAnswerForm`): a labelled text area limited to 1200 characters with a counter; Ctrl+Enter (⌘+Enter) sends, Enter adds a line. While grading, the text is read-only and a status line offers Cancel. A failure shows the actionable message of its code and keeps the text: Retry, or Answer later (the question is set aside, its draft kept; the end screen lists the questions left and brings them back, since every question counts). After grading: the verdict, the answer, each expected point covered or missing, misconceptions, explanation, what to review, the model answer, and Contest this grade (`ContestForm`: a short justification, same pending / cancel / error states).
+
+### Visual design (#33)
+
+The quiz screens follow `DESIGN.md` ([[Design System]]): dark only, hairline-bordered cards, mono caps labels, status chips, tokens and shared classes only. Styles are in `src/renderer/src/quiz/quiz.css`. The player, the feedback and the results share one reading column of 48rem, centered, so they sit the same way inside the topic screen and the dev Quiz screen.
+
+- **Round progress**: a mono caps line "Round N · topic" with "Question x of N" on the right, over the shared `.progress` bar (answered questions out of all, indigo to emerald, emerald and complete once every question is answered). The bar is a `progressbar` with `aria-valuenow`. The end screen reads "x of N answered".
+- **Question**: a type chip (Single choice, Multiple choice with the hint "Select every correct answer.", Scenario, Free answer) that carries the focus when a question appears, the scenario in a card, then the [[Diagram]] (`QuestionDiagram` adds no frame of its own: the diagram component owns its surface), then the prompt in `headline-sm`.
+- **Choices**: selectable cards around the native radio or checkbox (so the keyboard and screen reader behavior of the `fieldset` is unchanged). A picked choice gets the indigo (in progress) border, fill and glow through `:has(input:checked)`; the keyboard focus adds the indigo ring on the card.
+- **Answered states** (`choiceMark.ts`, tested): every state has a glyph and a chip, never color alone. *Correct* (picked, in the answer key, emerald), *Wrong* (picked, not in the key, red), *Missed* (a correct choice of a multiple choice left out, amber), *Correct answer* (the right choice of a single choice or scenario when another was picked, emerald dashed). A picked choice also carries a neutral "Your answer" chip.
+- **Verdict**: a chip with a glowing dot, Correct (emerald), Not quite (amber), Incorrect (red), then the plain-words detail of `feedbackText.ts`. The explanation, Misconceptions, To review and Model answer are cards with a caps label; the expected points of a free answer are rows marked Covered (emerald) or Missing (amber). Contest this grade opens a card with the justification field and the same pending, cancel and error states.
+- **Results**: the Round number with a Passed (emerald) or Not passed yet (amber) chip; a score card with the score and the [[Mastery Threshold]] side by side, over the progress bar with a tick at the threshold; the notion table with a Missed or All correct chip per row; then the numbered answers, each with its type chip, the prompt and the same feedback view as the player.
+- **Picker** (dev screen): one card per quiz with its question count, a grounded or ungrounded chip, the date and a primary Start button.
 
 ## Dev fixture
 

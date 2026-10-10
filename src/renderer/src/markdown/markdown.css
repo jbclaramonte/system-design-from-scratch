@@ -1,17 +1,20 @@
-/* Mermaid Diagrams in Markdown content (see docs/Mermaid Diagrams.md). */
+/* Mermaid Diagrams in Markdown content (see docs/Mermaid Diagrams.md). The drawing is themed
+   from the design tokens by mermaidTheme.ts: a layer 1 canvas with the dotted matrix grid of
+   docs/DESIGN.md, no light card. */
 
 .diagram {
-  margin: 1rem 0;
+  margin: var(--space-lg) 0;
 }
 
 .diagram-scroll {
   overflow-x: auto;
-  padding: 0.5rem;
+  padding: var(--space-md);
   border: 1px solid var(--color-border-card);
   border-radius: var(--radius-lg);
-  /* Mermaid is themed for a light background (mermaidRenderer.ts): keep a light card under it. */
-  background: var(--color-paper);
-  color: var(--color-paper-text);
+  background-color: var(--color-surface-base);
+  background-image: radial-gradient(var(--color-border-hairline) 1px, transparent 1px);
+  background-size: 16px 16px;
+  color: var(--color-text-primary);
 }
 
 /* Mermaid sets width 100% and max-width to the natural width; below 70 % of it (text
@@ -24,31 +27,45 @@
 }
 
 .diagram-loading {
-  padding: 0.75rem;
+  padding: var(--space-md);
   border: 1px dashed var(--color-border-active);
   border-radius: var(--radius-lg);
   color: var(--color-text-secondary);
-  font-size: 0.9em;
+  font-family: var(--font-mono);
+  font-size: var(--type-label-mono-size);
+  line-height: var(--type-label-mono-line);
+  letter-spacing: var(--type-label-mono-tracking);
 }
 
 .diagram-source {
-  margin-top: 0.3rem;
-  font-size: 0.85em;
+  margin-top: var(--space-sm);
   color: var(--color-text-secondary);
+  font-size: var(--type-body-sm-size);
+  line-height: var(--type-body-sm-line);
 }
 
 .diagram-source summary {
-  cursor: pointer;
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: var(--type-label-mono-size);
+  letter-spacing: var(--type-label-mono-tracking);
+}
+
+.diagram-source summary:hover {
+  color: var(--color-text-primary);
+}
+
+.diagram-source pre {
+  margin-top: var(--space-sm);
 }
 
 .diagram-fallback-note {
-  margin: 0 0 0.3rem;
-  padding: 0.4rem 0.6rem;
+  margin: 0 0 var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
   border: 1px solid var(--color-attention-border);
   border-radius: var(--radius-md);
   background: var(--color-attention-fill);
   color: var(--color-attention-text);
-  font-size: 0.9em;
 }
 
 .diagram-fallback-reason {
@@ -56,7 +73,50 @@
 }
 
 .diagram figcaption {
-  margin-top: 0.3rem;
+  margin-top: var(--space-sm);
   color: var(--color-text-secondary);
-  font-size: 0.9em;
+  font-size: var(--type-body-sm-size);
+  line-height: var(--type-body-sm-line);
+}
+
+/* GFM tables (wrapper added by MarkdownContent): a hairline frame that scrolls sideways when
+   the table is wider than the column. Header cells in the secondary text color, rules between
+   rows, no vertical lines. */
+
+.lesson-table {
+  overflow-x: auto;
+  margin: var(--space-md) 0;
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-base);
+}
+
+.lesson-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--type-body-md-size);
+  line-height: var(--type-body-md-line);
+}
+
+.lesson-table th,
+.lesson-table td {
+  padding: var(--space-sm) var(--space-md);
+  border: 0;
+  border-bottom: 1px solid var(--color-border-hairline);
+  text-align: left;
+  vertical-align: top;
+}
+
+.lesson-table th {
+  background: var(--color-surface-elevated);
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--type-label-mono-size);
+  font-weight: var(--type-label-mono-weight);
+  letter-spacing: var(--type-label-mono-tracking);
+  white-space: nowrap;
+}
+
+.lesson-table tbody tr:last-child td {
+  border-bottom: 0;
 }

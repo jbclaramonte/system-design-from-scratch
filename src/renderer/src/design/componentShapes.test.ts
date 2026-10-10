@@ -1,9 +1,11 @@
-import type { Editor } from 'tldraw'
+import { renderToStaticMarkup } from 'react-dom/server'
+import type { Editor, TLShape, SvgExportContext } from 'tldraw'
 import { describe, expect, it } from 'vitest'
 import { componentShapeUtils } from './componentShapes'
 import {
   COMPONENT_LOOKS,
   COMPONENT_TYPES,
+  componentColors,
   isComponentType,
   loadBalancerPoints
 } from './componentTypes'
@@ -52,5 +54,40 @@ describe('component shapes', () => {
   it('recognises component types', () => {
     expect(isComponentType('database')).toBe(true)
     expect(isComponentType('geo')).toBe(false)
+  })
+
+  it('colors the live canvas for dark mode and keeps the light palette for exports', () => {
+    for (const type of COMPONENT_TYPES) {
+      const { fill, stroke } = COMPONENT_LOOKS[type]
+      const light = componentColors(type, 'light')
+      const dark = componentColors(type, 'dark')
+
+      expect(light).toEqual({ fill, stroke, text: '#1d1d1d' })
+      expect(dark.fill).not.toBe(light.fill)
+      expect(dark.stroke).not.toBe(light.stroke)
+      expect(dark.text).toBe('var(--color-text-primary)')
+    }
+    const strokes = COMPONENT_TYPES.map((type) => componentColors(type, 'dark').stroke)
+    expect(new Set(strokes).size).toBe(COMPONENT_TYPES.length)
+  })
+
+  it('draws the image export (PNG/SVG) in the light palette, whatever the editor theme', () => {
+    for (const Util of componentShapeUtils) {
+      const shape = {
+        id: 'shape:x',
+        type: Util.type,
+        props: { w: 160, h: 90, text: 'Label' }
+      } as unknown as TLShape
+      const svg = renderToStaticMarkup(
+        new Util(editor).toSvg(shape as never, { isDarkMode: true } as SvgExportContext) as never
+      )
+      const light = componentColors(Util.type, 'light')
+      const dark = componentColors(Util.type, 'dark')
+
+      expect(svg).toContain(`stroke="${light.stroke}"`)
+      expect(svg).toContain(`fill="${light.text}"`)
+      expect(svg).not.toContain(dark.stroke)
+      expect(svg).not.toContain('var(--')
+    }
   })
 })

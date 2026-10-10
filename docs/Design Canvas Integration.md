@@ -15,7 +15,7 @@ How the [[Design Canvas]] (tldraw) is embedded in the app and how its [[Design S
 |---|---|
 | `src/renderer/src/design/componentTypes.ts` | Catalogue of component types (`client`, `cdn`, `load-balancer`, `service`, `cache`, `database`, `queue`): labels, colours, default sizes. Pure data. The type list itself lives in `src/shared/designGraph.ts` (re-exported here) so the main process can validate a [[Design Graph]]. |
 | `src/renderer/src/design/componentShapes.tsx` | One tldraw `ShapeUtil` per component type (ported from `spikes/tldraw/`): SVG body, editable plain-text label, arrow-binding geometry, SVG export. |
-| `src/renderer/src/design/DesignCanvas.tsx` | `<DesignCanvas designExerciseId>`: palette plus `<Tldraw>`, loads and autosaves the scene. |
+| `src/renderer/src/design/DesignCanvas.tsx` | `<DesignCanvas designExerciseId>`: palette bar plus `<Tldraw>`, loads and autosaves the scene. |
 | `src/renderer/src/design/sceneSnapshot.ts` | `serializeScene` / `deserializeScene`: tldraw snapshot to and from stored JSON. |
 | `src/renderer/src/design/debouncedSave.ts` | Debounced, ordered autosave. |
 | `src/renderer/src/design/assetUrls.ts` | Icon URL helpers (see Offline assets). |
@@ -50,6 +50,15 @@ tldraw loads fonts, UI icons and translations from `cdn.tldraw.com` by default. 
 - UI icons: tldraw's sprite (`0_merged.svg#name`) does not work as a `data:` URL, so each icon points at its own SVG from `@tldraw/assets/icons/icon/`. tldraw writes them into an unquoted CSS `url()`, so `cssSafeUrl` percent-encodes quotes, parentheses and spaces.
 
 CSP change (`src/renderer/index.html`): `connect-src 'self'` became `connect-src 'self' data:`, because tldraw `fetch()`es its translation files, now `data:` URLs. Nothing else changed: fonts already allowed `data:` (`font-src`), icons are CSS masks covered by `img-src 'self' data: blob:`, and styles already allowed `'unsafe-inline'`. No remote origin is allowed.
+
+## Visual design
+
+Issue #34, in the dark theme of [[Design System]]:
+
+- **tldraw in dark mode**: `<Tldraw colorScheme="dark">` (the `colorScheme` option of `TLEditorOptions` in tldraw 5.5.2; there is no `inferDarkMode` prop in this version). The editor UI and the native shapes (arrows, text, notes) follow tldraw's dark theme; `designCanvas.css` sets its `--tl-color-background` to the `color-canvas` token so the drawing area matches the screen.
+- **Palette**: a bar above the canvas (`designCanvas.css`, `data-testid="design-palette"`) with one `btn-sm` per component type and the Arrow tool. Each button has a left accent bar in the stroke color of its component on the canvas.
+- **Typed shapes**: `componentColors(type, mode)` in `componentTypes.ts` gives fill, stroke and label color per color mode. The live shape reads the editor color mode (`useColorMode`) and in dark mode draws the same hue per type as before, one step lighter, over an opaque deep tint of that hue, with `text-primary` labels. The strokes stay distinct per type (tested).
+- **Exports stay light**: `toSvg` of every shape always uses the `light` palette (pale fill, dark stroke, `#1d1d1d` label), whatever the editor theme. The Design Export PNG ([[Design Export]]) still asks tldraw for `darkMode: false` with no background and flattens the capture on opaque white (`exportDesignPng.ts`, unchanged), so the LLM sees dark strokes on white. Tests: the shapes' SVG contains no dark color and no CSS variable, and the PNG export is asked for light mode and painted on `#ffffff` before the capture. The persisted Design Scene format is unchanged (colors are not stored; they come from the shape type).
 
 ## Verification (2026-10-09)
 

@@ -4,7 +4,7 @@ import type {
   NotionMapCell,
   NotionTrend
 } from '../../../shared/dashboard'
-import type { TopicStep } from '../../../shared/learningPath'
+import type { LearningPathStepStatus, TopicStep } from '../../../shared/learningPath'
 import type { AttemptResult, QuestionType } from '../../../shared/quiz'
 import { lockMessage } from '../path/pathText'
 import { resultLabels as feedbackLabels } from '../quiz/feedbackText'
@@ -108,9 +108,12 @@ export const notionProgress = (topic: DashboardTopic): number =>
   topic.notionCount === 0 ? 0 : Math.floor((topic.notionsMastered * 100) / topic.notionCount)
 
 /** "2 of 3 rounds before the Round Limit", "Round Limit reached"... */
+export const roundLimitReached = (topic: DashboardTopic): boolean =>
+  topic.step.topic.mastery !== 'mastered' && topic.failedRounds >= topic.roundLimit
+
 export function roundLimitText(topic: DashboardTopic): string {
   if (topic.step.topic.mastery === 'mastered') return 'Mastered'
-  if (topic.failedRounds >= topic.roundLimit) return 'Round Limit reached'
+  if (roundLimitReached(topic)) return 'Round Limit reached'
   return `${topic.failedRounds} of ${topic.roundLimit} failed rounds`
 }
 
@@ -129,3 +132,54 @@ export const isEmptyDashboard = ({
   overview: { roundsCompleted: number; roundsInProgress: number; attemptCount: number }
 }): boolean =>
   overview.roundsCompleted === 0 && overview.roundsInProgress === 0 && overview.attemptCount === 0
+
+/**
+ * Shared chip classes (`chip-*` of the Design System) for a status. The label text always stays
+ * next to the chip, so a status never relies on colour alone.
+ */
+export const stepStatusChip = (status: LearningPathStepStatus): string => {
+  switch (status) {
+    case 'mastered':
+    case 'completed':
+      return 'chip chip-mastered chip-dot'
+    case 'in_progress':
+      return 'chip chip-progress chip-dot'
+    case 'skipped':
+      return 'chip chip-attention chip-dot'
+    case 'limit_reached':
+      return 'chip chip-error chip-dot'
+    case 'locked':
+    case 'coming_soon':
+      return 'chip chip-locked chip-dot'
+    case 'available':
+      return 'chip'
+  }
+}
+
+export const roundStatusChip = (status: DashboardRoundStatus): string => {
+  switch (status) {
+    case 'passed':
+      return 'chip chip-mastered chip-dot'
+    case 'failed':
+      return 'chip chip-attention chip-dot'
+    case 'in_progress':
+      return 'chip chip-progress chip-dot'
+  }
+}
+
+export const resultChip = (result: AttemptResult): string => {
+  switch (result) {
+    case 'correct':
+      return 'chip chip-mastered chip-dot'
+    case 'partially_correct':
+      return 'chip chip-attention chip-dot'
+    case 'incorrect':
+      return 'chip chip-error chip-dot'
+  }
+}
+
+/** Chip of a weak point's latest score: red below 50%, amber above (the two low heat levels). */
+export const weakScoreChip = (latestScorePercent: number | null): string =>
+  latestScorePercent !== null && latestScorePercent >= 50
+    ? 'chip chip-attention chip-dot'
+    : 'chip chip-error chip-dot'

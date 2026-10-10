@@ -1,0 +1,65 @@
+/* Design Canvas: component palette bar and the tldraw surface (docs/Design Canvas Integration.md). */
+
+.design-canvas {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--color-canvas);
+}
+
+.design-canvas-status {
+  padding: var(--space-md) var(--gutter);
+  color: var(--color-text-secondary);
+}
+
+.design-palette {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--color-border-hairline);
+  background: var(--color-surface-base);
+}
+
+.design-palette-title {
+  margin: 0 var(--space-xs) 0 0;
+}
+
+/* The accent bar on the left repeats the stroke color of the component on the canvas. */
+.design-palette-button {
+  border-left: 3px solid var(--swatch, var(--color-border-control));
+}
+
+.design-palette-divider {
+  align-self: stretch;
+  width: 1px;
+  margin: 0 var(--space-xs);
+  background: var(--color-border-hairline);
+}
+
+.design-palette-error {
+  flex-basis: 100%;
+  margin: 0;
+  padding: var(--space-sm);
+  border: 1px solid var(--color-error-border);
+  border-radius: var(--radius-md);
+  background: var(--color-error-fill);
+  color: var(--color-error-text);
+  font-size: var(--type-body-sm-size);
+  line-height: var(--type-body-sm-line);
+}
+
+.design-surface {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+}
+
+/* tldraw dark theme on the app canvas color, so the drawing area matches the screen. */
+.design-surface .tl-theme__dark {
+  --tl-color-background: var(--color-canvas);
+}

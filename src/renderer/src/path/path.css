@@ -1,135 +1,434 @@
+/* Learning Path screen (#30). Tokens and shared classes (.card, .chip, .progress, .btn,
+   .label-caps, .label-mono) come from styles/; this file only lays the screen out. */
+
 .path-screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  padding-bottom: var(--space-xl);
 }
 
-.path-summary {
-  margin-bottom: 1rem;
+.path-header h1 {
+  margin: 0 0 var(--space-xs);
+  font-size: var(--type-headline-lg-size);
+  line-height: var(--type-headline-lg-line);
 }
 
-.path-progress {
-  height: var(--progress-height);
-  max-width: 30rem;
-  border-radius: var(--radius-pill);
-  background: var(--color-track);
-  overflow: hidden;
-}
-
-.path-progress-fill {
-  height: 100%;
-  border-radius: var(--radius-pill);
-  background: var(--progress-gradient);
-  transition: width var(--duration-slow) var(--ease-out);
-}
-
-.path-continue {
-  margin-top: 0.75rem;
-  padding: 0.5rem 1rem;
-  border-color: var(--color-text-primary);
-  background: var(--color-text-primary);
-  color: var(--color-on-primary);
-  font-weight: 700;
-}
-
-.path-continue:hover:not(:disabled) {
-  background: var(--color-text-primary);
-  color: var(--color-on-primary);
-  opacity: 0.92;
-}
-
-.path-section h2 {
-  font-size: 1.1rem;
-  margin: 1.25rem 0 0.5rem;
-}
-
-.path-steps {
-  list-style: none;
+.path-header p {
   margin: 0;
-  padding: 0 0 0 1rem;
+}
+
+.path-overview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+/* Hero progress card */
+
+.path-hero {
+  padding: var(--space-lg);
+}
+
+.path-hero h2,
+.path-priority h2 {
+  margin: 0;
+}
+
+.path-hero-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.path-hero-count {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-sm);
+  margin: var(--space-xs) 0 0;
+  font-family: var(--font-mono);
+}
+
+.path-hero-count strong {
+  font-size: var(--type-headline-xl-size);
+  line-height: var(--type-headline-xl-line);
+  letter-spacing: var(--type-headline-xl-tracking);
+  font-weight: var(--type-headline-xl-weight);
+}
+
+.path-hero-total {
+  color: var(--color-text-secondary);
+  font-size: var(--type-headline-md-size);
+}
+
+.path-hero-unit {
+  margin-left: var(--space-xs);
+  color: var(--color-text-secondary);
+  font-family: var(--font-sans);
+  font-size: var(--type-body-md-size);
+}
+
+.path-hero-percent {
+  margin: 0;
+  color: var(--color-mastered-text);
+  font-family: var(--font-mono);
+  font-size: var(--type-headline-lg-size);
+  line-height: var(--type-headline-lg-line);
+  font-weight: var(--type-headline-lg-weight);
+}
+
+.path-counters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: var(--space-lg) 0 0;
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--color-border-hairline);
+}
+
+.path-counter {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: var(--space-xs);
+  padding: 0 var(--space-md);
   border-left: 1px solid var(--color-border-hairline);
 }
 
-.path-step {
-  margin-bottom: 0.4rem;
+.path-counter:first-child {
+  padding-left: 0;
+  border-left: 0;
 }
 
-.path-step[aria-current='step'] > .path-step-row {
-  border-color: var(--color-mastered);
-  font-weight: bold;
+.path-counter dd {
+  margin: 0;
+}
+
+.path-counter-value {
+  font-family: var(--font-mono);
+  font-size: var(--type-headline-md-size);
+  line-height: var(--type-headline-md-line);
+  font-weight: var(--type-headline-md-weight);
+}
+
+.path-counter-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.path-counter-label::before {
+  content: '';
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--color-locked);
+}
+
+.path-counter-mastered::before {
+  background: var(--color-mastered);
+  box-shadow: var(--glow-mastered);
+}
+
+.path-counter-progress::before {
+  background: var(--color-progress-text);
+  box-shadow: var(--glow-progress);
+}
+
+.path-counter-error::before {
+  background: var(--color-error);
+}
+
+/* Current priority card */
+
+.path-priority {
+  padding: var(--space-md) var(--space-lg);
+  border-left: 2px solid var(--color-progress);
+}
+
+.path-priority-body {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin-top: var(--space-sm);
+}
+
+.path-priority-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.path-priority-title {
+  margin: 0;
+  font-size: var(--type-headline-sm-size);
+  line-height: var(--type-headline-sm-line);
+  letter-spacing: var(--type-headline-sm-tracking);
+  font-weight: 600;
+}
+
+.path-priority-details {
+  margin: var(--space-2xs) 0 0;
+  font-size: var(--type-body-md-size);
+}
+
+.path-priority > .path-priority-title {
+  margin-top: var(--space-sm);
+}
+
+/* Filter tabs */
+
+.path-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  border-bottom: 1px solid var(--color-border-hairline);
+}
+
+.path-filter {
+  margin-bottom: -1px;
+  padding: var(--space-sm) var(--space-md);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  color: var(--color-text-secondary);
+}
+
+.path-filter:hover:not(:disabled) {
+  background: var(--color-hover);
+  color: var(--color-text-primary);
+}
+
+.path-filter[aria-pressed='true'] {
+  border-bottom-color: var(--color-progress);
+  color: var(--color-text-primary);
+}
+
+/* Sections and steps */
+
+.path-section {
+  margin-top: var(--space-md);
+}
+
+.path-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.path-section-head h2 {
+  margin: 0;
+  font-size: var(--type-headline-md-size);
+  line-height: var(--type-headline-md-line);
+}
+
+.path-section-head p {
+  margin: 0;
+}
+
+.path-steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.path-steps-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-md);
+}
+
+.path-step {
+  position: relative;
+  padding: var(--space-md);
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    background-color var(--duration-fast) var(--ease-out);
+}
+
+.path-step[aria-current='step'] {
+  border-color: var(--color-progress-border);
+  box-shadow: var(--glow-progress);
+}
+
+.path-step:has(> button.path-step-row:hover) {
+  border-color: var(--color-border-active);
+  background: var(--color-surface-elevated);
+}
+
+.path-step:has(> .path-step-row:focus-visible) {
+  border-color: var(--color-border-focus);
+  box-shadow: 0 0 0 3px var(--color-focus-ring);
+}
+
+.path-step-locked,
+.path-step-coming_soon {
+  background: var(--color-canvas);
 }
 
 .path-step-row {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--space-md);
   width: 100%;
-  box-sizing: border-box;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid var(--color-border-card);
+  padding: 0;
+  border: 0;
   border-radius: var(--radius-md);
-  background: var(--color-surface-base);
-  font: inherit;
+  background: none;
+  color: var(--color-text-primary);
+  font-size: var(--type-body-md-size);
   text-align: left;
 }
 
-button.path-step-row {
-  cursor: pointer;
+button.path-step-row:hover:not(:disabled) {
+  background: none;
+}
+
+/* The whole card opens the step: the row button stretches over it. */
+button.path-step-row::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-lg);
+}
+
+/* The focus ring is drawn around the whole card (.path-step:has(...:focus-visible)). */
+button.path-step-row:focus-visible {
+  outline: none;
+  box-shadow: none;
 }
 
 div.path-step-row {
   color: var(--color-text-secondary);
-  background: var(--color-canvas);
+  cursor: not-allowed;
 }
 
 .path-step-title {
   flex: 1;
+  min-width: 0;
+  font-weight: 500;
 }
 
-.path-step-note {
-  margin: 0.25rem 0 0.5rem 0.75rem;
-  color: var(--color-text-secondary);
-  font-size: 0.9em;
+.path-step-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-sm);
 }
 
-.path-rationale {
-  color: var(--color-text-secondary);
+/* Status circle */
+
+.path-mark {
+  display: inline-flex;
+  flex: none;
+  color: var(--color-locked);
 }
 
-.path-badge {
-  padding: 0.1rem 0.5rem;
-  border: 1px solid var(--color-border-control);
-  border-radius: var(--radius-sm);
-  background: var(--color-hover);
-  color: var(--color-text-secondary);
-  font-size: 0.8em;
-  font-weight: normal;
+.path-mark-ring {
+  stroke: currentColor;
+  stroke-width: 1.5;
 }
 
-.path-available,
-.path-in_progress {
-  border-color: var(--color-progress-border);
-  background: var(--color-progress-fill);
+.path-mark-glyph {
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.path-mark-dot {
+  fill: currentColor;
+}
+
+.path-mark-neutral {
+  color: var(--color-text-muted);
+}
+
+.path-mark-mastered {
+  color: var(--color-mastered);
+}
+
+.path-mark-mastered .path-mark-ring {
+  fill: var(--color-mastered-fill);
+}
+
+.path-mark-progress {
   color: var(--color-progress-text);
 }
 
-.path-mastered,
-.path-completed {
-  border-color: var(--color-mastered-border);
-  background: var(--color-mastered-fill);
-  color: var(--color-mastered-text);
+.path-mark-attention {
+  color: var(--color-attention-text);
 }
 
-.path-limit_reached {
-  border-color: var(--color-error-border);
-  background: var(--color-error-fill);
+.path-mark-error {
   color: var(--color-error-text);
 }
 
-.path-skipped {
-  border-color: var(--color-attention-border);
-  background: var(--color-attention-fill);
-  color: var(--color-attention-text);
+/* Reason lines */
+
+.path-step-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm) var(--space-md);
+  margin: var(--space-sm) 0 0 calc(20px + var(--space-md));
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-md-size);
+}
+
+.path-step-note button {
+  position: relative;
+  z-index: 1;
+}
+
+.path-exercise .path-step-row {
+  align-items: flex-start;
+}
+
+.path-exercise .path-step-note,
+.path-exercise .path-prerequisites,
+.path-exercise .path-rationale {
+  margin-left: 0;
+}
+
+.path-prerequisites {
+  margin: var(--space-sm) 0 0;
+  color: var(--color-text-secondary);
+}
+
+.path-rationale {
+  margin: var(--space-sm) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--type-body-sm-size);
+  line-height: var(--type-body-sm-line);
 }
 
 .path-unlocked {
   margin: 0;
   color: var(--color-mastered-text);
+}
+
+@media (max-width: 760px) {
+  .path-counters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    row-gap: var(--space-md);
+  }
+
+  .path-counter:nth-child(odd) {
+    padding-left: 0;
+    border-left: 0;
+  }
+
+  .path-priority-body {
+    flex-wrap: wrap;
+  }
+
+  .path-steps-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

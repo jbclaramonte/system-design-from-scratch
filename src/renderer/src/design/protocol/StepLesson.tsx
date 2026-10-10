@@ -68,20 +68,24 @@ function StepLessonStream({
   const running = isLessonRunning(state.status)
 
   return (
-    <article className="protocol-lesson" data-testid="step-lesson" aria-busy={running}>
-      <p className="lesson-badges">
-        <span className="lesson-badge">Why it matters</span>
+    <article
+      className="protocol-lesson card card-elevated"
+      data-testid="step-lesson"
+      aria-busy={running}
+    >
+      <p className="protocol-lesson-chips">
+        <span className="chip chip-progress chip-dot">Why it matters</span>
         {state.status === 'done' && (
-          <span className="lesson-badge" data-testid="step-lesson-origin">
+          <span className="chip" data-testid="step-lesson-origin">
             {state.fromCache ? 'From cache' : 'Generated'}
           </span>
         )}
       </p>
       {running && (
-        <p className="lesson-status" role="status" data-testid="step-lesson-status">
-          <span className="lesson-spinner" aria-hidden />{' '}
-          {state.text ? 'Writing the lesson...' : 'Preparing the lesson...'}{' '}
-          <button type="button" onClick={cancel}>
+        <p className="protocol-pending" role="status" data-testid="step-lesson-status">
+          <span className="protocol-spinner" aria-hidden />
+          <span>{state.text ? 'Writing the lesson...' : 'Preparing the lesson...'}</span>
+          <button type="button" className="btn-sm" onClick={cancel}>
             Cancel
           </button>
         </p>
@@ -99,9 +103,10 @@ function StepLessonStream({
       <div className="lesson-body" data-testid="step-lesson-body">
         <LessonMarkdown markdown={state.text} sources={state.sources} streaming={running} />
       </div>
-      <p>
+      <p className="protocol-lesson-actions">
         <button
           type="button"
+          className="btn-primary"
           data-testid="step-lesson-close"
           disabled={state.status !== 'done'}
           onClick={onClose}

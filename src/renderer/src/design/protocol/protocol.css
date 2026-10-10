@@ -1,3 +1,9 @@
+/*
+ * Design Exercise screen (docs/Interview Protocol Implementation.md, "Visual design"): header with
+ * progress, step state cards, step panel, feedback, Hints and final review. Tokens and shared
+ * classes (.card, .chip, .progress, .label-caps) only.
+ */
+
 .protocol-screen {
   flex: 1;
   min-height: 0;
@@ -6,12 +12,41 @@
   background: var(--color-canvas);
 }
 
+/* Header: back, title, exercise chip, review progress. */
+
 .protocol-header {
+  flex: none;
   display: flex;
-  gap: 12px;
+  gap: var(--space-md);
   align-items: center;
-  padding: 6px 12px;
+  padding: var(--space-sm) var(--gutter-sm);
   border-bottom: 1px solid var(--color-border-hairline);
+  background: var(--color-surface-base);
+}
+
+.protocol-title {
+  min-width: 0;
+}
+
+.protocol-title h1 {
+  margin: 0;
+  overflow: hidden;
+  font-size: var(--type-headline-sm-size);
+  line-height: var(--type-headline-sm-line);
+  font-weight: var(--type-headline-sm-weight);
+  letter-spacing: var(--type-headline-sm-tracking);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.protocol-progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  flex: none;
+  width: 13rem;
+  margin-left: auto;
+  color: var(--color-text-secondary);
 }
 
 .protocol-body {
@@ -20,17 +55,34 @@
   display: flex;
 }
 
+/* Navigation: problem statement and one state card per Protocol Step. */
+
 .protocol-nav {
-  width: 260px;
-  padding: 12px;
+  flex: none;
+  width: 17.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: var(--space-md);
   overflow-y: auto;
   border-right: 1px solid var(--color-border-hairline);
 }
 
+.protocol-statement-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.protocol-statement-card p {
+  margin: 0;
+}
+
 .protocol-statement {
-  margin-top: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-sm-size);
+  line-height: var(--type-body-sm-line);
   white-space: pre-wrap;
-  line-height: 1.4;
 }
 
 .protocol-steps {
@@ -39,32 +91,64 @@
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-sm);
 }
 
-.protocol-steps button {
+.protocol-step-card {
   width: 100%;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  padding: 6px 8px;
-  text-align: left;
-  cursor: pointer;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-md);
+  font-weight: 400;
 }
 
-.protocol-steps button[aria-current='true'] {
-  outline: 2px solid var(--color-border-focus);
+.protocol-step-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
 }
 
-.protocol-steps button:disabled {
+.protocol-step-title {
+  color: var(--color-text-primary);
+  font-weight: 500;
+}
+
+.protocol-step-detail {
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-sm-size);
+  line-height: var(--type-body-sm-line);
+}
+
+/* The selected step: indigo border and glow (aria-current), on the elevated layer. */
+.protocol-step-card[aria-current='true'] {
+  border-color: var(--color-border-focus);
+  background: var(--color-surface-elevated);
+  box-shadow: var(--glow-progress);
+}
+
+/* Locked: shown with its reason, not selectable. Dimmed by tokens, not by opacity, so the reason
+   stays readable. */
+.protocol-step-card:disabled {
+  border-color: var(--color-locked-border);
+  background: var(--color-locked-fill);
   cursor: default;
-  opacity: 0.55;
+  opacity: 1;
 }
 
-.protocol-steps small {
+.protocol-step-card:disabled:hover {
+  border-color: var(--color-locked-border);
+  background: var(--color-locked-fill);
+}
+
+.protocol-step-card:disabled .protocol-step-title {
   color: var(--color-text-secondary);
 }
+
+/* Main: step panel, with the Design Canvas next to it for graph steps. */
 
 .protocol-main {
   flex: 1;
@@ -80,88 +164,359 @@
 .protocol-panel {
   flex: 1;
   min-width: 0;
-  padding: 12px 16px;
+  padding: var(--space-lg) var(--gutter);
   overflow-y: auto;
 }
 
+.protocol-panel-inner {
+  max-width: 52rem;
+  margin: 0 auto;
+}
+
 .protocol-main-canvas .protocol-panel {
-  flex: 0 0 420px;
+  flex: 0 0 25rem;
+  padding: var(--space-lg) var(--space-md);
   border-left: 1px solid var(--color-border-hairline);
+  background: var(--color-surface-base);
+}
+
+.protocol-main-canvas .protocol-panel-inner {
+  max-width: none;
+}
+
+/* Step header: chips, title, goal. */
+
+.protocol-step-header {
+  margin-bottom: var(--space-lg);
+}
+
+.protocol-step-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+  margin: 0 0 var(--space-sm);
+}
+
+.protocol-step-header h2 {
+  margin: 0 0 var(--space-xs);
+  font-size: var(--type-headline-md-size);
+  line-height: var(--type-headline-md-line);
 }
 
 .protocol-goal {
+  margin: 0;
   color: var(--color-text-secondary);
 }
 
-.protocol-new {
-  font-size: 0.6em;
-  vertical-align: middle;
-}
+/* Lesson: elevated card with its chips, prose and the acknowledge button. */
 
 .protocol-lesson {
-  margin: 0.5rem 0 1rem;
-  padding: 0.5rem 1rem;
+  margin: 0 0 var(--space-lg);
+  padding: var(--space-md) var(--space-lg);
+}
+
+.protocol-lesson-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin: 0 0 var(--space-sm);
+}
+
+.protocol-lesson-actions {
+  margin: var(--space-md) 0 0;
+}
+
+/* Editor and actions. */
+
+.protocol-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+}
+
+.protocol-editor textarea {
+  width: 100%;
+  font: inherit;
+}
+
+.protocol-hint-text {
+  margin: var(--space-sm) 0 0;
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-sm-size);
+  line-height: var(--type-body-sm-line);
+}
+
+.protocol-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin: var(--space-md) 0;
+}
+
+/* Pending, cancelled and error states of a call. */
+
+.protocol-pending {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin: var(--space-md) 0;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--color-progress-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-progress-fill);
+  color: var(--color-progress-text);
+}
+
+.protocol-pending span:nth-child(2) {
+  flex: 1;
+}
+
+.protocol-spinner {
+  flex: none;
+  width: 0.9rem;
+  height: 0.9rem;
+  border: 2px solid var(--color-progress-text);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: protocol-spin 0.8s linear infinite;
+}
+
+@keyframes protocol-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .protocol-spinner {
+    animation-duration: 3s;
+  }
+}
+
+.protocol-notice {
+  margin: var(--space-md) 0;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--color-border-hairline);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-elevated);
+  color: var(--color-text-secondary);
+}
+
+.protocol-notice-error {
+  border-color: var(--color-error-border);
+  background: var(--color-error-fill);
+  color: var(--color-error-text);
+}
+
+/* Sections under the editor: Hints, Feedback history. */
+
+.protocol-section {
+  margin-top: var(--space-lg);
+}
+
+.protocol-section > h3 {
+  margin: 0 0 var(--space-sm);
+}
+
+.protocol-hints {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.protocol-hint {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-sm);
+}
+
+.protocol-hint p {
+  margin: 0;
+}
+
+/* Submissions: a card per submission, latest open. */
+
+.protocol-submission {
+  margin-bottom: var(--space-sm);
+  padding: 0;
+}
+
+.protocol-submission summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs) var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  font-weight: 500;
+}
+
+.protocol-submission[open] summary {
+  border-bottom: 1px solid var(--color-border-hairline);
+}
+
+.protocol-submission summary .chip {
+  margin-left: auto;
+}
+
+/* The date goes on its own line when the panel is narrow. */
+.protocol-submission summary .label-mono {
+  order: 3;
+  flex-basis: 100%;
+  margin-top: calc(var(--space-xs) * -1);
+}
+
+.protocol-submission > pre,
+.protocol-submission > .protocol-feedback {
+  margin: var(--space-md);
+}
+
+.protocol-submitted {
+  max-height: 14rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  font-size: var(--type-body-sm-size);
+  line-height: var(--type-body-sm-line);
+  background: var(--color-surface-elevated);
+}
+
+/* Feedback: score, checklist verdicts, severity lists, next step. */
+
+.protocol-feedback {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.protocol-feedback p,
+.protocol-final-review p {
+  margin: 0;
+}
+
+.protocol-feedback-summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.protocol-score {
+  color: var(--color-text-secondary);
+}
+
+.protocol-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.protocol-checklist li {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-base);
+}
+
+.protocol-checklist-item {
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-sm-size);
+  line-height: var(--type-body-sm-line);
+}
+
+.protocol-checklist-comment {
+  margin-top: var(--space-xs);
+}
+
+.protocol-list {
+  padding: var(--space-sm) var(--space-md);
   border: 1px solid var(--color-border-card);
   border-radius: var(--radius-lg);
   background: var(--color-surface-base);
 }
 
-.protocol-editor {
+.protocol-list[data-tone='error'] {
+  border-color: var(--color-error-border);
+}
+
+.protocol-list[data-tone='attention'] {
+  border-color: var(--color-attention-border);
+}
+
+.protocol-list[data-tone='mastered'] {
+  border-color: var(--color-mastered-border);
+}
+
+.protocol-list-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin: 0 0 var(--space-sm);
+}
+
+.protocol-list-head .chip {
+  white-space: normal;
+}
+
+.protocol-list ul {
+  margin: 0;
+  padding-left: var(--space-lg);
+}
+
+.protocol-list li + li {
+  margin-top: var(--space-xs);
+}
+
+.protocol-next {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin-top: 0.75rem;
-}
-
-.protocol-editor textarea {
-  width: 100%;
-  box-sizing: border-box;
-  font: inherit;
-}
-
-.protocol-hint-text {
-  color: var(--color-text-secondary);
-  font-size: 0.9em;
-}
-
-.protocol-submission {
-  margin: 0.5rem 0;
-  padding: 0.5rem;
-  border: 1px solid var(--color-border-card);
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--color-progress-border);
   border-radius: var(--radius-lg);
+  background: var(--color-progress-fill);
 }
 
-.protocol-submitted {
-  white-space: pre-wrap;
-  font-size: 0.85em;
+.protocol-next .label-caps {
+  color: var(--color-progress-text);
+}
+
+/* Final review. */
+
+.protocol-final-review {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  margin-top: var(--space-lg);
+}
+
+.protocol-final-review > h3 {
+  margin: 0;
+}
+
+.protocol-review-summary {
+  padding: var(--space-md);
+  border: 1px solid var(--color-border-elevated);
+  border-radius: var(--radius-lg);
   background: var(--color-surface-elevated);
-  padding: 0.5rem;
+  box-shadow: var(--shadow-layer-2);
 }
 
-.protocol-checklist {
-  padding-left: 1.2rem;
-}
-
-.protocol-verdict {
-  display: inline-block;
-  min-width: 4.5em;
-  font-weight: bold;
-}
-
-.protocol-verdict-met .protocol-verdict {
-  color: var(--color-mastered-text);
-}
-
-.protocol-verdict-partial .protocol-verdict {
-  color: var(--color-attention-text);
-}
-
-.protocol-verdict-missing .protocol-verdict {
-  color: var(--color-error-text);
-}
-
-.protocol-checklist-item {
-  color: var(--color-text-secondary);
+.protocol-reference {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-sm);
 }
 
 .protocol-link {
@@ -170,7 +525,15 @@
   background: none;
   color: var(--color-link);
   text-decoration: underline;
+  text-decoration-color: var(--color-progress-border);
+  text-underline-offset: 0.2em;
   cursor: pointer;
+}
+
+.protocol-link:hover {
+  background: none;
+  color: var(--color-link-hover);
+  text-decoration-color: currentColor;
 }
 
 /* The Design Exercise uses the full shell area: plain states keep a gutter. */
@@ -179,8 +542,28 @@
   padding: var(--space-md) var(--gutter);
 }
 
+.protocol-status {
+  color: var(--color-text-secondary);
+}
+
 .protocol-dev {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
+}
+
+.protocol-dev-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  max-width: 40rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.protocol-dev-list li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
 }

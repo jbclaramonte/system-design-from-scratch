@@ -2,7 +2,6 @@ import { useEffect, useId, useRef, useState } from 'react'
 import type { Dashboard, DashboardTopic, HistoryRound, WeakPoint } from '../../../shared/dashboard'
 import type { TopicStep } from '../../../shared/learningPath'
 import type { TopicMasterySummary } from '../../../shared/mastery'
-import '../path/path.css'
 import { stepStatusLabels } from '../path/pathText'
 import { errorMessage } from '../quiz/errorMessage'
 import './dashboard.css'
@@ -12,10 +11,15 @@ import {
   percentOrDash,
   practiceState,
   questionTypeLabels,
+  resultChip,
   resultLabels,
+  roundLimitReached,
   roundLimitText,
+  roundStatusChip,
   roundStatusLabels,
-  timeSince
+  stepStatusChip,
+  timeSince,
+  weakScoreChip
 } from './dashboardText'
 import { HeatLegend, NotionMapGrid } from './NotionMap'
 
@@ -37,6 +41,7 @@ function PracticeButton({ step, onOpenTopic }: { step: TopicStep; onOpenTopic: O
     return (
       <button
         type="button"
+        className="btn-sm"
         data-testid="practice"
         aria-label={`Practice ${step.topic.title}`}
         onClick={() => onOpenTopic(step.topic)}
@@ -49,13 +54,14 @@ function PracticeButton({ step, onOpenTopic }: { step: TopicStep; onOpenTopic: O
     <span className="dash-practice-locked">
       <button
         type="button"
+        className="btn-sm"
         data-testid="practice"
         aria-disabled="true"
         aria-label={`Practice ${step.topic.title} (locked)`}
         aria-describedby={reasonId}
       >
         Practice
-      </button>{' '}
+      </button>
       <span id={reasonId} className="dash-note" data-testid="practice-lock-reason">
         Locked. {state.reason}
       </span>
@@ -66,11 +72,6 @@ function PracticeButton({ step, onOpenTopic }: { step: TopicStep; onOpenTopic: O
 function Overview({ dashboard }: { dashboard: Dashboard }) {
   const { overview } = dashboard
   const cards = [
-    {
-      label: 'Learning Path',
-      value: `${overview.masteredTopics} of ${overview.totalTopics}`,
-      detail: `topics mastered (${overview.percent}%)`
-    },
     {
       label: 'Rounds',
       value: String(overview.roundsCompleted),
@@ -92,20 +93,41 @@ function Overview({ dashboard }: { dashboard: Dashboard }) {
     }
   ]
   return (
-    <section aria-labelledby="dash-overview">
+    <section className="dash-section" aria-labelledby="dash-overview">
       <h2 id="dash-overview">Overview</h2>
       <dl className="dash-cards" data-testid="dashboard-overview">
+        <div className="card card-elevated dash-card dash-hero">
+          <dt className="label-caps">Learning Path</dt>
+          <dd className="dash-card-value">
+            {overview.masteredTopics}{' '}
+            <span className="dash-hero-of">of {overview.totalTopics}</span>
+          </dd>
+          <dd className="dash-card-detail">topics mastered ({overview.percent}%)</dd>
+          <dd>
+            <div
+              className={`progress${overview.percent >= 100 ? ' progress-complete' : ''}`}
+              role="progressbar"
+              aria-label="Topics mastered on the Learning Path"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={overview.percent}
+              aria-valuetext={`${overview.masteredTopics} of ${overview.totalTopics} topics mastered`}
+            >
+              <div className="progress-fill" style={{ width: `${overview.percent}%` }} />
+            </div>
+          </dd>
+        </div>
         {cards.map((card) => (
-          <div key={card.label} className="dash-card">
-            <dt>{card.label}</dt>
+          <div key={card.label} className="card dash-card">
+            <dt className="label-caps">{card.label}</dt>
             <dd className="dash-card-value">{card.value}</dd>
             <dd className="dash-card-detail">{card.detail}</dd>
           </div>
         ))}
       </dl>
       <p className="dash-note">
-        Mastery Threshold {dashboard.masteryThreshold}%: notions are judged against it today; each
-        round keeps the result it got when it was completed.
+        Mastery Threshold <span className="label-mono">{dashboard.masteryThreshold}%</span>: notions
+        are judged against it today; each round keeps the result it got when it was completed.
       </p>
     </section>
   )
@@ -123,10 +145,10 @@ function WeakPoints({
   const [showAll, setShowAll] = useState(false)
   const shown = showAll ? weakPoints : weakPoints.slice(0, WEAK_POINTS_SHOWN)
   return (
-    <section aria-labelledby="dash-weak">
+    <section className="dash-section" aria-labelledby="dash-weak">
       <h2 id="dash-weak">Weak points</h2>
       {weakPoints.length === 0 ? (
-        <p className="dash-note">
+        <p className="card dash-note">
           No weak point: every notion tested so far meets the Mastery Threshold.
         </p>
       ) : (
@@ -138,17 +160,16 @@ function WeakPoints({
             {shown.map((weak) => {
               const step = steps.get(weak.topicId)
               return (
-                <li key={weak.notion.id} className="dash-weak">
-                  <div className="dash-weak-row">
-                    <div>
-                      <strong>{weak.notion.title}</strong>{' '}
-                      <span className="dash-note">in {weak.topicTitle}</span>
-                      <div className="dash-weak-reason">
-                        Latest {percentOrDash(weak.notion.latestScorePercent)}. {weak.reason}.
-                      </div>
-                    </div>
-                    {step && <PracticeButton step={step} onOpenTopic={onOpenTopic} />}
+                <li key={weak.notion.id} className="card dash-weak">
+                  <div className="dash-weak-chips">
+                    <span className={weakScoreChip(weak.notion.latestScorePercent)}>
+                      Latest {percentOrDash(weak.notion.latestScorePercent)}
+                    </span>
+                    <span className="chip dash-weak-topic">in {weak.topicTitle}</span>
                   </div>
+                  <strong className="dash-weak-title">{weak.notion.title}</strong>
+                  <p className="dash-weak-reason">{weak.reason}.</p>
+                  {step && <PracticeButton step={step} onOpenTopic={onOpenTopic} />}
                 </li>
               )
             })}
@@ -171,7 +192,7 @@ function TopicRow({ topic, onOpenTopic }: { topic: DashboardTopic; onOpenTopic: 
     <tr data-topic={step.topic.slug}>
       <th scope="row">{step.topic.title}</th>
       <td>
-        <span className={`path-badge path-${step.status}`}>{stepStatusLabels[step.status]}</span>
+        <span className={stepStatusChip(step.status)}>{stepStatusLabels[step.status]}</span>
       </td>
       <td>
         {topic.notionCount === 0 ? (
@@ -179,7 +200,7 @@ function TopicRow({ topic, onOpenTopic }: { topic: DashboardTopic; onOpenTopic: 
         ) : (
           <div className="dash-progress-cell">
             <div
-              className="dash-progress"
+              className={`progress dash-progress${progress >= 100 ? ' progress-complete' : ''}`}
               role="progressbar"
               aria-label={`Notions mastered in ${step.topic.title}`}
               aria-valuemin={0}
@@ -187,9 +208,9 @@ function TopicRow({ topic, onOpenTopic }: { topic: DashboardTopic; onOpenTopic: 
               aria-valuenow={progress}
               aria-valuetext={`${topic.notionsMastered} of ${topic.notionCount} notions mastered`}
             >
-              <div className="dash-progress-fill" style={{ width: `${progress}%` }} />
+              <div className="progress-fill" style={{ width: `${progress}%` }} />
             </div>
-            <span>
+            <span className="label-mono">
               {topic.notionsMastered}/{topic.notionCount}
             </span>
           </div>
@@ -215,10 +236,18 @@ function TopicRow({ topic, onOpenTopic }: { topic: DashboardTopic; onOpenTopic: 
           </details>
         )}
       </td>
-      <td>{percentOrDash(topic.bestScorePercent)}</td>
-      <td>{percentOrDash(topic.latestScorePercent)}</td>
-      <td>{topic.rounds.length === 0 ? '–' : roundLimitText(topic)}</td>
-      <td>{timeSince(topic.lastPracticedAt)}</td>
+      <td className="label-mono">{percentOrDash(topic.bestScorePercent)}</td>
+      <td className="label-mono">{percentOrDash(topic.latestScorePercent)}</td>
+      <td>
+        {topic.rounds.length === 0 ? (
+          '–'
+        ) : roundLimitReached(topic) ? (
+          <span className="label-mono dash-limit-reached">{roundLimitText(topic)}</span>
+        ) : (
+          <span className="label-mono">{roundLimitText(topic)}</span>
+        )}
+      </td>
+      <td className="muted">{timeSince(topic.lastPracticedAt)}</td>
       <td>
         <PracticeButton step={step} onOpenTopic={onOpenTopic} />
       </td>
@@ -234,9 +263,9 @@ function TopicsTable({
   onOpenTopic: OpenTopic
 }) {
   return (
-    <section aria-labelledby="dash-topics">
+    <section className="dash-section" aria-labelledby="dash-topics">
       <h2 id="dash-topics">Topics</h2>
-      <div className="dash-table-wrap">
+      <div className="card dash-table-wrap">
         <table className="dash-table" data-testid="dashboard-topics">
           <thead>
             <tr>
@@ -269,13 +298,20 @@ function HistoryRoundItem({ round }: { round: HistoryRound }) {
     <li className="dash-history-round">
       <details>
         <summary>
-          {round.topicTitle}, round {round.number}: {roundStatusLabels[round.status]}
-          {round.scorePercent !== null && `, ${percentOrDash(round.scorePercent)}`} (
-          {formatDate(round.startedAt)}, {round.attempts.length} attempt
-          {round.attempts.length === 1 ? '' : 's'})
+          <span className="dash-history-title">
+            {round.topicTitle}, round {round.number}
+          </span>
+          <span className={roundStatusChip(round.status)}>{roundStatusLabels[round.status]}</span>
+          {round.scorePercent !== null && (
+            <span className="label-mono">{percentOrDash(round.scorePercent)}</span>
+          )}
+          <span className="label-mono faint">
+            {formatDate(round.startedAt)}, {round.attempts.length} attempt
+            {round.attempts.length === 1 ? '' : 's'}
+          </span>
         </summary>
         {round.attempts.length === 0 ? (
-          <p className="dash-note">No answer recorded yet.</p>
+          <p className="dash-note dash-history-empty">No answer recorded yet.</p>
         ) : (
           <table className="dash-table">
             <thead>
@@ -292,14 +328,16 @@ function HistoryRoundItem({ round }: { round: HistoryRound }) {
                 <tr key={attempt.id}>
                   <td lang="fr">{attempt.prompt}</td>
                   <td>{questionTypeLabels[attempt.questionType]}</td>
-                  <td className={`dash-result-${attempt.result}`}>
-                    {resultLabels[attempt.result]}
+                  <td>
+                    <span className={resultChip(attempt.result)}>
+                      {resultLabels[attempt.result]}
+                    </span>
                     {attempt.contested && (
                       <span className="dash-note"> (contested, re-graded)</span>
                     )}
                   </td>
                   <td lang="fr">{attempt.notions.map((notion) => notion.title).join(', ')}</td>
-                  <td>{formatDate(attempt.attemptedAt)}</td>
+                  <td className="label-mono">{formatDate(attempt.attemptedAt)}</td>
                 </tr>
               ))}
             </tbody>
@@ -321,10 +359,10 @@ function History({
 }) {
   const practiced = dashboard.topics.filter((topic) => topic.rounds.length > 0)
   return (
-    <section aria-labelledby="dash-history">
+    <section className="dash-section" aria-labelledby="dash-history">
       <h2 id="dash-history">Attempt history</h2>
       <label className="dash-filter">
-        Topic{' '}
+        <span className="label-caps">Topic</span>
         <select
           data-testid="history-filter"
           value={topicFilter ?? ''}
@@ -339,7 +377,7 @@ function History({
         </select>
       </label>
       {dashboard.history.length === 0 ? (
-        <p className="dash-note">No round on this topic yet.</p>
+        <p className="card dash-note">No round on this topic yet.</p>
       ) : (
         <ol className="dash-history" data-testid="history">
           {dashboard.history.map((round) => (
@@ -353,7 +391,11 @@ function History({
 
 function EmptyState({ onClose }: { onClose: () => void }) {
   return (
-    <section className="dash-empty" data-testid="dashboard-empty" aria-labelledby="dash-empty">
+    <section
+      className="card card-elevated dash-empty"
+      data-testid="dashboard-empty"
+      aria-labelledby="dash-empty"
+    >
       <h2 id="dash-empty">Nothing to show yet</h2>
       <p>
         Take your first quiz on the Learning Path. Once a round is played, this Dashboard shows:
@@ -418,14 +460,18 @@ export function DashboardScreen({
   return (
     <main className="dash-screen" data-testid="dashboard-screen">
       <header className="dash-header">
-        <button type="button" onClick={onClose} data-testid="dashboard-back">
-          Learning Path
-        </button>
         <h1 ref={heading} tabIndex={-1}>
           Dashboard
         </h1>
+        <button type="button" className="btn-sm" onClick={onClose} data-testid="dashboard-back">
+          Learning Path
+        </button>
       </header>
-      {error && <p role="alert">Could not load the Dashboard: {error}</p>}
+      {error && (
+        <p role="alert" className="dash-error">
+          Could not load the Dashboard: {error}
+        </p>
+      )}
       {!dashboard ? (
         !error && <p>Loading the Dashboard...</p>
       ) : isEmptyDashboard(dashboard) ? (
@@ -434,7 +480,7 @@ export function DashboardScreen({
         <>
           <Overview dashboard={dashboard} />
           <WeakPoints weakPoints={dashboard.weakPoints} steps={steps} onOpenTopic={onOpenTopic} />
-          <section aria-labelledby="dash-map">
+          <section className="dash-section" aria-labelledby="dash-map">
             <h2 id="dash-map">Notion Map</h2>
             <p className="dash-note">
               Latest score of each notion, from the most recent completed round that tested it.

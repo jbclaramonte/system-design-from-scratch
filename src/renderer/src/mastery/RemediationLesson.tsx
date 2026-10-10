@@ -73,11 +73,11 @@ export function RemediationLesson({
   return (
     <article className="mastery-remediation" data-testid="remediation-lesson" aria-busy={running}>
       <p className="lesson-badges">
-        <span className="lesson-badge" data-testid="remediation-angle">
+        <span className="chip chip-progress" data-testid="remediation-angle">
           Angle: {angleLabels[target.angle]}
         </span>
         {state.status === 'done' && (
-          <span className="lesson-badge" data-testid="remediation-origin">
+          <span className="chip" data-testid="remediation-origin">
             {state.fromCache ? 'From cache' : 'Generated'}
           </span>
         )}

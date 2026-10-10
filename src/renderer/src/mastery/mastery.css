@@ -1,3 +1,6 @@
+/* Topic screen: the Mastery Loop header (status, round indicator, rounds), the step content and
+   its action bar. Tokens only (docs/Design System.md). Status chips are the shared `.chip-*`. */
+
 .mastery-topic {
   display: flex;
   flex-direction: column;
@@ -5,80 +8,231 @@
   min-height: 0;
 }
 
+/* Header: one layer 1 card, the state on the left and the round figures on the right. */
+
+.mastery-header {
+  flex: none;
+  margin-bottom: var(--space-sm);
+}
+
 .mastery-header h2 {
-  margin: 0.25rem 0;
+  margin: var(--space-xs) 0 var(--space-md);
+  font-size: var(--type-headline-lg-size);
+  line-height: var(--type-headline-lg-line);
+  letter-spacing: var(--type-headline-lg-tracking);
 }
 
 .mastery-progress {
-  margin: 0.25rem 0 0.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md) var(--space-lg);
+}
+
+.mastery-state {
+  display: grid;
+  flex: 1 1 18rem;
+  gap: var(--space-sm);
+  min-width: 0;
+}
+
+.mastery-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.mastery-summary {
+  margin: 0;
   color: var(--color-text-secondary);
-  font-size: 0.9em;
+  font-size: var(--type-body-md-size);
+  line-height: var(--type-body-md-line);
 }
 
-.mastery-badge {
-  padding: 0.1rem 0.5rem;
-  border: 1px solid var(--color-border-control);
-  border-radius: var(--radius-sm);
-  background: var(--color-hover);
-  color: var(--color-text-secondary);
-  font-size: 0.8em;
+/* Round figures: label-caps over a mono value, hairline dividers between them. */
+
+.mastery-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md) 0;
+  margin: 0;
 }
 
-.mastery-in_progress {
-  border-color: var(--color-progress-border);
-  background: var(--color-progress-fill);
-  color: var(--color-progress-text);
+.mastery-stat {
+  display: grid;
+  align-content: start;
+  gap: var(--space-xs);
+  min-width: 5rem;
+  padding: 0 var(--space-lg);
+  border-left: 1px solid var(--color-border-hairline);
 }
 
-.mastery-mastered {
-  border-color: var(--color-mastered-border);
-  background: var(--color-mastered-fill);
-  color: var(--color-mastered-text);
+.mastery-stat:first-child {
+  border-left: 0;
+  padding-left: 0;
 }
 
-.mastery-limit_reached {
-  border-color: var(--color-error-border);
-  background: var(--color-error-fill);
-  color: var(--color-error-text);
+.mastery-stat dd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+  margin: 0;
 }
 
-.mastery-skipped {
-  border-color: var(--color-attention-border);
-  background: var(--color-attention-fill);
-  color: var(--color-attention-text);
+.mastery-stat dt {
+  white-space: nowrap;
 }
+
+.mastery-stat-value {
+  color: var(--color-text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--type-headline-sm-size);
+  font-weight: 600;
+  line-height: var(--type-headline-sm-line);
+}
+
+/* Failed rounds toward the Round Limit: amber (retry limit), red once the limit is reached. */
+
+.mastery-attempts {
+  display: block;
+  flex-basis: 100%;
+}
+
+.mastery-attempts-fill {
+  display: block;
+  background: var(--color-attention);
+}
+
+.mastery-attempts[data-exhausted='true'] .mastery-attempts-fill {
+  background: var(--color-error);
+}
+
+/* Steps. */
 
 .mastery-scroll {
   flex: 1;
   min-height: 0;
+  max-width: 50rem;
   overflow-y: auto;
-  max-width: 72ch;
-  padding-bottom: 2rem;
-  line-height: 1.5;
+  padding-bottom: var(--space-lg);
 }
 
-.mastery-footer {
-  padding: 0.5rem 0 1rem;
+.mastery-intro {
+  margin: 0 0 var(--space-md);
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-md-size);
+  line-height: var(--type-body-md-line);
 }
+
+/* A step that ends with its action bar has no room below it: the bar sits at the very bottom. */
+.mastery-scroll:has(> .mastery-footer) {
+  padding-bottom: 0;
+}
+
+/* Action bar: stays at the bottom of the step, the main action on the right. */
+
+.mastery-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  max-width: 50rem;
+  padding: var(--space-sm) 0;
+  border-top: 1px solid var(--color-border-hairline);
+  background: var(--color-canvas);
+}
+
+/* Remediation: one tab-like button per missed notion. */
 
 .mastery-targets {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
-  margin: 0.5rem 0;
+  gap: var(--space-sm);
+  margin: 0 0 var(--space-lg);
+}
+
+.mastery-targets button {
+  color: var(--color-text-secondary);
 }
 
 .mastery-targets button[aria-current='true'] {
-  font-weight: bold;
+  border-color: var(--color-border-active);
+  background: var(--color-surface-elevated);
+  box-shadow: var(--shadow-layer-2);
+  color: var(--color-text-primary);
+}
+
+.mastery-remediation {
+  margin-top: var(--space-sm);
+}
+
+.mastery-remediation > .lesson-badges {
+  margin-bottom: var(--space-md);
+}
+
+/* Outcomes of the loop: Round Limit reached, skipped, mastered. */
+
+.mastery-outcome {
+  flex: none;
+  max-width: 50rem;
+  padding: var(--space-lg);
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-base);
+  box-shadow: none;
+}
+
+.mastery-outcome h3 {
+  margin: 0 0 var(--space-sm);
+}
+
+.mastery-outcome > :last-child {
+  margin-bottom: 0;
+}
+
+.mastery-outcome p {
+  margin: 0 0 var(--space-md);
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-lg-size);
+  line-height: var(--type-body-lg-line);
+}
+
+.mastery-outcome-limit {
+  border-color: var(--color-error-border);
+}
+
+.mastery-outcome-skipped {
+  border-color: var(--color-attention-border);
+}
+
+.mastery-outcome-mastered {
+  border-color: var(--color-mastered-border);
+  box-shadow: var(--glow-mastered);
 }
 
 .mastery-choices {
   display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: 0.5rem 1rem;
-  align-items: center;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: var(--space-md);
 }
 
-.mastery-remediation {
-  margin-top: 0.5rem;
+.mastery-choice {
+  display: grid;
+  align-content: start;
+  justify-items: start;
+  gap: var(--space-md);
+}
+
+.mastery-choice p {
+  margin: 0;
+  font-size: var(--type-body-md-size);
+  line-height: var(--type-body-md-line);
 }

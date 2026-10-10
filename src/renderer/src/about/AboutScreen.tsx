@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import type { AboutInfo, ThirdPartyPackage } from '../../../shared/about'
 import { errorMessage } from '../quiz/errorMessage'
+import './about.css'
 import { filterPackages } from './filterPackages'
 
 const AWESOME_RESOURCES_URL = 'https://github.com/ashishps1/awesome-system-design-resources'
@@ -15,18 +16,10 @@ function ExternalLink({ href, children }: { href: string; children: ReactNode })
   )
 }
 
-const preStyle = {
-  whiteSpace: 'pre-wrap',
-  fontSize: '0.85em',
-  background: 'var(--color-surface-elevated)',
-  padding: 8,
-  overflowX: 'auto'
-} as const
-
 function LicenseTexts({ pkg }: { pkg: ThirdPartyPackage }) {
   if (pkg.licenseFiles.length === 0) {
     return (
-      <p>
+      <p className="about-note">
         The package ships no license file; its package.json declares <code>{pkg.license}</code>.
       </p>
     )
@@ -35,10 +28,10 @@ function LicenseTexts({ pkg }: { pkg: ThirdPartyPackage }) {
     <>
       {pkg.licenseFiles.map((file) => (
         <div key={file.file}>
-          <p style={{ margin: '8px 0 4px' }}>
+          <p className="about-file">
             <code>{file.file}</code>
           </p>
-          <pre style={preStyle}>{file.text}</pre>
+          <pre className="about-license-text">{file.text}</pre>
         </div>
       ))}
     </>
@@ -52,8 +45,11 @@ function TldrawLicense({ packages }: { packages: ThirdPartyPackage[] }) {
     ? `https://github.com/tldraw/tldraw/blob/v${tldraw.version}/LICENSE.md`
     : 'https://github.com/tldraw/tldraw/blob/main/LICENSE.md'
   return (
-    <section data-testid="about-tldraw">
-      <h2>tldraw (Design Canvas)</h2>
+    <section className="card about-card about-card-attention" data-testid="about-tldraw">
+      <h2>
+        tldraw (Design Canvas){' '}
+        <span className="chip chip-attention chip-dot">Source-available</span>
+      </h2>
       <p>
         {packages.map((pkg) => `${pkg.name} ${pkg.version}`).join(', ')} are under the{' '}
         <ExternalLink href={licenseUrl}>tldraw license</ExternalLink>, a source-available license,
@@ -79,7 +75,7 @@ function TldrawLicense({ packages }: { packages: ThirdPartyPackage[] }) {
         </li>
       </ul>
       {tldraw && (
-        <details>
+        <details className="about-fold">
           <summary>tldraw license text</summary>
           <LicenseTexts pkg={tldraw} />
         </details>
@@ -93,14 +89,14 @@ function ThirdPartyLicenses({ about }: { about: AboutInfo }) {
   const { packages } = about.licenses
   const shown = filterPackages(packages, query)
   return (
-    <section data-testid="about-licenses">
+    <section className="card about-card" data-testid="about-licenses">
       <h2>Third-party licenses</h2>
       <p>
-        {packages.length} packages. Rule: {about.licenses.rule}
+        <span className="label-mono">{packages.length} packages.</span> Rule: {about.licenses.rule}
       </p>
-      <p>
+      <div className="about-filter">
         <label>
-          Filter by name or license{' '}
+          <span className="label-caps">Filter by name or license</span>
           <input
             type="search"
             data-testid="about-licenses-filter"
@@ -108,17 +104,23 @@ function ThirdPartyLicenses({ about }: { about: AboutInfo }) {
             onChange={(event) => setQuery(event.target.value)}
           />
         </label>
-      </p>
-      <ul style={{ listStyle: 'none', padding: 0 }}>
+      </div>
+      <ul className="about-packages">
         {shown.map((pkg) => (
           <li key={`${pkg.name}@${pkg.version}`} data-testid="about-license-entry">
             <details>
               <summary>
-                {pkg.name} {pkg.version}: <code>{pkg.license}</code>
-                {pkg.special === 'tldraw' && ' (tldraw license, see above)'}
+                <span className="about-pkg-name">{pkg.name}</span>
+                <span className="label-mono faint">{pkg.version}</span>
+                <span className={`chip${pkg.special === 'tldraw' ? ' chip-attention' : ''}`}>
+                  {pkg.license}
+                </span>
+                {pkg.special === 'tldraw' && (
+                  <span className="about-pkg-note">(tldraw license, see above)</span>
+                )}
               </summary>
               {pkg.special === 'electron' && (
-                <p>
+                <p className="about-note">
                   The app runtime. The Electron binary also contains Chromium, Node.js and other
                   components under their own licenses; Electron distributions ship their notices
                   next to the binary (LICENSES.chromium.html). They are not reproduced here.
@@ -129,6 +131,7 @@ function ThirdPartyLicenses({ about }: { about: AboutInfo }) {
           </li>
         ))}
       </ul>
+      {shown.length === 0 && <p className="about-note">No package matches.</p>}
     </section>
   )
 }
@@ -146,17 +149,17 @@ export function AboutScreen({ onClose }: { onClose: () => void }) {
   }, [])
 
   const header = (
-    <header style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-      <button type="button" onClick={onClose}>
+    <header className="about-header">
+      <h1>About</h1>
+      <button type="button" className="btn-sm" onClick={onClose}>
         Back
       </button>
-      <h1 style={{ fontSize: '1.4em', margin: 0 }}>About</h1>
     </header>
   )
 
   if (!about) {
     return (
-      <main>
+      <main className="about-screen">
         {header}
         {error ? <p role="alert">{error}</p> : <p>Loading...</p>}
       </main>
@@ -166,34 +169,38 @@ export function AboutScreen({ onClose }: { onClose: () => void }) {
   const { primer } = about
   const tldrawPackages = about.licenses.packages.filter((pkg) => pkg.special === 'tldraw')
   return (
-    <main
-      data-testid="about-screen"
-      style={{ maxWidth: '80ch', margin: '0 auto', lineHeight: 1.5 }}
-    >
+    <main className="about-screen" data-testid="about-screen">
       {header}
-      <p data-testid="about-app">
-        <strong>{about.appName}</strong> version {about.appVersion}. Licensed under Apache-2.0.
+      <p className="card card-elevated about-app" data-testid="about-app">
+        <strong>{about.appName}</strong>
+        <span>
+          version <span className="label-mono">{about.appVersion}</span>
+        </span>
+        <span className="chip">Licensed under Apache-2.0</span>
       </p>
 
-      <section data-testid="about-primer">
+      <section className="card about-card" data-testid="about-primer">
         <h2>The System Design Primer</h2>
         <p data-testid="about-attribution">{primer.attribution}</p>
-        <ul>
-          <li>
-            Source:{' '}
+        <dl className="about-facts">
+          <dt className="label-caps">Source</dt>
+          <dd>
             <ExternalLink href={primer.permalink}>
               {primer.repository} at commit {primer.commitSha}
             </ExternalLink>{' '}
-            (fetched {primer.fetchedAt})
-          </li>
-          <li>
-            License: <ExternalLink href={primer.licenseUrl}>{primer.licenseName}</ExternalLink>
-          </li>
-        </ul>
-        <p>The primer&apos;s own license notice:</p>
-        <pre style={preStyle} data-testid="about-upstream-notice">
-          {primer.upstreamNotice}
-        </pre>
+            <span className="muted">(fetched {primer.fetchedAt})</span>
+          </dd>
+          <dt className="label-caps">License</dt>
+          <dd>
+            <ExternalLink href={primer.licenseUrl}>{primer.licenseName}</ExternalLink>
+          </dd>
+        </dl>
+        <details className="about-fold">
+          <summary>The primer&apos;s own license notice</summary>
+          <pre className="about-license-text" data-testid="about-upstream-notice">
+            {primer.upstreamNotice}
+          </pre>
+        </details>
         <h3>Modifications</h3>
         <p data-testid="about-modifications">{primer.modifications}</p>
         <p data-testid="about-generated-notice">
@@ -204,7 +211,7 @@ export function AboutScreen({ onClose }: { onClose: () => void }) {
         <p>{primer.thirdPartyContent}</p>
       </section>
 
-      <section data-testid="about-generated">
+      <section className="card about-card" data-testid="about-generated">
         <h2>Generated content</h2>
         <ul>
           <li>

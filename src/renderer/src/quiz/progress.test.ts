@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { QuestionView } from '../../../shared/quiz'
 import {
   allGradableAnswered,
+  answeredPercent,
   formatPercent,
   nextQuestionIndex,
   postponedQuestions,
@@ -62,5 +63,18 @@ describe('formatPercent', () => {
   it('keeps whole numbers and rounds the others to one decimal', () => {
     expect(formatPercent(100)).toBe('100%')
     expect(formatPercent(200 / 3)).toBe('66.7%')
+  })
+})
+
+describe('answeredPercent', () => {
+  it('is the share of answered questions, rounded', () => {
+    expect(answeredPercent(0, 4)).toBe(0)
+    expect(answeredPercent(1, 3)).toBe(33)
+    expect(answeredPercent(4, 4)).toBe(100)
+  })
+
+  it('is 0 with no question and never above 100', () => {
+    expect(answeredPercent(0, 0)).toBe(0)
+    expect(answeredPercent(5, 4)).toBe(100)
   })
 })

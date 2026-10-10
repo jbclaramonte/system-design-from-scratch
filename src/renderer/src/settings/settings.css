@@ -1,0 +1,176 @@
+/* Settings: grouped cards, fields with helper text, CLI test result, save bar. Tokens only. */
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+}
+
+.settings-header h1 {
+  margin: 0;
+}
+
+.settings-groups {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: var(--space-md);
+  align-items: start;
+}
+
+.settings-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+}
+
+.settings-group h2 {
+  margin: 0;
+}
+
+.settings-group-intro {
+  margin: calc(var(--space-sm) * -1) 0 0;
+  color: var(--color-text-secondary);
+}
+
+.settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.settings-field label {
+  font-weight: 600;
+}
+
+.settings-field input {
+  width: 100%;
+}
+
+.settings-field input.settings-short {
+  width: 10rem;
+}
+
+.settings-mono {
+  font-family: var(--font-mono);
+  font-size: var(--type-code-inline-size);
+}
+
+.settings-help {
+  color: var(--color-text-secondary);
+}
+
+.settings-help-error {
+  color: var(--color-error-text);
+}
+
+/* Test button and its result. */
+
+.settings-test {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--color-border-hairline);
+}
+
+.settings-test-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.settings-check-live:empty {
+  display: none;
+}
+
+.settings-check {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  border: 1px solid var(--color-border-elevated);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-elevated);
+}
+
+.settings-check p {
+  margin: 0;
+}
+
+.settings-check-failed {
+  border-color: var(--color-error-border);
+}
+
+.settings-check-text {
+  word-break: break-all;
+}
+
+.settings-auth {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-sm) var(--space-lg);
+  margin: 0;
+}
+
+.settings-auth dt {
+  color: var(--color-text-muted);
+}
+
+.settings-auth dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Errors and save bar. */
+
+.settings-error {
+  margin: var(--space-md) 0 0;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--color-error-border);
+  border-radius: var(--radius-md);
+  background: var(--color-error-fill);
+  color: var(--color-error-text);
+}
+
+/* Sticky, so Save and its feedback stay in view under the long CLI test result. */
+.settings-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-md);
+  margin-top: var(--space-lg);
+  padding: var(--space-md) 0;
+  border-top: 1px solid var(--color-border-hairline);
+  background: var(--color-canvas);
+}
+
+.settings-saved {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-md);
+  border: 1px solid var(--color-mastered-border);
+  border-radius: var(--radius-md);
+  background: var(--color-mastered-fill);
+  color: var(--color-mastered-text);
+}
+
+.settings-saved::before {
+  content: '✓' / '';
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+@media (max-width: 52rem) {
+  .settings-groups {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

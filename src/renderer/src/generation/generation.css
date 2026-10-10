@@ -1,0 +1,105 @@
+/* Generation errors (GenerationErrorView) on the dark surface. `.lesson-error` and
+   `.lesson-notice` keep their names: other screens use `.lesson-notice` for plain notices. */
+
+.lesson-error,
+.lesson-notice {
+  display: grid;
+  gap: var(--space-sm);
+  margin: var(--space-md) 0;
+  padding: var(--space-md);
+  border: 1px solid var(--color-error-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-error-fill);
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-md-size);
+  line-height: var(--type-body-md-line);
+}
+
+.lesson-error > strong {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  color: var(--color-error-text);
+  font-size: var(--type-body-lg-size);
+  line-height: var(--type-body-lg-line);
+}
+
+/* The title never relies on color alone: a mark in front of it. */
+.lesson-error > strong::before {
+  content: '!';
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 1px solid var(--color-error-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: var(--type-label-mono-size);
+  line-height: 1;
+}
+
+.lesson-notice {
+  border-color: var(--color-border-hairline);
+  background: var(--color-surface-base);
+}
+
+.lesson-notice > strong {
+  color: var(--color-text-primary);
+}
+
+.lesson-error > *,
+.lesson-notice > * {
+  margin: 0;
+}
+
+.lesson-error p,
+.lesson-notice p {
+  max-width: 60ch;
+  color: var(--color-text-secondary);
+  white-space: pre-wrap;
+}
+
+.lesson-error details,
+.lesson-notice details {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.lesson-error summary,
+.lesson-notice summary {
+  justify-self: start;
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--type-label-mono-size);
+  letter-spacing: var(--type-label-mono-tracking);
+}
+
+.lesson-error summary:hover,
+.lesson-notice summary:hover {
+  color: var(--color-text-primary);
+}
+
+/* Raw CLI output, read-only and selectable. */
+.generation-details-text {
+  width: 100%;
+  background: var(--color-canvas);
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--type-code-block-size);
+  line-height: var(--type-code-block-line);
+}
+
+.generation-details-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+/* Retry and the screen's own actions sit in one row. */
+.generation-error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+}

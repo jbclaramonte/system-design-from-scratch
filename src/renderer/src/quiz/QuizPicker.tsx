@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { QuizSummary, QuizTopic } from '../../../shared/quiz'
 import { errorMessage } from './errorMessage'
+import './quiz.css'
 
 /** Picks a topic, then one of its quizzes. In dev, creates a fixture quiz to play. */
 export function QuizPicker({ onStart }: { onStart: (quizId: number) => void }) {
@@ -54,53 +55,66 @@ export function QuizPicker({ onStart }: { onStart: (quizId: number) => void }) {
   const withQuizzes = topics?.filter((topic) => topic.quizCount > 0) ?? []
 
   return (
-    <section data-testid="quiz-picker">
+    <section className="quiz-picker" data-testid="quiz-picker">
       <h2>Choose a quiz</h2>
       {error && <p role="alert">{error}</p>}
       {topics === null ? (
-        <p>Loading...</p>
+        <p className="muted">Loading...</p>
       ) : withQuizzes.length === 0 ? (
-        <p>No quiz yet. Quizzes are generated from a topic&apos;s lesson.</p>
+        <p className="quiz-empty">No quiz yet. Quizzes are generated from a topic&apos;s lesson.</p>
       ) : (
-        <p>
-          <label>
-            Topic{' '}
-            <select
-              data-testid="quiz-topic"
-              value={topicId ?? ''}
-              onChange={(e) => setTopicId(Number(e.target.value))}
-            >
-              {withQuizzes.map((topic) => (
-                <option key={topic.id} value={topic.id}>
-                  {topic.title} ({topic.quizCount})
-                </option>
-              ))}
-            </select>
-          </label>
-        </p>
+        <label className="quiz-picker-field">
+          <span className="label-caps">Topic</span>
+          <select
+            data-testid="quiz-topic"
+            value={topicId ?? ''}
+            onChange={(e) => setTopicId(Number(e.target.value))}
+          >
+            {withQuizzes.map((topic) => (
+              <option key={topic.id} value={topic.id}>
+                {topic.title} ({topic.quizCount})
+              </option>
+            ))}
+          </select>
+        </label>
       )}
       {topicId !== null && quizzes && (
-        <ul data-testid="quiz-list" style={{ listStyle: 'none', padding: 0 }}>
+        <ul className="quiz-list" data-testid="quiz-list">
           {quizzes.map((quiz) => (
-            <li key={quiz.id} style={{ marginBottom: 8 }}>
-              <button data-testid={`start-quiz-${quiz.id}`} onClick={() => onStart(quiz.id)}>
-                Quiz #{quiz.id}
-              </button>{' '}
-              {quiz.questionCount} questions
-              {quiz.gradableQuestionCount < quiz.questionCount &&
-                ` (${quiz.questionCount - quiz.gradableQuestionCount} not graded)`}
-              , {quiz.grounded ? 'grounded' : 'ungrounded'},{' '}
-              {new Date(quiz.createdAt).toLocaleString()}
+            <li key={quiz.id} className="card quiz-list-item">
+              <div className="quiz-list-main">
+                <h3 className="quiz-list-title">Quiz #{quiz.id}</h3>
+                <div className="quiz-list-meta">
+                  <span className="label-mono muted">
+                    {quiz.questionCount} questions
+                    {quiz.gradableQuestionCount < quiz.questionCount &&
+                      ` (${quiz.questionCount - quiz.gradableQuestionCount} not graded)`}
+                  </span>
+                  <span className={`chip ${quiz.grounded ? 'chip-progress' : 'chip-attention'}`}>
+                    {quiz.grounded ? 'grounded' : 'ungrounded'}
+                  </span>
+                  <span className="label-mono faint">
+                    {new Date(quiz.createdAt).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+              <button
+                className="btn-primary"
+                data-testid={`start-quiz-${quiz.id}`}
+                onClick={() => onStart(quiz.id)}
+              >
+                Start quiz #{quiz.id}
+              </button>
             </li>
           ))}
         </ul>
       )}
       {import.meta.env.DEV && (
-        <p>
+        <div className="quiz-actions">
           <button data-testid="create-dev-quiz" onClick={createDevQuiz}>
             Create fixture quiz (dev)
           </button>
-        </p>
+        </div>
       )}
     </section>
   )

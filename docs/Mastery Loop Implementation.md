@@ -85,6 +85,10 @@ Read models for the [[Notion Map]] (#17) and the [[Dashboard]] (#18), in `querie
 
 The separate Lessons and Quiz screens stay reachable in dev builds only ("Lessons (dev)", "Quiz (dev)").
 
+## Visual design
+
+Issue #32 (tokens: [[Design System]]). The topic header (`TopicHeader`) is one layer 1 card: on the left the mastery status as a chip with its glowing dot (`masteryChip` in `masteryText.ts`: Not started neutral, In progress indigo, Mastered emerald, Round Limit reached red, Skipped amber, the label always written), the Outside the primer chip when it applies, and the progress sentence (`roundProgress`); on the right the figures of the loop (`RoundStats`): the round number, failed rounds against the Round Limit with a 4px bar (`attemptsStat`, amber, red once the limit is reached), the latest completed round with its score and a Passed / Not passed chip, and the Mastery Threshold. Only data of `MasteryState` is shown: there is no rounds history in the loop state, so earlier rounds are not listed. The main action of a step is the one solid `btn-primary` of the action bar at the bottom of the topic ("Take the quiz", "Start round N", "Retry: start round N", "Continue"); the bar stays in view (`position: sticky`) while the step scrolls. Remediation shows its missed notions as tab-like buttons (selected: elevated surface and active border; a "✓" when the Remediation Lesson is read; the score in mono), then the lesson with an "Angle" chip. The outcomes (Round Limit reached, Topic skipped, Topic mastered) are cards with a red, amber or emerald border; the two Round Limit choices are two elevated cards, "Try another angle" being the primary action.
+
 ## Settings
 
 `SettingsScreen` (`src/renderer/src/settings/`), `settings:get` / `settings:update` / `settings:testCli` (`src/main/settings/`), validation shared in `src/shared/settings.ts` (`settingsErrors`):

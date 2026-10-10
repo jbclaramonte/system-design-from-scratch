@@ -1,5 +1,6 @@
 import type { Mermaid, MermaidConfig } from 'mermaid'
 import { DIAGRAM_LIMITS, diagramErrorFromException, type DiagramError } from './diagramSource'
+import { diagramFontFamily, mermaidThemeVariables } from './mermaidTheme'
 
 // Lazy, single mermaid instance for the renderer. `mermaid` (and the chunk of each diagram type)
 // is only fetched by the first diagram on screen, so the main bundle does not grow.
@@ -9,57 +10,59 @@ export const RENDER_TIMEOUT_MS = 10_000
 
 export type RenderResult = { ok: true; svg: string } | { ok: false; error: DiagramError }
 
-const FONT_FAMILY = 'system-ui, sans-serif'
+/**
+ * Dark theme from the design tokens (`mermaidTheme.ts`), labels as SVG text, strict security.
+ * Built when mermaid loads, so the tokens are read from the loaded stylesheet.
+ */
+function buildConfig(): MermaidConfig {
+  return {
+    startOnLoad: false,
+    securityLevel: 'strict',
+    // Labels as SVG text, never HTML in a foreignObject.
+    htmlLabels: false,
+    suppressErrorRendering: true,
+    maxTextSize: DIAGRAM_LIMITS.maxChars,
+    maxEdges: DIAGRAM_LIMITS.maxEdges,
+    theme: 'base',
+    darkMode: true,
+    fontFamily: diagramFontFamily(),
+    themeVariables: mermaidThemeVariables(),
+    // Keys a diagram can never override (directives are also refused before rendering).
+    secure: [
+      'secure',
+      'securityLevel',
+      'startOnLoad',
+      'maxTextSize',
+      'maxEdges',
+      'suppressErrorRendering',
+      'htmlLabels',
+      'theme',
+      'themeVariables',
+      'themeCSS',
+      'fontFamily'
+    ]
+  }
+}
 
-/** Plain styles matching the app: dark text on the source-chip blue, grey lines, system font. */
-const CONFIG: MermaidConfig = {
-  startOnLoad: false,
-  securityLevel: 'strict',
-  // Labels as SVG text, never HTML in a foreignObject.
-  htmlLabels: false,
-  suppressErrorRendering: true,
-  maxTextSize: DIAGRAM_LIMITS.maxChars,
-  maxEdges: DIAGRAM_LIMITS.maxEdges,
-  theme: 'base',
-  fontFamily: FONT_FAMILY,
-  themeVariables: {
-    fontFamily: FONT_FAMILY,
-    fontSize: '14px',
-    background: '#ffffff',
-    primaryColor: '#f0f4fc',
-    primaryBorderColor: '#2b4a8b',
-    primaryTextColor: '#1a1a1a',
-    secondaryColor: '#f5f5f5',
-    tertiaryColor: '#ffffff',
-    lineColor: '#555555',
-    textColor: '#1a1a1a',
-    noteBkgColor: '#fff4e5',
-    noteBorderColor: '#c77d1a',
-    noteTextColor: '#1a1a1a'
-  },
-  // Keys a diagram can never override (directives are also refused before rendering).
-  secure: [
-    'secure',
-    'securityLevel',
-    'startOnLoad',
-    'maxTextSize',
-    'maxEdges',
-    'suppressErrorRendering',
-    'htmlLabels',
-    'theme',
-    'themeVariables',
-    'themeCSS',
-    'fontFamily'
-  ]
+/**
+ * Mermaid measures labels with the font in use: wait for the UI font (self-hosted, loaded on
+ * first use) so the boxes are sized for the final glyphs and the text does not clip.
+ */
+async function waitForFont(): Promise<void> {
+  try {
+    await document.fonts.load(`14px ${diagramFontFamily()}`)
+  } catch {
+    // Fallback font: labels are measured with it, still legible.
+  }
 }
 
 let loading: Promise<Mermaid> | null = null
 
 /** Imports and initializes mermaid once; a failed import is retried by the next call. */
 function loadMermaid(): Promise<Mermaid> {
-  loading ??= import('mermaid').then(
-    ({ default: mermaid }) => {
-      mermaid.initialize(CONFIG)
+  loading ??= Promise.all([import('mermaid'), waitForFont()]).then(
+    ([{ default: mermaid }]) => {
+      mermaid.initialize(buildConfig())
       return mermaid
     },
     (reason: unknown) => {

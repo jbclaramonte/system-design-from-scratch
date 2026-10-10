@@ -1,4 +1,5 @@
 import { GenerationErrorView } from '../generation/GenerationErrorView'
+import './quiz.css'
 import type { GradingError } from './useGrading'
 
 /** Pending state (with Cancel) or the error of a free-answer grading, with what to do next. */
@@ -18,9 +19,10 @@ export function GradingStatus({
 }) {
   if (pending) {
     return (
-      <p role="status" data-testid="grading-pending">
-        {pendingLabel}{' '}
-        <button type="button" data-testid="cancel-grading" onClick={onCancel}>
+      <p className="quiz-pending" role="status" data-testid="grading-pending">
+        <span className="quiz-pending-dot" aria-hidden="true" />
+        <span className="quiz-pending-text">{pendingLabel}</span>
+        <button type="button" className="btn-sm" data-testid="cancel-grading" onClick={onCancel}>
           Cancel
         </button>
       </p>
@@ -29,7 +31,7 @@ export function GradingStatus({
   if (!error) return null
   if (error.code === 'cancelled') {
     return (
-      <p role="status" data-testid="grading-error" data-code={error.code}>
+      <p className="quiz-notice" role="status" data-testid="grading-error" data-code={error.code}>
         Grading cancelled. Your text is kept.
       </p>
     )

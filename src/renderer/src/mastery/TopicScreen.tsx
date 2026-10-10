@@ -10,8 +10,11 @@ import { errorMessage } from '../quiz/errorMessage'
 import { formatPercent } from '../quiz/progress'
 import { QuizPlayer } from '../quiz/QuizPlayer'
 import { QuizResults } from '../quiz/QuizResults'
+import './mastery.css'
 import {
+  attemptsStat,
   firstRemediationIndex,
+  masteryChip,
   masteryLabels,
   preparationText,
   roundPreparation,
@@ -140,7 +143,13 @@ export function TopicScreen({
   const backToLoop = () => void showLoop()
 
   if (!state) {
-    return error ? <p role="alert">{error}</p> : <p>Loading the topic...</p>
+    return error ? (
+      <p role="alert">{error}</p>
+    ) : (
+      <p className="muted" role="status">
+        Loading the topic...
+      </p>
+    )
   }
 
   return (
@@ -168,7 +177,13 @@ export function TopicScreen({
       {overlay?.name === 'results' && (
         <div className="mastery-scroll">
           <p>
-            <button type="button" data-testid="mastery-continue" onClick={backToLoop} autoFocus>
+            <button
+              type="button"
+              className="btn-primary"
+              data-testid="mastery-continue"
+              onClick={backToLoop}
+              autoFocus
+            >
               {overlay.result.round.passed ? 'Continue' : 'Continue to the Remediation Lessons'}
             </button>
           </p>
@@ -189,6 +204,7 @@ export function TopicScreen({
           <footer className="mastery-footer">
             <button
               type="button"
+              className="btn-primary"
               data-testid="mastery-start-round"
               disabled={!lessonDone && !state.step.lessonReady}
               onClick={startRound}
@@ -199,7 +215,9 @@ export function TopicScreen({
         </>
       )}
       {overlay === null && state.step.name === 'round' && (
-        <p>Resuming round {state.roundNumber}...</p>
+        <p className="muted" role="status">
+          Resuming round {state.roundNumber}...
+        </p>
       )}
       {overlay === null && state.step.name === 'remediation' && (
         <RemediationStep
@@ -213,7 +231,10 @@ export function TopicScreen({
         />
       )}
       {overlay === null && state.step.name === 'limit_reached' && (
-        <section className="mastery-scroll" data-testid="mastery-limit-reached">
+        <section
+          className="mastery-outcome mastery-outcome-limit"
+          data-testid="mastery-limit-reached"
+        >
           <h3>Round Limit reached</h3>
           <p>
             {state.failedRounds} rounds without reaching the Mastery Threshold (
@@ -221,27 +242,33 @@ export function TopicScreen({
             on.
           </p>
           <div className="mastery-choices">
-            <button
-              type="button"
-              data-testid="choose-another-angle"
-              onClick={() => choose('another_angle')}
-            >
-              Try another angle
-            </button>
-            <span>New Remediation Lessons in a style you have not read yet, then a new round.</span>
-            <button type="button" data-testid="choose-skip" onClick={() => choose('skip')}>
-              Skip and come back later
-            </button>
-            <span>The topic stays marked as skipped; reopen it whenever you want.</span>
+            <div className="card card-elevated mastery-choice">
+              <button
+                type="button"
+                className="btn-primary"
+                data-testid="choose-another-angle"
+                onClick={() => choose('another_angle')}
+              >
+                Try another angle
+              </button>
+              <p>New Remediation Lessons in a style you have not read yet, then a new round.</p>
+            </div>
+            <div className="card card-elevated mastery-choice">
+              <button type="button" data-testid="choose-skip" onClick={() => choose('skip')}>
+                Skip and come back later
+              </button>
+              <p>The topic stays marked as skipped; reopen it whenever you want.</p>
+            </div>
           </div>
         </section>
       )}
       {overlay === null && state.step.name === 'skipped' && (
-        <section className="mastery-scroll" data-testid="mastery-skipped">
+        <section className="mastery-outcome mastery-outcome-skipped" data-testid="mastery-skipped">
           <h3>Topic skipped</h3>
           <p>You chose to come back to this topic later.</p>
           <button
             type="button"
+            className="btn-primary"
             data-testid="choose-come-back"
             onClick={() => choose('another_angle')}
           >
@@ -250,7 +277,10 @@ export function TopicScreen({
         </section>
       )}
       {overlay === null && state.step.name === 'mastered' && (
-        <section className="mastery-scroll" data-testid="mastery-mastered">
+        <section
+          className="mastery-outcome mastery-outcome-mastered"
+          data-testid="mastery-mastered"
+        >
           <h3>Topic mastered</h3>
           <p>
             Round {state.lastRound?.number} passed with{' '}
@@ -281,19 +311,74 @@ export function TopicHeader({
   return (
     <header className="mastery-header">
       {showTitle && <h2>{state.topicTitle}</h2>}
-      <p className="mastery-progress" data-testid="mastery-progress">
-        <span className={`mastery-badge mastery-${state.status}`} data-testid="mastery-status">
-          {masteryLabels[state.status]}
-        </span>{' '}
-        {!grounded && (
-          <>
-            <OutsidePrimerBadge testId="mastery-ungrounded" />{' '}
-          </>
-        )}
-        {roundProgress(state)}
-      </p>
+      <div className="mastery-progress card" data-testid="mastery-progress">
+        <div className="mastery-state">
+          <div className="mastery-chips">
+            <span className={masteryChip[state.status]} data-testid="mastery-status">
+              {masteryLabels[state.status]}
+            </span>
+            {!grounded && <OutsidePrimerBadge testId="mastery-ungrounded" />}
+          </div>
+          <p className="mastery-summary">{roundProgress(state)}</p>
+        </div>
+        <RoundStats state={state} />
+      </div>
       {error && <GenerationErrorView code="refused" message={error} testId="mastery-error" />}
     </header>
+  )
+}
+
+/**
+ * The round indicator and what the loop knows about the rounds: the number of the round, failed
+ * rounds against the Round Limit, the latest completed round, the Mastery Threshold.
+ */
+function RoundStats({ state }: { state: MasteryState }) {
+  const attempts = attemptsStat(state)
+  const last = state.lastRound
+  const lastScore = last && last.completedAt !== null ? last.scorePercent : null
+  return (
+    <dl className="mastery-stats">
+      <div className="mastery-stat" data-testid="mastery-round">
+        <dt className="label-caps">Round</dt>
+        <dd className="mastery-stat-value">{state.roundNumber}</dd>
+      </div>
+      {attempts && (
+        <div className="mastery-stat" data-testid="mastery-attempts">
+          <dt className="label-caps">Round Limit</dt>
+          <dd>
+            <span className="mastery-stat-value">
+              {attempts.failedRounds} / {attempts.roundLimit}
+            </span>{' '}
+            <span className="label-mono muted">failed</span>
+            <span
+              className="progress mastery-attempts"
+              data-exhausted={attempts.exhausted}
+              aria-hidden
+            >
+              <span
+                className="progress-fill mastery-attempts-fill"
+                style={{ width: `${attempts.percent}%` }}
+              />
+            </span>
+          </dd>
+        </div>
+      )}
+      {last && lastScore !== null && (
+        <div className="mastery-stat" data-testid="mastery-last-round">
+          <dt className="label-caps">Round {last.number}</dt>
+          <dd>
+            <span className="mastery-stat-value">{formatPercent(lastScore)}</span>{' '}
+            <span className={last.passed ? 'chip chip-mastered' : 'chip chip-attention'}>
+              {last.passed ? 'Passed' : 'Not passed'}
+            </span>
+          </dd>
+        </div>
+      )}
+      <div className="mastery-stat">
+        <dt className="label-caps">Mastery Threshold</dt>
+        <dd className="mastery-stat-value">{state.masteryThreshold}%</dd>
+      </div>
+    </dl>
   )
 }
 
@@ -371,7 +456,12 @@ function RemediationStep({
           Remediation Lesson to read. Retry the round with fresh questions.
         </p>
         <footer className="mastery-footer">
-          <button type="button" data-testid="mastery-start-round" onClick={onStartRound}>
+          <button
+            type="button"
+            className="btn-primary"
+            data-testid="mastery-start-round"
+            onClick={onStartRound}
+          >
             Retry: start round {state.roundNumber}
           </button>
         </footer>
@@ -381,7 +471,7 @@ function RemediationStep({
 
   return (
     <div className="mastery-scroll" data-testid="mastery-remediation">
-      <p>
+      <p className="mastery-intro">
         {anotherAngle ? 'Another angle: ' : ''}Round {last?.number} scored{' '}
         {formatPercent(last?.scorePercent ?? 0)}, below the Mastery Threshold (
         {state.masteryThreshold}%). One short Remediation Lesson per missed notion, then a new round
@@ -397,8 +487,9 @@ function RemediationStep({
             data-ready={String(t.ready)}
             onClick={() => setIndex(i)}
           >
-            {t.ready ? '✓ ' : ''}
-            {t.notion.title} ({formatPercent(t.scorePercent)})
+            {t.ready && <span title="Remediation Lesson ready">✓</span>}
+            <span>{t.notion.title}</span>
+            <span className="label-mono muted">{formatPercent(t.scorePercent)}</span>
           </button>
         ))}
       </nav>
@@ -414,9 +505,10 @@ function RemediationStep({
           <button type="button" data-testid="remediation-next" onClick={() => setIndex(index + 1)}>
             Next notion
           </button>
-        )}{' '}
+        )}
         <button
           type="button"
+          className="btn-primary"
           data-testid="mastery-start-round"
           disabled={!allReady}
           onClick={onStartRound}

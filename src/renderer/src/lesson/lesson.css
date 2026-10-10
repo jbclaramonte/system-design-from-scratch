@@ -1,3 +1,8 @@
+/* Lesson, Remediation Lesson and topic list: prose typography, streaming status, source chips.
+   Tokens only (docs/Design System.md). The topic screen itself is mastery/mastery.css. */
+
+/* Screen frame (also used by the topic screen opened from the Learning Path). */
+
 .lesson-view {
   display: flex;
   flex-direction: column;
@@ -7,30 +12,62 @@
 
 .lesson-nav {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 1rem;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
 }
 
 .lesson-nav h1 {
-  font-size: 1.25rem;
+  margin: 0;
+  font-size: var(--type-headline-lg-size);
+  line-height: var(--type-headline-lg-line);
 }
 
+/* Back button: compact, with a decorative arrow. */
+.lesson-nav > button {
+  padding: var(--space-xs) var(--space-md) var(--space-xs) var(--space-sm);
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-sm-size);
+  line-height: var(--type-body-sm-line);
+}
+
+.lesson-nav > button::before {
+  content: '\2190' / '';
+}
+
+/* The next step unlocked by a mastered topic (Learning Path screen). */
+.lesson-nav .path-unlocked {
+  margin: 0 0 0 auto;
+}
+
+/* Topic lists of the developer screens: one card per topic. */
+
 .lesson-topic-list {
-  list-style: none;
+  display: grid;
+  gap: var(--space-sm);
+  max-width: 40rem;
+  margin: 0;
   padding: 0;
   overflow-y: auto;
+  list-style: none;
 }
 
 .lesson-topic-list button {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--space-md);
   width: 100%;
-  max-width: 40rem;
-  margin-bottom: 0.25rem;
-  padding: 0.5rem 0.75rem;
+  padding: var(--space-sm) var(--space-md);
+  border-color: var(--color-border-card);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-base);
   text-align: left;
-  cursor: pointer;
+}
+
+.lesson-topic-list button:hover {
+  border-color: var(--color-border-active);
+  background: var(--color-surface-elevated);
 }
 
 .lesson-topic-title {
@@ -39,8 +76,12 @@
 
 .lesson-topic-meta {
   color: var(--color-text-secondary);
-  font-size: 0.85em;
+  font-family: var(--font-mono);
+  font-size: var(--type-label-mono-size);
+  letter-spacing: var(--type-label-mono-tracking);
 }
+
+/* Lesson screen: a header with badges and notion buttons, then a scrolling reading column. */
 
 .lesson-screen {
   display: flex;
@@ -49,57 +90,93 @@
   min-height: 0;
 }
 
-.lesson-header h2 {
-  margin: 0.25rem 0;
+/* Badges and notion buttons share a row; the title, status and error take a full row. */
+.lesson-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm) var(--space-lg);
+  margin-bottom: var(--space-sm);
+}
+
+.lesson-header > h2,
+.lesson-header > .lesson-status,
+.lesson-header > [role='alert'] {
+  flex-basis: 100%;
+  margin: 0;
 }
 
 .lesson-badges,
 .lesson-notions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.4rem;
-  margin: 0.4rem 0;
+  align-items: center;
+  gap: var(--space-sm);
+  margin: 0;
 }
 
+/* Badge of the other lesson views (Protocol Step Lesson, exercise): the neutral chip look. */
 .lesson-badge {
-  padding: 0.1rem 0.5rem;
-  border: 1px solid var(--color-progress-border);
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.5rem;
+  border: 1px solid var(--color-border-control);
   border-radius: var(--radius-sm);
-  background: var(--color-progress-fill);
-  color: var(--color-progress-text);
-  font-size: 0.8em;
-}
-
-.lesson-badge-grounded {
-  border-color: var(--color-mastered-border);
-  background: var(--color-mastered-fill);
-  color: var(--color-mastered-text);
-}
-
-.lesson-badge-ungrounded {
-  border-color: var(--color-attention-border);
-  background: var(--color-attention-fill);
-  color: var(--color-attention-text);
+  background: var(--color-hover);
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--type-label-caps-size);
+  font-weight: var(--type-label-caps-weight);
+  line-height: var(--type-label-caps-line);
+  letter-spacing: var(--type-label-caps-tracking);
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .lesson-notions button {
-  font-size: 0.85em;
-  cursor: pointer;
+  padding: var(--space-xs) var(--space-sm);
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-sm-size);
+  line-height: var(--type-body-sm-line);
 }
 
+.lesson-notions button:hover {
+  color: var(--color-text-primary);
+}
+
+/* Streaming indicator: a quiet strip with a spinner, the step in progress and Cancel. */
+
 .lesson-status {
-  color: var(--color-text-secondary);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+  margin: 0 0 var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--color-progress-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-progress-fill);
+  color: var(--color-text-primary);
+  font-size: var(--type-body-md-size);
+  line-height: var(--type-body-md-line);
+}
+
+.lesson-status button {
+  margin-left: auto;
+  padding: var(--space-xs) var(--space-sm);
+  font-size: var(--type-body-sm-size);
+  line-height: var(--type-body-sm-line);
 }
 
 .lesson-spinner {
   display: inline-block;
-  width: 0.8em;
-  height: 0.8em;
-  border: 2px solid var(--color-text-secondary);
-  border-top-color: transparent;
-  border-radius: 50%;
+  flex: none;
+  width: 0.875rem;
+  height: 0.875rem;
+  border: 2px solid var(--color-progress-border);
+  border-top-color: var(--color-progress-text);
+  border-radius: var(--radius-pill);
   animation: lesson-spin 0.8s linear infinite;
-  vertical-align: middle;
 }
 
 @keyframes lesson-spin {
@@ -108,75 +185,171 @@
   }
 }
 
-.lesson-error,
-.lesson-notice {
-  margin: 0.5rem 0;
-  padding: 0.75rem;
-  border: 1px solid var(--color-error-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-error-fill);
-  color: var(--color-error-text);
+@media (prefers-reduced-motion: reduce) {
+  .lesson-spinner {
+    animation-duration: 3s;
+  }
 }
 
-.lesson-notice {
-  border-color: var(--color-border-hairline);
-  background: var(--color-surface-elevated);
-  color: var(--color-text-secondary);
-}
-
-.lesson-error .settings-error-action {
-  display: block;
-  margin: 0.4rem 0;
-}
-
-.lesson-error p {
-  margin: 0.4rem 0;
-  white-space: pre-wrap;
-}
+/* Reading column. */
 
 .lesson-scroll {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding-bottom: 2rem;
+  padding-bottom: var(--space-xl);
 }
+
+/* Prose: body-lg (16px / 26px), a clear heading hierarchy, generous rhythm. */
 
 .lesson-body {
-  max-width: 46rem;
+  max-width: 50rem;
+  color: var(--color-text-primary);
   font-size: var(--type-body-lg-size);
-  line-height: 1.625;
+  line-height: var(--type-body-lg-line);
   letter-spacing: var(--type-body-lg-tracking);
+  overflow-wrap: anywhere;
 }
 
-.lesson-table {
-  overflow-x: auto;
+.lesson-body > :first-child {
+  margin-top: 0;
 }
 
-.lesson-table table {
-  border-collapse: collapse;
+.lesson-body p {
+  margin: 0 0 var(--space-md);
 }
 
-.lesson-table th,
-.lesson-table td {
-  padding: 0.3rem 0.6rem;
-  border: 1px solid var(--color-border-control);
+.lesson-body h1,
+.lesson-body h2,
+.lesson-body h3,
+.lesson-body h4,
+.lesson-body h5,
+.lesson-body h6 {
+  scroll-margin-top: var(--space-md);
 }
+
+.lesson-body h1 {
+  margin: var(--space-xl) 0 var(--space-md);
+  font-size: var(--type-headline-lg-size);
+  line-height: var(--type-headline-lg-line);
+}
+
+.lesson-body h2 {
+  margin: var(--space-xl) 0 var(--space-md);
+  padding-top: var(--space-lg);
+  border-top: 1px solid var(--color-border-hairline);
+  font-size: var(--type-headline-md-size);
+  line-height: var(--type-headline-md-line);
+}
+
+.lesson-body h3 {
+  margin: var(--space-lg) 0 var(--space-sm);
+  font-size: var(--type-headline-sm-size);
+  line-height: var(--type-headline-sm-line);
+}
+
+.lesson-body h4,
+.lesson-body h5,
+.lesson-body h6 {
+  margin: var(--space-lg) 0 var(--space-xs);
+  color: var(--color-text-secondary);
+}
+
+/* The first heading of the text opens it: no rule above it. */
+.lesson-body > h1:first-child,
+.lesson-body > h2:first-child,
+.lesson-body > .lesson-notion-anchor:first-child + h2 {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.lesson-body ul,
+.lesson-body ol {
+  margin: 0 0 var(--space-md);
+  padding-left: var(--space-lg);
+}
+
+.lesson-body li {
+  margin: var(--space-xs) 0;
+  padding-left: var(--space-xs);
+}
+
+.lesson-body li::marker {
+  color: var(--color-text-muted);
+}
+
+.lesson-body li > p {
+  margin-bottom: var(--space-sm);
+}
+
+.lesson-body li > ul,
+.lesson-body li > ol {
+  margin: var(--space-xs) 0;
+}
+
+.lesson-body blockquote {
+  margin: var(--space-lg) 0;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--color-border-card);
+  border-left: 2px solid var(--color-border-active);
+  border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+  background: var(--color-surface-base);
+  color: var(--color-text-secondary);
+}
+
+.lesson-body blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+.lesson-body strong {
+  font-weight: 600;
+}
+
+.lesson-body em {
+  color: var(--color-text-primary);
+}
+
+.lesson-body pre {
+  margin: var(--space-lg) 0;
+}
+
+.lesson-body hr {
+  margin: var(--space-xl) 0;
+}
+
+/* Notion anchors are empty spans used as scroll targets. */
+.lesson-notion-anchor {
+  display: block;
+  height: 0;
+}
+
+/* Citations: a small mono chip that opens the primer section; an unknown id is dashed. */
 
 .source-chip {
+  margin: 0 var(--space-2xs);
   font-style: normal;
-  font-size: 0.7em;
-  vertical-align: 0.15em;
-  margin: 0 0.1em;
+  vertical-align: 0.1em;
 }
 
 .source-chip button {
+  display: inline;
   padding: 0 0.4em;
   border: 1px solid var(--color-progress-border);
   border-radius: var(--radius-sm);
   background: var(--color-progress-fill);
   color: var(--color-progress-text);
-  font: inherit;
-  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: var(--type-label-mono-size);
+  font-weight: var(--type-label-mono-weight);
+  line-height: var(--type-label-mono-line);
+  letter-spacing: var(--type-label-mono-tracking);
+}
+
+.source-chip button:hover {
+  border-color: var(--color-progress);
+  background: var(--color-progress-fill);
+  color: var(--color-link-hover);
 }
 
 .source-chip-unknown {
@@ -184,11 +357,47 @@
   border: 1px dashed var(--color-error-border);
   border-radius: var(--radius-sm);
   color: var(--color-error-text);
+  font-family: var(--font-mono);
+  font-size: var(--type-label-mono-size);
+  line-height: var(--type-label-mono-line);
 }
 
+/* Sources footer of a finished lesson. */
+
 .lesson-sources {
-  max-width: 46rem;
-  margin-top: 2rem;
-  font-size: 0.85em;
+  max-width: 50rem;
+  margin-top: var(--space-xl);
+  padding: var(--space-md);
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-base);
   color: var(--color-text-secondary);
+  font-size: var(--type-body-md-size);
+  line-height: var(--type-body-md-line);
+}
+
+.lesson-sources h3 {
+  margin: 0 0 var(--space-sm);
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--type-label-caps-size);
+  font-weight: var(--type-label-caps-weight);
+  line-height: var(--type-label-caps-line);
+  letter-spacing: var(--type-label-caps-tracking);
+  text-transform: uppercase;
+}
+
+.lesson-sources p {
+  margin: 0 0 var(--space-sm);
+}
+
+.lesson-sources ul {
+  display: grid;
+  gap: var(--space-xs);
+  margin: 0;
+  padding-left: var(--space-lg);
+}
+
+.lesson-sources li::marker {
+  color: var(--color-text-muted);
 }

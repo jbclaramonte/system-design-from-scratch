@@ -42,7 +42,7 @@ Names below drop the `--` prefix families: `--color-*`, `--radius-*`, `--space-*
 | Attention (amber) | `color-attention` #f59e0b, `-text` #fbbf24, `-fill` .12, `-border` .28 |
 | Locked (slate) | `color-locked` #64748b, `-fill` .03, `-border` .05 |
 | Error, Round Limit reached (red) | `color-error` #f87171, `-text`, `-fill`, `-border`. Not in the Colors section of `DESIGN.md`; derived from the same alpha pattern. |
-| Other colors | `color-link`, `color-hover`, `color-pressed`, `color-selection`, `color-code-inline`, `color-heat-*` (Notion Map, Okabe-Ito), `color-paper` (see below) |
+| Other colors | `color-link`, `color-hover`, `color-pressed`, `color-selection`, `color-code-inline`, `color-heat-*` (Notion Map, Okabe-Ito), `color-paper` (light surfaces, e.g. exports) |
 | Radii | `radius-sm` 4px (tags, badges, inline code, checkboxes), `-md` 6px (buttons, inputs, list rows), `-lg` 8px (cards, sections), `-xl` 12px (modals), `-pill` (progress tracks only) |
 | Spacing | `space-2xs` .125rem, `-xs` .25, `-sm` .5, `-md` 1, `-lg` 1.5, `-xl` 2.5rem; `gutter`, `gutter-sm`, `margin` |
 | Type | `font-sans`, `font-mono`, and `type-<style>-{size,line,tracking,weight}` for headline-xl/lg/md/sm, body-lg/md/sm, code-inline, code-block, label-mono, label-caps |
@@ -78,7 +78,7 @@ Existing screen classes (`.path-badge`, `.mastery-badge`, `.lesson-badge`, `.das
 
 Issue #29. `AppShell` (`src/renderer/src/shell/AppShell.tsx`, `shell.css`) wraps every screen from `App`. It fills the window (`height: 100vh`, flex column): header, content area, footer. Only the content area scrolls, so the header is always in view.
 
-- **Header**: `layout-header-height` high, `surface-base` with a hairline bottom border. Brand mark (inline SVG, decorative) and "System Design" with a muted "from Scratch"; navigation on the right. The brand is not a heading: each screen owns its `h1` (the Learning Path has a visually hidden "Learning Path" `h1`).
+- **Header**: `layout-header-height` high, `surface-base` with a hairline bottom border. Brand mark (inline SVG, decorative) and "System Design" with a muted "from Scratch"; navigation on the right. The brand is not a heading: each screen owns its `h1` (the Learning Path renders its own visible "Learning Path" `h1`).
 - **Navigation** (`NAV_ITEMS` in `shell/navigation.ts`): Learning Path, Dashboard, Settings, About, with `data-testid` `open-learning-path`, `open-dashboard`, `open-settings`, `open-about`. The first item is the Learning Path home screen (the mock-up says "Curriculum", which the glossary forbids). The active item has `aria-current="page"` and a raised style (hover fill, control border, primary text); others are secondary text with a transparent border. Focus uses the global focus ring.
 - **Active item**: `activeNavItem(screen)` (pure, tested). Topic screens and exercises keep Learning Path; a topic opened from the Dashboard keeps Dashboard; Settings opened from an error highlights Settings (its back button still returns to the screen it came from); dev screens keep Learning Path.
 - **Content container**: `layout-max-width` (1100px) centered, `gutter` side padding. Screens render their own `<main>` and must not add page-level padding, a page-level max width or `height: 100vh`.
@@ -108,6 +108,6 @@ To add a screen: add it to the `Screen` union, give it a nav item and a layout i
 
 ## Third-party content on a dark app
 
-- Mermaid ([[Mermaid Diagrams]]): the Mermaid theme is configured for a light background (`mermaidRenderer.ts`). Diagrams therefore sit on a light `color-paper` card (`.diagram-scroll`) and stay readable. A dark Mermaid theme is a separate task.
-- tldraw ([[Design Canvas Integration]]): the editor keeps its own light theme (`tldraw/tldraw.css`) inside the canvas; the component shapes use light fills with dark text. The palette column and surrounding screen use tokens. Dark canvas theming is a separate task.
+- Mermaid ([[Mermaid Diagrams]]): themed for dark (`markdown/mermaidTheme.ts`, mermaid `base` theme with variables from the token values, checked against `design-tokens.css` by a unit test). Diagrams sit on a layer 1 card with the dotted grid.
+- tldraw ([[Design Canvas Integration]]): dark (`colorScheme="dark"`), typed shapes recolored through `componentColors(type, mode)`. The export (PNG and SVG) stays light and opaque on purpose so the LLM reads it reliably.
 - Design Export PNG stays light on white by design (`exportDesignPng.ts`), independent of the app theme.

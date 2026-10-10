@@ -88,6 +88,15 @@ Then mermaid itself: `parse_error` (`mermaid.parse`), `render_error` (`mermaid.r
 - Width: mermaid draws at most at its natural width and shrinks to the container down to 70 % of that width (`svgMinWidth`, CSS variable `--diagram-min-width`); wider diagrams scroll horizontally inside their frame instead of overflowing the lesson.
 - Contrast: dark text (`#1a1a1a`) on `#f0f4fc` nodes and `#fff4e5` notes.
 
+## Visual design
+
+Issue #32. The diagrams are drawn for the dark surface of [[Design System]]: no light card any more.
+
+- **Theme**: mermaid theme `base` with `themeVariables` built by `mermaidThemeVariables()` (`src/renderer/src/markdown/mermaidTheme.ts`) from the design tokens, read from the CSS custom properties when mermaid loads (`getComputedStyle`), with constants as fallbacks (`TOKEN_FALLBACKS`, checked against `design-tokens.css` by `mermaidTheme.test.ts`). Mermaid derives its shades from the colors, so only solid hex tokens are used. Nodes are `surface-elevated` with a `text-muted` border and `text-primary` labels, lines and arrows `text-secondary`, clusters and edge labels `surface-base`, sequence notes and activations use the indigo accent, ER rows alternate `surface-elevated` and `surface-base`, no drop shadow. The font is the UI font (Geist); the renderer waits for it (`document.fonts.load`) before the first render so labels are measured with the final glyphs.
+- **Frame**: `.diagram-scroll` is a layer 1 card (`surface-base`, hairline border, 8px radius) with the dotted matrix grid of `DESIGN.md` as background. `securityLevel: 'strict'`, labels as SVG text and the `secure` list are unchanged, and so is the `MermaidDiagram` API (the quiz scenario diagram uses it as is).
+- **Fallback**: the failure note is an amber attention note, the source a shared `pre`; "Diagram source" is a mono summary.
+- **Checked** (built app, scratch profile, a generated-style lesson with the five dev fixtures): flowchart, sequenceDiagram, classDiagram, stateDiagram-v2 and erDiagram are legible on dark (labels, edge labels, arrow heads, cylinder and note shapes, ER attribute rows).
+
 ## Generation side (#23)
 
 Lessons, [[Remediation Lesson|Remediation Lessons]] and [[Protocol Step Lesson|Protocol Step Lessons]] ask the model for diagrams (`DIAGRAM_RULES` and `diagramPlacementRules` in `src/main/generation/prompts/common.ts`, see [[Prompts#Diagrams]]). Two lines of defence:

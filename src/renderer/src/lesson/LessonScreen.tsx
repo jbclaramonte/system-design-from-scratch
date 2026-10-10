@@ -116,23 +116,23 @@ export function LessonScreen({
         {!embedded && <h2>{topic.title}</h2>}
         <div className="lesson-badges">
           {grounded ? (
-            <span
-              className="lesson-badge lesson-badge-grounded"
-              title="Grounded on the System Design Primer"
-            >
+            <span className="chip" title="Grounded on the System Design Primer">
               System Design Primer
             </span>
           ) : (
             !embedded && <OutsidePrimerBadge testId="lesson-ungrounded" />
           )}
           {state.status === 'done' && (
-            <span className="lesson-badge" data-testid="lesson-origin">
+            <span className="chip" data-testid="lesson-origin">
               {state.fromCache ? 'From cache' : 'Generated'}
             </span>
           )}
         </div>
         {state.notions.length > 0 && (
           <nav className="lesson-notions" aria-label="Notions">
+            <span className="label-caps" aria-hidden>
+              Notions
+            </span>
             {state.notions.map((notion) => (
               <button
                 key={notion.id}

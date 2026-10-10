@@ -7,17 +7,55 @@ import { QuestionDiagram } from './QuestionDiagram'
 import { QuestionFeedbackView } from './QuestionFeedbackView'
 import {
   allGradableAnswered,
+  answeredPercent,
   nextQuestionIndex,
   postponedQuestions,
   toggleChoice
 } from './progress'
+import './quiz.css'
 
 const typeLabels = {
   single_choice: 'Single choice',
-  multiple_choice: 'Multiple choice: select every correct answer',
+  multiple_choice: 'Multiple choice',
   scenario: 'Scenario',
   free_answer: 'Free answer'
 } as const
+
+/** The Round progress: where the learner is, and how much of the quiz is answered. */
+function RoundProgress({
+  label,
+  position,
+  answered,
+  total
+}: {
+  label: string
+  /** "Question 3 of 4", or null on the end screen. */
+  position: string | null
+  answered: number
+  total: number
+}) {
+  const percent = answeredPercent(answered, total)
+  return (
+    <header className="quiz-progress">
+      <div className="quiz-progress-head">
+        <p className="label-caps">{label}</p>
+        <p className="label-mono quiz-progress-count" data-testid="quiz-position">
+          {position ?? `${answered} of ${total} answered`}
+        </p>
+      </div>
+      <div
+        className={`progress${percent === 100 ? ' progress-complete' : ''}`}
+        role="progressbar"
+        aria-label="Questions answered"
+        aria-valuemin={0}
+        aria-valuemax={total}
+        aria-valuenow={answered}
+      >
+        <div className="progress-fill" style={{ width: `${percent}%` }} />
+      </div>
+    </header>
+  )
+}
 
 /**
  * Plays a Round one question at a time: answer, see the feedback right away, move on. Grading
@@ -95,42 +133,52 @@ export function QuizPlayer({
       })
   }
 
-  const progress = `Round ${round.number} · ${quiz.topicTitle}`
+  const progressLabel = `Round ${round.number} · ${quiz.topicTitle}`
+
+  const total = quiz.questions.length
 
   if (done) {
     const postponed = postponedQuestions(quiz.questions, answered, skipped)
     return (
-      <section data-testid="quiz-player">
-        <p>{progress}</p>
-        <h2 ref={headingRef} tabIndex={-1}>
-          {postponed.length === 0
-            ? 'All questions answered'
-            : `${postponed.length} question(s) left to answer`}
-        </h2>
-        {postponed.length > 0 && (
-          <p>
-            Every question counts in the score.{' '}
-            <button
-              data-testid="answer-postponed"
-              onClick={() =>
-                setSkipped(
-                  (previous) =>
-                    new Set([...previous].filter((id) => !postponed.some((q) => q.id === id)))
-                )
-              }
-            >
-              Answer them now
-            </button>
-          </p>
-        )}
-        {error && <p role="alert">{error}</p>}
-        <button
-          data-testid="complete-round"
-          onClick={complete}
-          disabled={busy || !allGradableAnswered(quiz.questions, answered)}
-        >
-          See results
-        </button>
+      <section className="quiz-player" data-testid="quiz-player">
+        <RoundProgress
+          label={progressLabel}
+          position={null}
+          answered={answered.size}
+          total={total}
+        />
+        <div className="card quiz-end">
+          <h2 ref={headingRef} tabIndex={-1}>
+            {postponed.length === 0
+              ? 'All questions answered'
+              : `${postponed.length} question(s) left to answer`}
+          </h2>
+          {postponed.length > 0 && (
+            <>
+              <p className="muted">Every question counts in the score.</p>
+              <button
+                data-testid="answer-postponed"
+                onClick={() =>
+                  setSkipped(
+                    (previous) =>
+                      new Set([...previous].filter((id) => !postponed.some((q) => q.id === id)))
+                  )
+                }
+              >
+                Answer them now
+              </button>
+            </>
+          )}
+          {error && <p role="alert">{error}</p>}
+          <button
+            className="btn-primary"
+            data-testid="complete-round"
+            onClick={complete}
+            disabled={busy || !allGradableAnswered(quiz.questions, answered)}
+          >
+            See results
+          </button>
+        </div>
       </section>
     )
   }
@@ -138,23 +186,19 @@ export function QuizPlayer({
   const multiple = question.type === 'multiple_choice'
 
   return (
-    <section data-testid="quiz-player">
-      <p>
-        {progress} · Question {index + 1} of {quiz.questions.length}
-      </p>
-      <h2
-        ref={headingRef}
-        tabIndex={-1}
-        style={{ fontSize: '1.1em', color: 'var(--color-text-secondary)' }}
-      >
-        {typeLabels[question.type]}
+    <section className="quiz-player" data-testid="quiz-player">
+      <RoundProgress
+        label={progressLabel}
+        position={`Question ${index + 1} of ${total}`}
+        answered={answered.size}
+        total={total}
+      />
+      <h2 className="label-caps quiz-kind" ref={headingRef} tabIndex={-1}>
+        <span className="chip">{typeLabels[question.type]}</span>
+        {multiple && <span className="quiz-kind-hint">Select every correct answer.</span>}
       </h2>
       {question.scenario && (
-        <p
-          lang="fr"
-          data-testid="question-scenario"
-          style={{ background: 'var(--color-surface-elevated)', padding: '8px 12px' }}
-        >
+        <p lang="fr" className="card quiz-scenario" data-testid="question-scenario">
           {question.scenario}
         </p>
       )}
@@ -167,23 +211,25 @@ export function QuizPlayer({
         />
       )}
       {!question.gradable ? (
-        <>
-          <p lang="fr" style={{ fontSize: '1.15em' }}>
+        <div className="quiz-stack">
+          <p lang="fr" className="quiz-prompt">
             {question.prompt}
           </p>
-          <p data-testid="question-not-gradable">
+          <p className="quiz-notice" data-testid="question-not-gradable">
             No grader is available for this question. It is not counted in this round.
           </p>
-          <button
-            data-testid="skip-question"
-            onClick={() => setSkipped((previous) => new Set(previous).add(question.id))}
-          >
-            Skip
-          </button>
-        </>
+          <div className="quiz-actions">
+            <button
+              data-testid="skip-question"
+              onClick={() => setSkipped((previous) => new Set(previous).add(question.id))}
+            >
+              Skip
+            </button>
+          </div>
+        </div>
       ) : reviewing ? (
-        <>
-          <p lang="fr" style={{ fontSize: '1.15em' }}>
+        <div className="quiz-stack">
+          <p lang="fr" className="quiz-prompt">
             {question.prompt}
           </p>
           <div role="status">
@@ -197,12 +243,17 @@ export function QuizPlayer({
               onContested={showGraded}
             />
           )}
-          <p>
-            <button data-testid="next-question" onClick={() => setReviewing(null)} autoFocus>
+          <div className="quiz-actions">
+            <button
+              className="btn-primary"
+              data-testid="next-question"
+              onClick={() => setReviewing(null)}
+              autoFocus
+            >
               Next
             </button>
-          </p>
-        </>
+          </div>
+        </div>
       ) : question.type === 'free_answer' ? (
         <FreeAnswerForm
           key={question.id}
@@ -218,30 +269,18 @@ export function QuizPlayer({
         />
       ) : (
         <form
+          className="quiz-stack"
           onSubmit={(event) => {
             event.preventDefault()
             submit()
           }}
         >
-          <fieldset style={{ border: 'none', padding: 0, margin: 0 }} disabled={busy}>
-            <legend lang="fr" style={{ fontSize: '1.15em', marginBottom: 8 }}>
+          <fieldset className="quiz-choices" disabled={busy}>
+            <legend lang="fr" className="quiz-prompt">
               {question.prompt}
             </legend>
             {question.choices.map((choice, choiceIndex) => (
-              <label
-                key={choiceIndex}
-                lang="fr"
-                style={{
-                  display: 'flex',
-                  gap: 8,
-                  alignItems: 'baseline',
-                  padding: '6px 8px',
-                  marginBottom: 4,
-                  border: '1px solid var(--color-border-control)',
-                  borderRadius: 'var(--radius-md)',
-                  cursor: 'pointer'
-                }}
-              >
+              <label key={choiceIndex} lang="fr" className="quiz-choice">
                 <input
                   type={multiple ? 'checkbox' : 'radio'}
                   name={`question-${question.id}`}
@@ -256,15 +295,16 @@ export function QuizPlayer({
             ))}
           </fieldset>
           {error && <p role="alert">{error}</p>}
-          <p>
+          <div className="quiz-actions">
             <button
               type="submit"
+              className="btn-primary"
               data-testid="submit-answer"
               disabled={busy || selected.length === 0}
             >
               Check answer
             </button>
-          </p>
+          </div>
         </form>
       )}
     </section>

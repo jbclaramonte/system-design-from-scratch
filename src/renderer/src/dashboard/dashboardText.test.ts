@@ -9,8 +9,13 @@ import {
   notionProgress,
   percentOrDash,
   practiceState,
+  resultChip,
+  roundLimitReached,
   roundLimitText,
-  timeSince
+  roundStatusChip,
+  stepStatusChip,
+  timeSince,
+  weakScoreChip
 } from './dashboardText'
 
 const cell = (overrides: Partial<NotionMapCell> = {}): NotionMapCell => ({
@@ -138,6 +143,9 @@ describe('topic helpers', () => {
     const mastered = step()
     mastered.topic = { ...mastered.topic, mastery: 'mastered' }
     expect(roundLimitText(topic({ step: mastered }))).toBe('Mastered')
+    expect(roundLimitReached(topic({ failedRounds: 3 }))).toBe(true)
+    expect(roundLimitReached(topic({ failedRounds: 2 }))).toBe(false)
+    expect(roundLimitReached(topic({ failedRounds: 3, step: mastered }))).toBe(false)
   })
 })
 
@@ -163,5 +171,33 @@ describe('isEmptyDashboard', () => {
     const overview = { roundsCompleted: 0, roundsInProgress: 0, attemptCount: 0 }
     expect(isEmptyDashboard({ overview })).toBe(true)
     expect(isEmptyDashboard({ overview: { ...overview, roundsInProgress: 1 } })).toBe(false)
+  })
+})
+
+describe('status chips', () => {
+  it('maps every step status to a Design System chip', () => {
+    expect(stepStatusChip('mastered')).toContain('chip-mastered')
+    expect(stepStatusChip('completed')).toContain('chip-mastered')
+    expect(stepStatusChip('in_progress')).toContain('chip-progress')
+    expect(stepStatusChip('skipped')).toContain('chip-attention')
+    expect(stepStatusChip('limit_reached')).toContain('chip-error')
+    expect(stepStatusChip('locked')).toContain('chip-locked')
+    expect(stepStatusChip('coming_soon')).toContain('chip-locked')
+    expect(stepStatusChip('available')).toBe('chip')
+  })
+
+  it('maps round statuses and attempt results', () => {
+    expect(roundStatusChip('passed')).toContain('chip-mastered')
+    expect(roundStatusChip('failed')).toContain('chip-attention')
+    expect(roundStatusChip('in_progress')).toContain('chip-progress')
+    expect(resultChip('correct')).toContain('chip-mastered')
+    expect(resultChip('partially_correct')).toContain('chip-attention')
+    expect(resultChip('incorrect')).toContain('chip-error')
+  })
+
+  it('colours a weak point score by heat band', () => {
+    expect(weakScoreChip(20)).toContain('chip-error')
+    expect(weakScoreChip(50)).toContain('chip-attention')
+    expect(weakScoreChip(null)).toContain('chip-error')
   })
 })

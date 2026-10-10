@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Editor } from 'tldraw'
 import {
   PROTOCOL_STEP_DEFINITIONS,
+  protocolSteps,
   type ProtocolExerciseView,
   type ProtocolStep,
   type ProtocolStepView,
@@ -13,10 +14,14 @@ import { exportDesign } from '../export'
 import { CallStatus, FinalReviewPanel, SubmissionHistory } from './FeedbackViews'
 import { StepLesson } from './StepLesson'
 import {
+  chipClass,
   defaultStep,
+  finalReviewState,
   hintButtonLabel,
   hintLevelLabels,
-  stepStatus,
+  progressLabel,
+  reviewProgress,
+  stepState,
   stepTitle
 } from './protocolText'
 import { useProtocolCall } from './useProtocolCall'
@@ -70,6 +75,7 @@ function StepPanel({
   onExercise: (view: ProtocolExerciseView) => void
 }) {
   const definition = PROTOCOL_STEP_DEFINITIONS[step.step]
+  const state = stepState(step)
   const draft = useDraft(view.id, step)
   const submit = useProtocolCall(onExercise)
   const hint = useProtocolCall(onExercise)
@@ -135,11 +141,16 @@ function StepPanel({
 
   return (
     <section className="protocol-step" data-testid="step-panel" data-step={step.step}>
-      <header>
-        <h3>
-          {definition.title}{' '}
-          {step.isNew && <span className="lesson-badge protocol-new">New in this exercise</span>}
-        </h3>
+      <header className="protocol-step-header">
+        <p className="protocol-step-chips">
+          <span className="label-mono faint">
+            Step {protocolSteps.indexOf(step.step) + 1} of {protocolSteps.length}
+          </span>
+          <span className={chipClass(state.chip)}>{state.label}</span>
+          {step.isNew && <span className="chip chip-progress">New in this exercise</span>}
+          <span className="chip">{definition.input === 'canvas' ? 'Design Canvas' : 'Text'}</span>
+        </p>
+        <h2>{definition.title}</h2>
         <p className="protocol-goal">{definition.goal}</p>
       </header>
       {lessonOpen ? (
@@ -149,14 +160,23 @@ function StepPanel({
           onClose={closeLesson}
         />
       ) : (
-        <button type="button" data-testid="open-step-lesson" onClick={() => setLessonOpen(true)}>
-          Why it matters
-        </button>
+        <p>
+          <button
+            type="button"
+            className="btn-sm"
+            data-testid="open-step-lesson"
+            onClick={() => setLessonOpen(true)}
+          >
+            Why it matters
+          </button>
+        </p>
       )}
       {(step.lessonSeen || !lessonOpen) && (
         <>
           <label className="protocol-editor">
-            <span>{definition.input === 'text' ? 'Your answer' : 'Notes (optional)'}</span>
+            <span className="label-caps">
+              {definition.input === 'text' ? 'Your answer' : 'Notes (optional)'}
+            </span>
             <textarea
               data-testid="step-editor"
               value={draft.text}
@@ -172,12 +192,26 @@ function StepPanel({
               PNG).
             </p>
           )}
-          {draft.saveError && <p role="alert">Draft not saved: {draft.saveError}</p>}
-          {exportError && <p role="alert">{exportError}</p>}
+          {draft.saveError && (
+            <p role="alert" className="protocol-notice protocol-notice-error">
+              Draft not saved: {draft.saveError}
+            </p>
+          )}
+          {exportError && (
+            <p role="alert" className="protocol-notice protocol-notice-error">
+              {exportError}
+            </p>
+          )}
           <p className="protocol-actions">
-            <button type="button" data-testid="step-submit" disabled={busy} onClick={onSubmit}>
+            <button
+              type="button"
+              className="btn-primary"
+              data-testid="step-submit"
+              disabled={busy}
+              onClick={onSubmit}
+            >
               Submit for feedback
-            </button>{' '}
+            </button>
             <button
               type="button"
               data-testid="step-hint"
@@ -200,12 +234,20 @@ function StepPanel({
             onCancel={hint.cancel}
           />
           {step.hints.length > 0 && (
-            <section data-testid="hints">
-              <h4>Hints</h4>
-              <ol>
+            <section className="protocol-section" data-testid="hints">
+              <h3 className="label-caps">Hints</h3>
+              <ol className="protocol-hints">
                 {step.hints.map((given) => (
-                  <li key={given.id} data-testid="hint" data-level={given.level}>
-                    <strong>{hintLevelLabels[given.level]}:</strong> {given.hint}
+                  <li
+                    key={given.id}
+                    className="protocol-hint card"
+                    data-testid="hint"
+                    data-level={given.level}
+                  >
+                    <span className="chip chip-progress chip-dot">
+                      Hint {given.level} <span aria-hidden>·</span> {hintLevelLabels[given.level]}
+                    </span>
+                    <p>{given.hint}</p>
                   </li>
                 ))}
               </ol>
@@ -256,56 +298,91 @@ export function ProtocolExerciseScreen({
 
   const step = selected === 'final_review' ? null : view.steps.find((s) => s.step === selected)!
   const canvas = step !== null && PROTOCOL_STEP_DEFINITIONS[step.step].input === 'canvas'
+  const progress = reviewProgress(view)
+  const finalState = finalReviewState(view)
+  const finalAvailable = view.canRequestFinalReview || view.finalReview !== null
 
   return (
     <section className="protocol-screen" data-testid="protocol-exercise">
       <header className="protocol-header">
-        <button type="button" onClick={onClose}>
-          Back
+        <button type="button" className="btn-ghost btn-sm" onClick={onClose}>
+          <span aria-hidden>←</span> Back
         </button>
-        <strong>{view.title}</strong>
-        <span className="lesson-badge" data-testid="exercise-index">
+        <div className="protocol-title">
+          <h1>{view.title}</h1>
+        </div>
+        <span className="chip chip-progress" data-testid="exercise-index">
           Exercise {view.exerciseIndex}
         </span>
+        <div className="protocol-progress" data-testid="protocol-progress">
+          <span className="label-mono">{progressLabel(progress)}</span>
+          <div
+            className={
+              progress.total > 0 && progress.reviewed === progress.total
+                ? 'progress progress-complete'
+                : 'progress'
+            }
+            role="presentation"
+          >
+            <div className="progress-fill" style={{ width: `${progress.percent}%` }} />
+          </div>
+        </div>
       </header>
       <div className="protocol-body">
-        <nav className="protocol-nav">
-          <p className="protocol-statement" data-testid="problem-statement">
-            {view.problemStatement}
-          </p>
+        <nav className="protocol-nav" aria-label="Protocol Steps">
+          <div className="protocol-statement-card card">
+            <p className="label-caps">Problem statement</p>
+            <p className="protocol-statement" data-testid="problem-statement">
+              {view.problemStatement}
+            </p>
+          </div>
           <ol className="protocol-steps">
-            {view.steps.map((s) => (
-              <li key={s.step}>
-                <button
-                  type="button"
-                  data-testid={`step-${s.step}`}
-                  data-active={s.active}
-                  aria-current={selected === s.step}
-                  disabled={!s.active}
-                  className={s.active ? 'protocol-step-active' : 'protocol-step-locked'}
-                  onClick={() => setSelected(s.step)}
-                >
-                  <span>{stepTitle(s.step)}</span>
-                  <small>{stepStatus(s)}</small>
-                </button>
-              </li>
-            ))}
+            {view.steps.map((s, index) => {
+              const state = stepState(s)
+              return (
+                <li key={s.step}>
+                  <button
+                    type="button"
+                    data-testid={`step-${s.step}`}
+                    data-active={s.active}
+                    data-state={state.kind}
+                    aria-current={selected === s.step}
+                    disabled={!s.active}
+                    className={`protocol-step-card card card-interactive ${
+                      s.active ? 'protocol-step-active' : 'protocol-step-locked'
+                    }`}
+                    onClick={() => setSelected(s.step)}
+                  >
+                    <span className="protocol-step-top">
+                      <span className="label-mono faint">{String(index + 1).padStart(2, '0')}</span>
+                      <span className={chipClass(state.chip)}>{state.label}</span>
+                    </span>
+                    <span className="protocol-step-title">{stepTitle(s.step)}</span>
+                    <span className="protocol-step-detail">{state.detail}</span>
+                  </button>
+                </li>
+              )
+            })}
             <li>
               <button
                 type="button"
                 data-testid="step-final-review"
+                data-state={finalState.kind}
                 aria-current={selected === 'final_review'}
-                disabled={!view.canRequestFinalReview && !view.finalReview}
+                disabled={!finalAvailable}
+                className={`protocol-step-card card card-interactive ${
+                  finalAvailable ? 'protocol-step-active' : 'protocol-step-locked'
+                }`}
                 onClick={() => setSelected('final_review')}
               >
-                <span>Final review</span>
-                <small>
-                  {view.finalReview
-                    ? 'Done'
-                    : view.canRequestFinalReview
-                      ? 'Ready'
-                      : 'After every active step is reviewed'}
-                </small>
+                <span className="protocol-step-top">
+                  <span className="label-mono faint">
+                    {String(view.steps.length + 1).padStart(2, '0')}
+                  </span>
+                  <span className={chipClass(finalState.chip)}>{finalState.label}</span>
+                </span>
+                <span className="protocol-step-title">Final review</span>
+                <span className="protocol-step-detail">{finalState.detail}</span>
               </button>
             </li>
           </ol>
@@ -316,49 +393,58 @@ export function ProtocolExerciseScreen({
               <DesignCanvas key={view.id} designExerciseId={view.id} onEditorChange={setEditor} />
             </div>
           )}
-          <div className="protocol-panel">
-            {step ? (
-              <StepPanel
-                key={step.step}
-                view={view}
-                step={step}
-                editor={editor}
-                onExercise={setView}
-              />
-            ) : (
-              <section data-testid="final-review-panel">
-                <p>
-                  The final review compares your latest submission of each step with the Reference
-                  Solution of the System Design Primer.
-                </p>
-                <p>
-                  <button
-                    type="button"
-                    data-testid="request-final-review"
-                    disabled={review.pending || !view.canRequestFinalReview}
-                    onClick={() =>
-                      review.run((requestId) =>
-                        window.api.requestFinalReview({ requestId, designExerciseId: view.id })
-                      )
-                    }
-                  >
-                    {view.finalReview ? 'Review again' : 'Get the final review'}
-                  </button>
-                </p>
-                <CallStatus
-                  pending={review.pending}
-                  error={review.error}
-                  pendingLabel="Comparing your design with the Reference Solution..."
-                  onCancel={review.cancel}
+          <div className="protocol-panel" key={selected}>
+            <div className="protocol-panel-inner">
+              {step ? (
+                <StepPanel
+                  key={step.step}
+                  view={view}
+                  step={step}
+                  editor={editor}
+                  onExercise={setView}
                 />
-                {view.finalReview && (
-                  <FinalReviewPanel
-                    review={view.finalReview}
-                    referenceSolution={view.referenceSolution}
+              ) : (
+                <section data-testid="final-review-panel">
+                  <header className="protocol-step-header">
+                    <p className="protocol-step-chips">
+                      <span className={chipClass(finalState.chip)}>{finalState.label}</span>
+                    </p>
+                    <h2>Final review</h2>
+                    <p className="protocol-goal">
+                      The final review compares your latest submission of each step with the
+                      Reference Solution of the System Design Primer.
+                    </p>
+                  </header>
+                  <p className="protocol-actions">
+                    <button
+                      type="button"
+                      className="btn-primary"
+                      data-testid="request-final-review"
+                      disabled={review.pending || !view.canRequestFinalReview}
+                      onClick={() =>
+                        review.run((requestId) =>
+                          window.api.requestFinalReview({ requestId, designExerciseId: view.id })
+                        )
+                      }
+                    >
+                      {view.finalReview ? 'Review again' : 'Get the final review'}
+                    </button>
+                  </p>
+                  <CallStatus
+                    pending={review.pending}
+                    error={review.error}
+                    pendingLabel="Comparing your design with the Reference Solution..."
+                    onCancel={review.cancel}
                   />
-                )}
-              </section>
-            )}
+                  {view.finalReview && (
+                    <FinalReviewPanel
+                      review={view.finalReview}
+                      referenceSolution={view.referenceSolution}
+                    />
+                  )}
+                </section>
+              )}
+            </div>
           </div>
         </div>
       </div>

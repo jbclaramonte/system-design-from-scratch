@@ -1,12 +1,13 @@
-import type {
-  DesignExerciseStep,
-  LearningPath,
-  LearningPathProgress,
-  LearningPathSection,
-  LearningPathStep,
-  LearningPathStepStatus,
-  LearningPathTopicRef,
-  TopicStep
+import {
+  learningPathSections,
+  type DesignExerciseStep,
+  type LearningPath,
+  type LearningPathProgress,
+  type LearningPathSection,
+  type LearningPathStep,
+  type LearningPathStepStatus,
+  type LearningPathTopicRef,
+  type TopicStep
 } from '../../../shared/learningPath'
 
 export const sectionTitles: Record<LearningPathSection, string> = {
@@ -14,6 +15,21 @@ export const sectionTitles: Record<LearningPathSection, string> = {
   primer: 'Primer topics',
   design_exercises: 'Design Exercises'
 }
+
+/** The filter tabs of the screen: every section, or one of them. */
+export const pathFilters = ['all', 'foundations', 'primer', 'design_exercises'] as const
+export type PathFilter = (typeof pathFilters)[number]
+
+export const pathFilterLabels: Record<PathFilter, string> = {
+  all: 'All',
+  foundations: 'Foundations',
+  primer: 'Primer topics',
+  design_exercises: 'Design exercises'
+}
+
+/** The sections a filter shows, in path order. */
+export const filteredSections = (filter: PathFilter): readonly LearningPathSection[] =>
+  filter === 'all' ? learningPathSections : [filter]
 
 export const stepStatusLabels: Record<LearningPathStepStatus, string> = {
   locked: 'Locked',
@@ -41,6 +57,20 @@ export function continueLabel(step: LearningPathStep): string {
       return `Choose how to go on with ${title}`
     default:
       return `Start: ${title}`
+  }
+}
+
+/** Short label of the button of the Current priority card (the full sentence is `continueLabel`). */
+export function actionLabel(step: LearningPathStep): string {
+  switch (step.status) {
+    case 'in_progress':
+      return 'Continue'
+    case 'skipped':
+      return 'Come back'
+    case 'limit_reached':
+      return 'Choose how to go on'
+    default:
+      return 'Start'
   }
 }
 
@@ -107,4 +137,85 @@ export function noNextStepText(path: LearningPath): string {
     return 'Every topic is mastered and every available Design Exercise completed. More Design Exercises are coming soon.'
   }
   return 'Nothing to start right now.'
+}
+
+/** Topic counts of the hero card, from the topic steps of the path. */
+export interface TopicCounters {
+  mastered: number
+  inProgress: number
+  /** Topics at the Round Limit, waiting for another angle or a skip. */
+  retryRequired: number
+  locked: number
+}
+
+export function topicCounters(path: LearningPath): TopicCounters {
+  const counters: TopicCounters = { mastered: 0, inProgress: 0, retryRequired: 0, locked: 0 }
+  for (const step of path.steps) {
+    if (step.kind !== 'topic') continue
+    if (step.status === 'mastered') counters.mastered += 1
+    else if (step.status === 'in_progress') counters.inProgress += 1
+    else if (step.status === 'limit_reached') counters.retryRequired += 1
+    else if (step.status === 'locked') counters.locked += 1
+  }
+  return counters
+}
+
+/** "6/6 mastered" for a topic section, "1/8 completed" for the Design Exercises. */
+export function sectionCounter(path: LearningPath, section: LearningPathSection): string {
+  const steps = path.steps.filter((step) => step.section === section)
+  const done = steps.filter(
+    (step) => step.status === (section === 'design_exercises' ? 'completed' : 'mastered')
+  ).length
+  return `${done}/${steps.length} ${section === 'design_exercises' ? 'completed' : 'mastered'}`
+}
+
+/** The label of a step's status chip. A startable Design Exercise is "Ready to start". */
+export const statusLabel = (step: LearningPathStep): string =>
+  step.kind === 'design_exercise' && step.status === 'available'
+    ? 'Ready to start'
+    : stepStatusLabels[step.status]
+
+export type ChipVariant = 'mastered' | 'progress' | 'attention' | 'locked' | 'error' | 'neutral'
+
+/** The chip variant of a status (see the Design System: emerald mastered, indigo in progress...). */
+export const statusChipVariant: Record<LearningPathStepStatus, ChipVariant> = {
+  locked: 'locked',
+  available: 'neutral',
+  in_progress: 'progress',
+  mastered: 'mastered',
+  skipped: 'attention',
+  limit_reached: 'error',
+  completed: 'mastered',
+  coming_soon: 'neutral'
+}
+
+/** What an unlocked topic that does not simply continue is waiting for, or null. */
+export function statusNote(step: LearningPathStep): string | null {
+  if (step.kind !== 'topic') return null
+  switch (step.status) {
+    case 'limit_reached':
+      return 'Round Limit reached: open the topic to try another angle or skip it for now.'
+    case 'skipped':
+      return 'Skipped for now: come back to it with another angle.'
+    default:
+      return null
+  }
+}
+
+/** "3 of 4 prerequisites mastered" for a Design Exercise, or null when it has none. */
+export function prerequisiteText(step: DesignExerciseStep): string | null {
+  const total = step.prerequisites.length
+  if (total === 0) return null
+  const mastered = total - step.missingPrerequisites.length
+  return `${mastered} of ${total} prerequisites mastered`
+}
+
+/** The facts under the title of the Current priority card; only what the step really has. */
+export function priorityDetails(step: LearningPathStep): string[] {
+  if (step.kind === 'design_exercise') return [step.rationale]
+  const details = [step.section === 'foundations' ? sectionTitles.foundations : 'Primer topic']
+  if (step.topic.notionCount > 0) {
+    details.push(`${step.topic.notionCount} ${step.topic.notionCount === 1 ? 'notion' : 'notions'}`)
+  }
+  return details
 }

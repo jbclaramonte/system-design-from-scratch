@@ -15,6 +15,18 @@ export const masteryLabels: Record<TopicMastery, string> = {
   skipped: 'Skipped, come back later'
 }
 
+/**
+ * Shared chip variant (`.chip-*`, see docs/Design System.md) of a topic's mastery. The label
+ * always stays, so the status never relies on color alone.
+ */
+export const masteryChip: Record<TopicMastery, string> = {
+  not_started: 'chip',
+  in_progress: 'chip chip-progress chip-dot',
+  mastered: 'chip chip-mastered chip-dot',
+  limit_reached: 'chip chip-error chip-dot',
+  skipped: 'chip chip-attention chip-dot'
+}
+
 export const angleLabels: Record<RemediationAngle, string> = {
   concrete_example: 'Concrete example',
   analogy: 'Analogy',
@@ -44,6 +56,33 @@ export function roundProgress({
   return status === 'in_progress'
     ? `Round ${roundNumber} · another angle after the Round Limit (${failed}) · ${threshold}`
     : `Round ${roundNumber} · Round Limit reached (${failed}) · ${threshold}`
+}
+
+export interface AttemptsStat {
+  failedRounds: number
+  roundLimit: number
+  /** Share of the Round Limit used, 0 to 100. */
+  percent: number
+  /** The Round Limit is reached: the loop offers another angle or a skip. */
+  exhausted: boolean
+}
+
+/**
+ * Failed rounds against the Round Limit, for the topic header. Null when it says nothing: the
+ * lesson is not recorded yet (no round to count) or the topic is mastered.
+ */
+export function attemptsStat({
+  status,
+  failedRounds,
+  roundLimit
+}: Pick<MasteryState, 'status' | 'failedRounds' | 'roundLimit'>): AttemptsStat | null {
+  if (status === 'not_started' || status === 'mastered' || roundLimit <= 0) return null
+  return {
+    failedRounds,
+    roundLimit,
+    percent: Math.min(100, Math.round((failedRounds * 100) / roundLimit)),
+    exhausted: failedRounds >= roundLimit
+  }
 }
 
 /** Status of a round being prepared (the quiz Generation runs in the main process). */
