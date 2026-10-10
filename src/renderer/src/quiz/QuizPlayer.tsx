@@ -140,7 +140,7 @@ export function QuizPlayer({
   if (done) {
     const postponed = postponedQuestions(quiz.questions, answered, skipped)
     return (
-      <section className="quiz-player" data-testid="quiz-player">
+      <section className="reading-column quiz-player" data-testid="quiz-player">
         <RoundProgress
           label={progressLabel}
           position={null}
@@ -186,7 +186,7 @@ export function QuizPlayer({
   const multiple = question.type === 'multiple_choice'
 
   return (
-    <section className="quiz-player" data-testid="quiz-player">
+    <section className="reading-column quiz-player" data-testid="quiz-player">
       <RoundProgress
         label={progressLabel}
         position={`Question ${index + 1} of ${total}`}
@@ -215,7 +215,7 @@ export function QuizPlayer({
           <p lang="fr" className="quiz-prompt">
             {question.prompt}
           </p>
-          <p className="quiz-notice" data-testid="question-not-gradable">
+          <p className="notice" data-testid="question-not-gradable">
             No grader is available for this question. It is not counted in this round.
           </p>
           <div className="quiz-actions">

@@ -1,5 +1,6 @@
-/* Learning Path screen (#30). Tokens and shared classes (.card, .chip, .progress, .btn,
-   .label-caps, .label-mono) come from styles/; this file only lays the screen out. */
+/* Learning Path screen (#30). Tokens and shared classes (.card, .chip, .progress, .btn, .stat,
+   .tabs, .card-clickable, .status-mark, .label-caps, .label-mono) come from styles/; this file
+   only lays the screen out. */
 
 .path-screen {
   display: flex;
@@ -88,9 +89,7 @@
 }
 
 .path-counter {
-  display: flex;
   flex-direction: column-reverse;
-  gap: var(--space-xs);
   padding: 0 var(--space-md);
   border-left: 1px solid var(--color-border-hairline);
 }
@@ -98,17 +97,6 @@
 .path-counter:first-child {
   padding-left: 0;
   border-left: 0;
-}
-
-.path-counter dd {
-  margin: 0;
-}
-
-.path-counter-value {
-  font-family: var(--font-mono);
-  font-size: var(--type-headline-md-size);
-  line-height: var(--type-headline-md-line);
-  font-weight: var(--type-headline-md-weight);
 }
 
 .path-counter-label {
@@ -176,34 +164,6 @@
   margin-top: var(--space-sm);
 }
 
-/* Filter tabs */
-
-.path-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-xs);
-  border-bottom: 1px solid var(--color-border-hairline);
-}
-
-.path-filter {
-  margin-bottom: -1px;
-  padding: var(--space-sm) var(--space-md);
-  border: 0;
-  border-bottom: 2px solid transparent;
-  border-radius: var(--radius-md) var(--radius-md) 0 0;
-  color: var(--color-text-secondary);
-}
-
-.path-filter:hover:not(:disabled) {
-  background: var(--color-hover);
-  color: var(--color-text-primary);
-}
-
-.path-filter[aria-pressed='true'] {
-  border-bottom-color: var(--color-progress);
-  color: var(--color-text-primary);
-}
-
 /* Sections and steps */
 
 .path-section {
@@ -243,69 +203,14 @@
   gap: var(--space-md);
 }
 
-.path-step {
-  position: relative;
-  padding: var(--space-md);
-  transition:
-    border-color var(--duration-fast) var(--ease-out),
-    background-color var(--duration-fast) var(--ease-out);
-}
-
 .path-step[aria-current='step'] {
   border-color: var(--color-progress-border);
   box-shadow: var(--glow-progress);
 }
 
-.path-step:has(> button.path-step-row:hover) {
-  border-color: var(--color-border-active);
-  background: var(--color-surface-elevated);
-}
-
-.path-step:has(> .path-step-row:focus-visible) {
-  border-color: var(--color-border-focus);
-  box-shadow: 0 0 0 3px var(--color-focus-ring);
-}
-
 .path-step-locked,
 .path-step-coming_soon {
   background: var(--color-canvas);
-}
-
-.path-step-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
-  width: 100%;
-  padding: 0;
-  border: 0;
-  border-radius: var(--radius-md);
-  background: none;
-  color: var(--color-text-primary);
-  font-size: var(--type-body-md-size);
-  text-align: left;
-}
-
-button.path-step-row:hover:not(:disabled) {
-  background: none;
-}
-
-/* The whole card opens the step: the row button stretches over it. */
-button.path-step-row::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: var(--radius-lg);
-}
-
-/* The focus ring is drawn around the whole card (.path-step:has(...:focus-visible)). */
-button.path-step-row:focus-visible {
-  outline: none;
-  box-shadow: none;
-}
-
-div.path-step-row {
-  color: var(--color-text-secondary);
-  cursor: not-allowed;
 }
 
 .path-step-title {
@@ -321,54 +226,6 @@ div.path-step-row {
   gap: var(--space-sm);
 }
 
-/* Status circle */
-
-.path-mark {
-  display: inline-flex;
-  flex: none;
-  color: var(--color-locked);
-}
-
-.path-mark-ring {
-  stroke: currentColor;
-  stroke-width: 1.5;
-}
-
-.path-mark-glyph {
-  stroke: currentColor;
-  stroke-width: 1.6;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.path-mark-dot {
-  fill: currentColor;
-}
-
-.path-mark-neutral {
-  color: var(--color-text-muted);
-}
-
-.path-mark-mastered {
-  color: var(--color-mastered);
-}
-
-.path-mark-mastered .path-mark-ring {
-  fill: var(--color-mastered-fill);
-}
-
-.path-mark-progress {
-  color: var(--color-progress-text);
-}
-
-.path-mark-attention {
-  color: var(--color-attention-text);
-}
-
-.path-mark-error {
-  color: var(--color-error-text);
-}
-
 /* Reason lines */
 
 .path-step-note {
@@ -381,12 +238,7 @@ div.path-step-row {
   font-size: var(--type-body-md-size);
 }
 
-.path-step-note button {
-  position: relative;
-  z-index: 1;
-}
-
-.path-exercise .path-step-row {
+.path-exercise .card-clickable-main {
   align-items: flex-start;
 }
 
@@ -406,6 +258,11 @@ div.path-step-row {
   color: var(--color-text-muted);
   font-size: var(--type-body-sm-size);
   line-height: var(--type-body-sm-line);
+}
+
+/* The next step unlocked by a mastered topic, at the end of the screen nav. */
+.screen-nav .path-unlocked {
+  margin: 0 0 0 auto;
 }
 
 .path-unlocked {

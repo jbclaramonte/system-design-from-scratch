@@ -381,7 +381,7 @@ export function TopicHeader({
       {showTitle && <h2>{state.topicTitle}</h2>}
       <div className="mastery-progress card" data-testid="mastery-progress">
         <div className="mastery-state">
-          <div className="mastery-chips">
+          <div className="chip-row">
             <span className={masteryChip[state.status]} data-testid="mastery-status">
               {masteryLabels[state.status]}
             </span>
@@ -407,15 +407,15 @@ function RoundStats({ state }: { state: MasteryState }) {
   const lastScore = last && last.completedAt !== null ? last.scorePercent : null
   return (
     <dl className="mastery-stats">
-      <div className="mastery-stat" data-testid="mastery-round">
+      <div className="stat mastery-stat" data-testid="mastery-round">
         <dt className="label-caps">Round</dt>
-        <dd className="mastery-stat-value">{state.roundNumber}</dd>
+        <dd className="stat-value">{state.roundNumber}</dd>
       </div>
       {attempts && (
-        <div className="mastery-stat" data-testid="mastery-attempts">
+        <div className="stat mastery-stat" data-testid="mastery-attempts">
           <dt className="label-caps">Round Limit</dt>
           <dd>
-            <span className="mastery-stat-value">
+            <span className="stat-value">
               {attempts.failedRounds} / {attempts.roundLimit}
             </span>{' '}
             <span className="label-mono muted">failed</span>
@@ -433,19 +433,19 @@ function RoundStats({ state }: { state: MasteryState }) {
         </div>
       )}
       {last && lastScore !== null && (
-        <div className="mastery-stat" data-testid="mastery-last-round">
+        <div className="stat mastery-stat" data-testid="mastery-last-round">
           <dt className="label-caps">Round {last.number}</dt>
           <dd>
-            <span className="mastery-stat-value">{formatPercent(lastScore)}</span>{' '}
+            <span className="stat-value">{formatPercent(lastScore)}</span>{' '}
             <span className={last.passed ? 'chip chip-mastered' : 'chip chip-attention'}>
               {last.passed ? 'Passed' : 'Not passed'}
             </span>
           </dd>
         </div>
       )}
-      <div className="mastery-stat">
+      <div className="stat mastery-stat">
         <dt className="label-caps">Mastery Threshold</dt>
-        <dd className="mastery-stat-value">{state.masteryThreshold}%</dd>
+        <dd className="stat-value">{state.masteryThreshold}%</dd>
       </div>
     </dl>
   )
@@ -485,10 +485,15 @@ function Preparing({
     )
   }
   return (
-    <p className="lesson-status" role="status" data-testid="mastery-round-status">
-      <span className="lesson-spinner" aria-hidden /> Round {roundNumber}:{' '}
+    <p className="status-strip" role="status" data-testid="mastery-round-status">
+      <span className="spinner" aria-hidden /> Round {roundNumber}:{' '}
       {preparationText[preparation.status]}{' '}
-      <button type="button" onClick={onCancel} data-testid="mastery-round-cancel">
+      <button
+        type="button"
+        className="btn-sm"
+        onClick={onCancel}
+        data-testid="mastery-round-cancel"
+      >
         Cancel
       </button>
     </p>

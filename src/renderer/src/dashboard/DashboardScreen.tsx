@@ -96,13 +96,13 @@ function Overview({ dashboard }: { dashboard: Dashboard }) {
     <section className="dash-section" aria-labelledby="dash-overview">
       <h2 id="dash-overview">Overview</h2>
       <dl className="dash-cards" data-testid="dashboard-overview">
-        <div className="card card-elevated dash-card dash-hero">
+        <div className="card card-elevated stat stat-lg dash-hero">
           <dt className="label-caps">Learning Path</dt>
-          <dd className="dash-card-value">
+          <dd className="stat-value">
             {overview.masteredTopics}{' '}
             <span className="dash-hero-of">of {overview.totalTopics}</span>
           </dd>
-          <dd className="dash-card-detail">topics mastered ({overview.percent}%)</dd>
+          <dd className="stat-detail">topics mastered ({overview.percent}%)</dd>
           <dd>
             <div
               className={`progress${overview.percent >= 100 ? ' progress-complete' : ''}`}
@@ -118,10 +118,10 @@ function Overview({ dashboard }: { dashboard: Dashboard }) {
           </dd>
         </div>
         {cards.map((card) => (
-          <div key={card.label} className="card dash-card">
+          <div key={card.label} className="card stat stat-lg">
             <dt className="label-caps">{card.label}</dt>
-            <dd className="dash-card-value">{card.value}</dd>
-            <dd className="dash-card-detail">{card.detail}</dd>
+            <dd className="stat-value">{card.value}</dd>
+            <dd className="stat-detail">{card.detail}</dd>
           </div>
         ))}
       </dl>
@@ -265,8 +265,8 @@ function TopicsTable({
   return (
     <section className="dash-section" aria-labelledby="dash-topics">
       <h2 id="dash-topics">Topics</h2>
-      <div className="card dash-table-wrap">
-        <table className="dash-table" data-testid="dashboard-topics">
+      <div className="card card-flush">
+        <table className="card-table dash-topics" data-testid="dashboard-topics">
           <thead>
             <tr>
               <th scope="col">Topic</th>
@@ -296,7 +296,7 @@ function TopicsTable({
 function HistoryRoundItem({ round }: { round: HistoryRound }) {
   return (
     <li className="dash-history-round">
-      <details>
+      <details className="card-disclosure">
         <summary>
           <span className="dash-history-title">
             {round.topicTitle}, round {round.number}
@@ -313,7 +313,7 @@ function HistoryRoundItem({ round }: { round: HistoryRound }) {
         {round.attempts.length === 0 ? (
           <p className="dash-note dash-history-empty">No answer recorded yet.</p>
         ) : (
-          <table className="dash-table">
+          <table className="card-table">
             <thead>
               <tr>
                 <th scope="col">Question</th>
@@ -459,7 +459,7 @@ export function DashboardScreen({
 
   return (
     <main className="dash-screen" data-testid="dashboard-screen">
-      <header className="dash-header">
+      <header className="page-header">
         <h1 ref={heading} tabIndex={-1}>
           Dashboard
         </h1>
@@ -468,7 +468,7 @@ export function DashboardScreen({
         </button>
       </header>
       {error && (
-        <p role="alert" className="dash-error">
+        <p role="alert" className="notice notice-error">
           Could not load the Dashboard: {error}
         </p>
       )}

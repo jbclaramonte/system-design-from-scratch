@@ -164,3 +164,42 @@
   gap: var(--space-sm);
   margin: var(--space-sm) 0;
 }
+
+/* Topic lists of the developer screens (Lessons, Learn): one card per topic. */
+.dev-topic-list {
+  display: grid;
+  gap: var(--space-sm);
+  max-width: 40rem;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.dev-topic-list button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  border-color: var(--color-border-card);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-base);
+  text-align: left;
+}
+
+.dev-topic-list button:hover {
+  border-color: var(--color-border-active);
+  background: var(--color-surface-elevated);
+}
+
+.dev-topic-title {
+  flex: 1;
+}
+
+.dev-topic-meta {
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--type-label-mono-size);
+  letter-spacing: var(--type-label-mono-tracking);
+}

@@ -90,7 +90,7 @@ export function StepFeedbackView({
         testId="feedback-tradeoffs"
         tone="attention"
       />
-      <p className="protocol-next">
+      <p className="note-card note-card-compact note-card-progress">
         <span className="label-caps">Next</span>
         {feedback.nextStep}
       </p>
@@ -122,7 +122,7 @@ export function SubmissionHistory({
           <details
             key={submission.id}
             open={index === 0}
-            className="protocol-submission card"
+            className="protocol-submission card-disclosure"
             data-testid="submission"
             data-status={submission.status}
           >
@@ -208,9 +208,9 @@ export function CallStatus({
 }) {
   if (pending) {
     return (
-      <p className="protocol-pending" role="status" data-testid="protocol-pending">
-        <span className="protocol-spinner" aria-hidden />
-        <span>{pendingLabel}</span>
+      <p className="status-strip" role="status" data-testid="protocol-pending">
+        <span className="spinner" aria-hidden />
+        <span className="status-strip-text">{pendingLabel}</span>
         <button type="button" className="btn-sm" data-testid="protocol-cancel" onClick={onCancel}>
           Cancel
         </button>
@@ -220,12 +220,7 @@ export function CallStatus({
   if (!error) return null
   if (error.code === 'cancelled') {
     return (
-      <p
-        className="protocol-notice"
-        role="status"
-        data-testid="protocol-error"
-        data-code={error.code}
-      >
+      <p className="notice" role="status" data-testid="protocol-error" data-code={error.code}>
         Cancelled. Your work is kept.
       </p>
     )

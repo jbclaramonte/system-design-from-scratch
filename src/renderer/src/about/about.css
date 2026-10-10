@@ -7,16 +7,8 @@
   padding-bottom: var(--space-xl);
 }
 
-.about-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-md);
+.about-screen > .page-header {
   margin-bottom: var(--space-sm);
-}
-
-.about-header h1 {
-  margin: 0;
 }
 
 .about-app {
@@ -78,17 +70,6 @@
 
 .about-fold {
   margin: var(--space-md) 0;
-  border: 1px solid var(--color-border-card);
-  border-radius: var(--radius-md);
-  background: var(--color-canvas);
-}
-
-.about-fold > summary {
-  padding: var(--space-sm) var(--space-md);
-}
-
-.about-fold[open] > summary {
-  border-bottom: 1px solid var(--color-border-hairline);
 }
 
 .about-license-text {

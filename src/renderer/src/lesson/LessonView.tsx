@@ -18,13 +18,13 @@ function TopicList({ onOpen }: { onOpen: (topic: TopicSummary) => void }) {
   if (error) return <p role="alert">Could not load the topics: {error}</p>
   if (!topics) return <p>Loading topics...</p>
   return (
-    <ul className="lesson-topic-list" data-testid="lesson-topic-list">
+    <ul className="dev-topic-list" data-testid="lesson-topic-list">
       {topics.map((topic) => (
         <li key={topic.id}>
           <button type="button" onClick={() => onOpen(topic)} data-topic={topic.slug}>
-            <span className="lesson-topic-title">{topic.title}</span>
+            <span className="dev-topic-title">{topic.title}</span>
             {!topic.grounded && <OutsidePrimerBadge />}
-            <span className="lesson-topic-meta">
+            <span className="dev-topic-meta">
               {topic.notionCount > 0 ? `${topic.notionCount} notions` : 'No notions yet'}
             </span>
           </button>
@@ -41,8 +41,8 @@ export function LessonView({ onClose }: { onClose: () => void }) {
   const [attempt, setAttempt] = useState(0)
 
   return (
-    <main className="lesson-view" data-testid="lesson-view">
-      <nav className="lesson-nav">
+    <main className="screen-fill" data-testid="lesson-view">
+      <nav className="screen-nav">
         {topic ? (
           <button type="button" onClick={() => setTopic(null)} data-testid="lesson-back">
             All topics

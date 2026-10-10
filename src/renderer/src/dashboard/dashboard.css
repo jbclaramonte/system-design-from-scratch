@@ -4,18 +4,6 @@
   padding-bottom: var(--space-xl);
 }
 
-.dash-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-md);
-  margin-bottom: var(--space-lg);
-}
-
-.dash-header h1 {
-  margin: 0;
-}
-
 .dash-section {
   margin-top: var(--space-xl);
 }
@@ -35,14 +23,6 @@
   line-height: var(--type-body-sm-line);
 }
 
-.dash-error {
-  padding: var(--space-sm) var(--space-md);
-  border: 1px solid var(--color-error-border);
-  border-radius: var(--radius-md);
-  background: var(--color-error-fill);
-  color: var(--color-error-text);
-}
-
 .dash-visually-hidden {
   position: absolute;
   width: 1px;
@@ -52,23 +32,12 @@
   white-space: nowrap;
 }
 
-/* Overview: a hero card for the Learning Path, then the stat cards. */
+/* Overview: a hero card for the Learning Path, then the stat cards (.stat). */
 
 .dash-cards {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--space-md);
-  margin: 0;
-}
-
-.dash-card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-  margin: 0;
-}
-
-.dash-card dd {
   margin: 0;
 }
 
@@ -86,21 +55,6 @@
 
 .dash-hero .progress {
   margin-top: var(--space-sm);
-}
-
-.dash-card-value {
-  font-family: var(--font-mono);
-  font-size: var(--type-headline-lg-size);
-  line-height: var(--type-headline-lg-line);
-  font-weight: 600;
-  letter-spacing: var(--type-headline-lg-tracking);
-}
-
-.dash-card-detail {
-  min-height: var(--type-body-sm-line);
-  color: var(--color-text-secondary);
-  font-size: var(--type-body-sm-size);
-  line-height: var(--type-body-sm-line);
 }
 
 /* Weak points: one card per notion. */
@@ -305,59 +259,18 @@
   color: var(--color-text-secondary);
 }
 
-/* Topics and history tables */
+/* Topics and history tables: the shared .card-table, plus the topics table's own cells. */
 
-.dash-table-wrap {
-  padding: 0;
-  overflow-x: auto;
-}
-
-.dash-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--type-body-md-size);
-}
-
-.dash-table th,
-.dash-table td {
-  padding: var(--space-sm) var(--space-sm);
-  border-bottom: 1px solid var(--color-border-hairline);
-  text-align: left;
-  vertical-align: middle;
-}
-
-.dash-table tbody tr:last-child > * {
-  border-bottom: 0;
-}
-
-.dash-table thead th {
-  border-bottom: 1px solid var(--color-border-active);
-  color: var(--color-text-muted);
-  font-family: var(--font-mono);
-  font-size: var(--type-label-caps-size);
-  font-weight: var(--type-label-caps-weight);
-  letter-spacing: var(--type-label-caps-tracking);
-  line-height: var(--type-label-caps-line);
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.dash-table th:first-child,
-.dash-table td:first-child {
-  padding-left: var(--space-md);
-}
-
-.dash-table th:last-child,
-.dash-table td:last-child {
-  padding-right: var(--space-md);
-}
-
-.dash-table tbody th {
+.dash-topics tbody th {
   min-width: 9rem;
   font-weight: 600;
 }
 
-.dash-table summary {
+.dash-topics summary {
+  white-space: nowrap;
+}
+
+.dash-screen .card-table td .label-mono {
   white-space: nowrap;
 }
 
@@ -371,10 +284,6 @@
 .dash-progress {
   width: 4rem;
   flex: none;
-}
-
-.dash-table summary {
-  cursor: pointer;
 }
 
 .dash-rounds {
@@ -399,31 +308,19 @@
   list-style: none;
 }
 
-.dash-history-round {
-  border: 1px solid var(--color-border-card);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface-base);
-}
-
 .dash-history-round summary {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-sm) var(--space-md);
-  padding: var(--space-sm) var(--space-md);
-  cursor: pointer;
 }
 
 .dash-history-title {
   font-weight: 600;
 }
 
-.dash-history-round details[open] > summary {
-  border-bottom: 1px solid var(--color-border-hairline);
-}
-
-.dash-history-round .dash-table th,
-.dash-history-round .dash-table td {
+.dash-history-round .card-table th,
+.dash-history-round .card-table td {
   vertical-align: top;
 }
 
@@ -455,8 +352,4 @@
 
 .dash-limit-reached {
   color: var(--color-error-text);
-}
-
-.dash-table td .label-mono {
-  white-space: nowrap;
 }

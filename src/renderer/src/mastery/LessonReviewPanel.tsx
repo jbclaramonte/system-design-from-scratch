@@ -118,7 +118,7 @@ export function LessonReviewView({
       )}
       {tab && (
         <div className="lesson-scroll" key={tab.key}>
-          <p className="lesson-badges">
+          <p className="chip-row">
             {tab.reading.grounded && (
               <span className="chip" title="Grounded on the System Design Primer">
                 System Design Primer

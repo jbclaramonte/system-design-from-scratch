@@ -1,14 +1,11 @@
 /* Quiz screens: picker, player, feedback, results (vault note docs/Quiz Engine.md, "Visual design"). */
 
-/* Reading column shared by the picker, the player and the results. */
+/* The picker, the player and the results are a .reading-column laid out as a grid. */
 .quiz-picker,
 .quiz-player,
 .quiz-results {
   display: grid;
   gap: var(--space-lg);
-  width: 100%;
-  max-width: 48rem;
-  margin: 0 auto;
   padding-bottom: var(--space-xl);
 }
 
@@ -44,9 +41,6 @@
 /* Quiz screen (dev): back buttons and title. */
 
 .quiz-screen-head {
-  width: 100%;
-  max-width: 48rem;
-  margin-inline: auto;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -147,10 +141,6 @@
   margin: 0;
 }
 
-.quiz-kind:focus-visible {
-  outline-offset: 4px;
-}
-
 .quiz-kind-hint {
   color: var(--color-text-secondary);
   font-family: var(--font-sans);
@@ -213,14 +203,6 @@ label.quiz-prompt {
 
 .quiz-flag input {
   width: 100%;
-}
-
-.quiz-flag-done {
-  padding: var(--space-sm) var(--space-md);
-  border: 1px solid var(--color-attention-border);
-  border-radius: var(--radius-md);
-  background: var(--color-attention-fill);
-  color: var(--color-attention-text);
 }
 
 /* Choices as selectable cards: the native radio or checkbox stays inside the label. */
@@ -291,7 +273,7 @@ label.quiz-prompt {
   box-shadow: none;
 }
 
-/* Choice states once answered. */
+/* Choice states once answered: the shared .mark-row. */
 
 .quiz-marks {
   display: grid;
@@ -299,80 +281,6 @@ label.quiz-prompt {
   margin: 0;
   padding: 0;
   list-style: none;
-}
-
-.quiz-mark {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: var(--space-sm) var(--space-md);
-  padding: var(--space-md);
-  border: 1px solid var(--color-border-card);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface-base);
-  color: var(--color-text-secondary);
-}
-
-.quiz-mark-glyph {
-  flex: none;
-  width: 1.25rem;
-  font-family: var(--font-mono);
-  font-weight: 700;
-  line-height: var(--type-body-md-line);
-  text-align: center;
-}
-
-.quiz-mark-text {
-  flex: 1 1 14rem;
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.quiz-mark-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-xs);
-}
-
-.quiz-mark[data-state='correct'],
-.quiz-mark[data-state='answer'],
-.quiz-point[data-covered='true'] {
-  border-color: var(--color-mastered-border);
-  background: var(--color-mastered-fill);
-  color: var(--color-text-primary);
-}
-
-.quiz-mark[data-state='correct'] .quiz-mark-glyph,
-.quiz-mark[data-state='answer'] .quiz-mark-glyph,
-.quiz-point[data-covered='true'] .quiz-mark-glyph {
-  color: var(--color-mastered-text);
-}
-
-.quiz-mark[data-state='answer'] {
-  border-style: dashed;
-  background: transparent;
-}
-
-.quiz-mark[data-state='wrong'] {
-  border-color: var(--color-error-border);
-  background: var(--color-error-fill);
-  color: var(--color-text-primary);
-}
-
-.quiz-mark[data-state='wrong'] .quiz-mark-glyph {
-  color: var(--color-error-text);
-}
-
-.quiz-mark[data-state='missed'],
-.quiz-point[data-covered='false'] {
-  border-color: var(--color-attention-border);
-  background: var(--color-attention-fill);
-  color: var(--color-text-primary);
-}
-
-.quiz-mark[data-state='missed'] .quiz-mark-glyph,
-.quiz-point[data-covered='false'] .quiz-mark-glyph {
-  color: var(--color-attention-text);
 }
 
 /* Feedback */
@@ -407,29 +315,6 @@ label.quiz-prompt {
 /* The detail sentence follows the verdict chip and starts lowercase ("Not quite: you found ..."). */
 .quiz-verdict-detail::first-letter {
   text-transform: uppercase;
-}
-
-.quiz-note {
-  display: grid;
-  gap: var(--space-sm);
-  overflow-wrap: anywhere;
-}
-
-.quiz-note > * {
-  margin: 0;
-}
-
-.quiz-note ul {
-  display: grid;
-  gap: var(--space-xs);
-  margin: 0;
-  padding-left: var(--space-md);
-  list-style: disc;
-}
-
-.quiz-note-attention {
-  border-color: var(--color-attention-border);
-  background: var(--color-attention-fill);
 }
 
 .quiz-answer {
@@ -507,20 +392,7 @@ label.quiz-prompt {
   margin: 0;
 }
 
-/* Grading status */
-
-.quiz-pending {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-sm) var(--space-md);
-  margin: 0;
-  padding: var(--space-sm) var(--space-md);
-  border: 1px solid var(--color-progress-border);
-  border-radius: var(--radius-md);
-  background: var(--color-progress-fill);
-  color: var(--color-text-primary);
-}
+/* Grading status: the shared .status-strip with a pulsing dot. */
 
 .quiz-pending-dot {
   flex: none;
@@ -530,19 +402,6 @@ label.quiz-prompt {
   background: var(--color-progress-text);
   box-shadow: var(--glow-progress);
   animation: quiz-pulse 1.2s ease-in-out infinite;
-}
-
-.quiz-pending-text {
-  flex: 1 1 12rem;
-}
-
-.quiz-notice {
-  margin: 0;
-  padding: var(--space-sm) var(--space-md);
-  border: 1px solid var(--color-border-hairline);
-  border-radius: var(--radius-md);
-  background: var(--color-surface-elevated);
-  color: var(--color-text-secondary);
 }
 
 @keyframes quiz-pulse {
@@ -594,10 +453,6 @@ label.quiz-prompt {
   gap: var(--space-sm) var(--space-md);
 }
 
-.quiz-results-title:focus-visible {
-  outline-offset: 4px;
-}
-
 .quiz-score {
   display: grid;
   gap: var(--space-md);
@@ -615,26 +470,13 @@ label.quiz-prompt {
   gap: var(--space-md);
 }
 
-.quiz-score-figure {
-  display: grid;
-  gap: var(--space-xs);
-}
-
-.quiz-score-figure > * {
-  margin: 0;
+/* The figures keep the paragraph margins they always had (breathing room above the score). */
+.quiz-score-figures > .stat {
+  margin-block: 1em;
 }
 
 .quiz-score-figure-end {
   text-align: right;
-}
-
-.quiz-score-value {
-  color: var(--color-text-primary);
-  font-family: var(--font-mono);
-  font-size: var(--type-headline-xl-size);
-  font-weight: var(--type-headline-xl-weight);
-  line-height: var(--type-headline-xl-line);
-  letter-spacing: var(--type-headline-xl-tracking);
 }
 
 .quiz-score-threshold {
@@ -666,33 +508,13 @@ label.quiz-prompt {
   color: var(--color-text-secondary);
 }
 
-.quiz-notions {
-  width: 100%;
-  overflow: hidden;
-  padding: 0;
-}
-
-.quiz-notions table {
-  width: 100%;
-}
-
 .quiz-notions th,
 .quiz-notions td {
   padding: var(--space-sm) var(--space-md);
 }
 
 .quiz-notions thead th {
-  color: var(--color-text-secondary);
-  font-family: var(--font-mono);
-  font-size: var(--type-label-caps-size);
-  font-weight: var(--type-label-caps-weight);
-  letter-spacing: var(--type-label-caps-tracking);
-  text-transform: uppercase;
-}
-
-.quiz-notions tbody tr:last-child th,
-.quiz-notions tbody tr:last-child td {
-  border-bottom: 0;
+  line-height: var(--type-body-md-line);
 }
 
 .quiz-notions tbody th {

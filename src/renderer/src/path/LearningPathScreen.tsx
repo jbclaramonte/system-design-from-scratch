@@ -54,20 +54,19 @@ function StatusChip({ step, testId }: { step: LearningPathStep; testId?: string 
 /** The circle before a title. Decorative: the status chip carries the status in words. */
 function StatusMark({ status }: { status: LearningPathStepStatus }) {
   return (
-    <span className={`path-mark path-mark-${statusChipVariant[status]}`} aria-hidden="true">
+    <span className={`status-mark status-mark-${statusChipVariant[status]}`} aria-hidden="true">
       <svg viewBox="0 0 20 20" width="20" height="20" fill="none">
-        <circle cx="10" cy="10" r="9" className="path-mark-ring" />
+        <circle cx="10" cy="10" r="9" className="status-mark-ring" />
         {(status === 'mastered' || status === 'completed') && (
-          <path d="M6 10.5l2.8 2.8L14 7.5" className="path-mark-glyph" />
+          <path d="M6 10.5l2.8 2.8L14 7.5" className="status-mark-glyph" />
         )}
-        {status === 'in_progress' && <circle cx="10" cy="10" r="3" className="path-mark-dot" />}
-        {status === 'limit_reached' && <path d="M10 6v5M10 13.4v.1" className="path-mark-glyph" />}
-        {status === 'skipped' && <path d="M7 10h6" className="path-mark-glyph" />}
+        {status === 'in_progress' && <circle cx="10" cy="10" r="3" className="status-mark-dot" />}
+        {status === 'limit_reached' && (
+          <path d="M10 6v5M10 13.4v.1" className="status-mark-glyph" />
+        )}
+        {status === 'skipped' && <path d="M7 10h6" className="status-mark-glyph" />}
         {status === 'locked' && (
-          <path
-            d="M7.5 9V7.7a2.5 2.5 0 015 0V9M7 9h6v4.5H7z"
-            className="path-mark-glyph path-mark-lock"
-          />
+          <path d="M7.5 9V7.7a2.5 2.5 0 015 0V9M7 9h6v4.5H7z" className="status-mark-glyph" />
         )}
       </svg>
     </span>
@@ -108,16 +107,20 @@ function TopicStepItem({
   )
   return (
     <li
-      className={`card path-step path-step-${step.status}`}
+      className={`card card-clickable path-step path-step-${step.status}`}
       data-step={step.key}
       aria-current={recommended ? 'step' : undefined}
     >
       {step.status === 'locked' ? (
-        <div className="path-step-row" aria-disabled="true">
+        <div className="card-clickable-main" aria-disabled="true">
           {title}
         </div>
       ) : (
-        <button type="button" className="path-step-row" onClick={() => onOpenTopic(step.topic)}>
+        <button
+          type="button"
+          className="card-clickable-main"
+          onClick={() => onOpenTopic(step.topic)}
+        >
           {title}
         </button>
       )}
@@ -125,7 +128,11 @@ function TopicStepItem({
         <p className="path-step-note" data-testid="path-lock-message">
           <span>{lock}</span>
           {blocker && blocker.status !== 'locked' && blocker.status !== 'mastered' && (
-            <button type="button" className="btn btn-sm" onClick={() => onOpenTopic(blocker.topic)}>
+            <button
+              type="button"
+              className="btn btn-sm card-clickable-action"
+              onClick={() => onOpenTopic(blocker.topic)}
+            >
               Go to {blocker.topic.title}
             </button>
           )}
@@ -162,16 +169,16 @@ function ExerciseStepItem({
   )
   return (
     <li
-      className={`card path-step path-exercise path-step-${step.status}`}
+      className={`card card-clickable path-step path-exercise path-step-${step.status}`}
       data-step={step.key}
       aria-current={recommended ? 'step' : undefined}
     >
       {id !== null ? (
-        <button type="button" className="path-step-row" onClick={() => onOpenExercise(id)}>
+        <button type="button" className="card-clickable-main" onClick={() => onOpenExercise(id)}>
           {title}
         </button>
       ) : (
-        <div className="path-step-row" aria-disabled="true">
+        <div className="card-clickable-main" aria-disabled="true">
           {title}
         </div>
       )}
@@ -228,11 +235,11 @@ function ProgressHero({ path }: { path: LearningPath }) {
       </div>
       <dl className="path-counters">
         {items.map((item) => (
-          <div key={item.key} className="path-counter" title={item.hint}>
+          <div key={item.key} className="stat stat-md path-counter" title={item.hint}>
             <dt className={`label-caps path-counter-label path-counter-${item.key}`}>
               {item.label}
             </dt>
-            <dd className="path-counter-value">{item.value}</dd>
+            <dd className="stat-value">{item.value}</dd>
           </div>
         ))}
       </dl>
@@ -345,12 +352,12 @@ export function LearningPathScreen({
         <ProgressHero path={path} />
         <CurrentPriority path={path} onOpenTopic={onOpenTopic} onOpenExercise={onOpenExercise} />
       </div>
-      <div className="path-filters" role="group" aria-label="Filter the Learning Path">
+      <div className="tabs" role="group" aria-label="Filter the Learning Path">
         {pathFilters.map((value) => (
           <button
             key={value}
             type="button"
-            className="path-filter"
+            className="tab"
             aria-pressed={filter === value}
             data-testid={`path-filter-${value}`}
             onClick={() => setFilter(value)}

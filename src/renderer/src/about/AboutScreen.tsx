@@ -75,7 +75,7 @@ function TldrawLicense({ packages }: { packages: ThirdPartyPackage[] }) {
         </li>
       </ul>
       {tldraw && (
-        <details className="about-fold">
+        <details className="card-disclosure card-disclosure-inset about-fold">
           <summary>tldraw license text</summary>
           <LicenseTexts pkg={tldraw} />
         </details>
@@ -149,7 +149,7 @@ export function AboutScreen({ onClose }: { onClose: () => void }) {
   }, [])
 
   const header = (
-    <header className="about-header">
+    <header className="page-header">
       <h1>About</h1>
       <button type="button" className="btn-sm" onClick={onClose}>
         Back
@@ -195,7 +195,7 @@ export function AboutScreen({ onClose }: { onClose: () => void }) {
             <ExternalLink href={primer.licenseUrl}>{primer.licenseName}</ExternalLink>
           </dd>
         </dl>
-        <details className="about-fold">
+        <details className="card-disclosure card-disclosure-inset about-fold">
           <summary>The primer&apos;s own license notice</summary>
           <pre className="about-license-text" data-testid="about-upstream-notice">
             {primer.upstreamNotice}

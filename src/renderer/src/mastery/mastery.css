@@ -37,13 +37,6 @@
   min-width: 0;
 }
 
-.mastery-chips {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-sm);
-}
-
 .mastery-summary {
   margin: 0;
   color: var(--color-text-secondary);
@@ -51,7 +44,7 @@
   line-height: var(--type-body-md-line);
 }
 
-/* Round figures: label-caps over a mono value, hairline dividers between them. */
+/* Round figures: a .stat each, with hairline dividers between them. */
 
 .mastery-stats {
   display: flex;
@@ -61,9 +54,6 @@
 }
 
 .mastery-stat {
-  display: grid;
-  align-content: start;
-  gap: var(--space-xs);
   min-width: 5rem;
   padding: 0 var(--space-lg);
   border-left: 1px solid var(--color-border-hairline);
@@ -84,14 +74,6 @@
 
 .mastery-stat dt {
   white-space: nowrap;
-}
-
-.mastery-stat-value {
-  color: var(--color-text-primary);
-  font-family: var(--font-mono);
-  font-size: var(--type-headline-sm-size);
-  font-weight: 600;
-  line-height: var(--type-headline-sm-line);
 }
 
 /* Failed rounds toward the Round Limit: amber (retry limit), red once the limit is reached. */
@@ -163,7 +145,7 @@
   margin-bottom: var(--space-md);
 }
 
-.mastery-review > .lesson-scroll > .lesson-badges {
+.mastery-review > .lesson-scroll > .chip-row {
   margin-bottom: var(--space-md);
 }
 
@@ -231,7 +213,7 @@
   margin-top: var(--space-sm);
 }
 
-.mastery-remediation > .lesson-badges {
+.mastery-remediation > .chip-row {
   margin-bottom: var(--space-md);
 }
 

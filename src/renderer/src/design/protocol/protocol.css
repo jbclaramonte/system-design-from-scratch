@@ -255,59 +255,11 @@
   margin: var(--space-md) 0;
 }
 
-/* Pending, cancelled and error states of a call. */
-
-.protocol-pending {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
+/* Pending and cancelled states of a call (.status-strip, .notice) sit between blocks. */
+.protocol-panel .status-strip,
+.protocol-panel .notice,
+.protocol-dev .notice {
   margin: var(--space-md) 0;
-  padding: var(--space-sm) var(--space-md);
-  border: 1px solid var(--color-progress-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-progress-fill);
-  color: var(--color-progress-text);
-}
-
-.protocol-pending span:nth-child(2) {
-  flex: 1;
-}
-
-.protocol-spinner {
-  flex: none;
-  width: 0.9rem;
-  height: 0.9rem;
-  border: 2px solid var(--color-progress-text);
-  border-top-color: transparent;
-  border-radius: 50%;
-  animation: protocol-spin 0.8s linear infinite;
-}
-
-@keyframes protocol-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .protocol-spinner {
-    animation-duration: 3s;
-  }
-}
-
-.protocol-notice {
-  margin: var(--space-md) 0;
-  padding: var(--space-sm) var(--space-md);
-  border: 1px solid var(--color-border-hairline);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface-elevated);
-  color: var(--color-text-secondary);
-}
-
-.protocol-notice-error {
-  border-color: var(--color-error-border);
-  background: var(--color-error-fill);
-  color: var(--color-error-text);
 }
 
 /* Sections under the editor: Hints, Feedback history. */
@@ -340,11 +292,10 @@
   margin: 0;
 }
 
-/* Submissions: a card per submission, latest open. */
+/* Submissions: a .card-disclosure per submission, latest open. */
 
 .protocol-submission {
   margin-bottom: var(--space-sm);
-  padding: 0;
 }
 
 .protocol-submission summary {
@@ -352,12 +303,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-xs) var(--space-md);
-  padding: var(--space-sm) var(--space-md);
   font-weight: 500;
-}
-
-.protocol-submission[open] summary {
-  border-bottom: 1px solid var(--color-border-hairline);
 }
 
 .protocol-submission summary .chip {
@@ -475,20 +421,6 @@
 
 .protocol-list li + li {
   margin-top: var(--space-xs);
-}
-
-.protocol-next {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-  padding: var(--space-sm) var(--space-md);
-  border: 1px solid var(--color-progress-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-progress-fill);
-}
-
-.protocol-next .label-caps {
-  color: var(--color-progress-text);
 }
 
 /* Final review. */

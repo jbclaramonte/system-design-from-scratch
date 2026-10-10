@@ -22,6 +22,15 @@ const resultChips: Record<AttemptResult, string> = {
   incorrect: 'chip-error'
 }
 
+/** Tone of the row of a marked choice. */
+const stateRows: Record<ChoiceState, string> = {
+  correct: ' mark-row-mastered',
+  wrong: ' mark-row-error',
+  missed: ' mark-row-attention',
+  answer: ' mark-row-mastered mark-row-outline',
+  neutral: ''
+}
+
 /** Status chip of a marked choice. */
 const stateChips: Record<ChoiceState, string> = {
   correct: 'chip-mastered',
@@ -71,10 +80,7 @@ function Note({
   children: React.ReactNode
 }) {
   return (
-    <section
-      className={`card quiz-note${attention ? ' quiz-note-attention' : ''}`}
-      data-testid={testId}
-    >
+    <section className={`note-card${attention ? ' note-card-attention' : ''}`} data-testid={testId}>
       <h4 className="label-caps">{title}</h4>
       <div lang={lang}>{children}</div>
     </section>
@@ -93,12 +99,12 @@ function ChoiceFeedbackView({ feedback }: { feedback: ChoiceQuestionFeedback }) 
         {feedback.choices.map((choice, index) => {
           const mark = choiceMark(choice, feedback.type)
           return (
-            <li key={index} className="quiz-mark" data-state={mark.state}>
-              <span className="quiz-mark-glyph" aria-hidden="true">
+            <li key={index} className={`mark-row${stateRows[mark.state]}`} data-state={mark.state}>
+              <span className="mark-row-glyph" aria-hidden="true">
                 {mark.glyph}
               </span>
-              <span className="quiz-mark-text">{choice.text}</span>
-              <span className="quiz-mark-tags" lang="en">
+              <span className="mark-row-text">{choice.text}</span>
+              <span className="mark-row-chips" lang="en">
                 {choice.selected && <span className="chip">Your answer</span>}
                 {mark.label && (
                   <span className={`chip ${stateChips[mark.state]}`}>{mark.label}</span>
@@ -119,15 +125,19 @@ function ExpectedPoints({ points }: { points: ExpectedPointFeedback[] }) {
   return (
     <ul lang="fr" className="quiz-marks">
       {points.map((point, index) => (
-        <li key={index} className="quiz-mark quiz-point" data-covered={String(point.covered)}>
-          <span className="quiz-mark-glyph" aria-hidden="true">
+        <li
+          key={index}
+          className={`mark-row ${point.covered ? 'mark-row-mastered' : 'mark-row-attention'}`}
+          data-covered={String(point.covered)}
+        >
+          <span className="mark-row-glyph" aria-hidden="true">
             {point.covered ? '✓' : '!'}
           </span>
           <span className="quiz-point-body">
             <strong>{point.point}</strong>
             <span className="quiz-point-justification">{point.justification}</span>
           </span>
-          <span className="quiz-mark-tags" lang="en">
+          <span className="mark-row-chips" lang="en">
             <span className={`chip ${point.covered ? 'chip-mastered' : 'chip-attention'}`}>
               {point.covered ? 'Covered' : 'Missing'}
             </span>

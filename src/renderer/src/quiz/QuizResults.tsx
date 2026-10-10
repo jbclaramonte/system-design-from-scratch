@@ -33,7 +33,7 @@ export function QuizResults({
   }, [])
 
   return (
-    <section className="quiz-results" data-testid="quiz-results">
+    <section className="reading-column quiz-results" data-testid="quiz-results">
       <header className="quiz-results-head">
         <h2 className="quiz-results-title" ref={headingRef} tabIndex={-1}>
           Round {round.number}
@@ -56,11 +56,11 @@ export function QuizResults({
         data-passed={String(round.passed)}
       >
         <div className="quiz-score-figures">
-          <p className="quiz-score-figure">
+          <p className="stat stat-xl">
             <span className="label-caps">Score</span>
-            <strong className="quiz-score-value">{formatPercent(score)}</strong>
+            <strong className="stat-value">{formatPercent(score)}</strong>
           </p>
-          <p className="quiz-score-figure quiz-score-figure-end">
+          <p className="stat quiz-score-figure-end">
             <span className="label-caps">Mastery Threshold</span>
             <strong className="quiz-score-threshold label-mono">
               {formatPercent(masteryThreshold)}
@@ -85,8 +85,8 @@ export function QuizResults({
 
       <section className="quiz-stack" aria-labelledby="quiz-by-notion">
         <h3 id="quiz-by-notion">By notion</h3>
-        <div className="card quiz-notions">
-          <table data-testid="notion-scores">
+        <div className="card card-flush quiz-notions">
+          <table className="card-table" data-testid="notion-scores">
             <thead>
               <tr>
                 <th scope="col">Notion</th>

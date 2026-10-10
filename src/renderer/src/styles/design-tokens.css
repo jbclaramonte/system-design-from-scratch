@@ -102,9 +102,10 @@
   --gutter-sm: 1rem;
   --margin: 2rem;
 
-  /* App shell: content container width and header height. */
+  /* App shell: content container width and header height; reading column of the quiz screens. */
   --layout-max-width: 1100px;
   --layout-header-height: 3.5rem;
+  --layout-reading-width: 48rem;
 
   /* Fonts (self-hosted by @fontsource-variable, see main.tsx). */
   --font-sans: 'Geist Variable', ui-sans-serif, system-ui, -apple-system, sans-serif;

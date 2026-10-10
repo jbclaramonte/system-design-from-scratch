@@ -26,7 +26,7 @@ export function QuizScreen({ onClose }: { onClose: () => void }) {
 
   return (
     <main data-testid="quiz-screen">
-      <header className="quiz-screen-head">
+      <header className="reading-column quiz-screen-head">
         <button onClick={onClose}>Back</button>
         {step.name !== 'pick' && (
           <button data-testid="quiz-back-to-list" onClick={() => setStep({ name: 'pick' })}>

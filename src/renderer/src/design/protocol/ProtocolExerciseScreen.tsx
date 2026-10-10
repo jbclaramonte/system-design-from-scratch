@@ -193,12 +193,12 @@ function StepPanel({
             </p>
           )}
           {draft.saveError && (
-            <p role="alert" className="protocol-notice protocol-notice-error">
+            <p role="alert" className="notice notice-error">
               Draft not saved: {draft.saveError}
             </p>
           )}
           {exportError && (
-            <p role="alert" className="protocol-notice protocol-notice-error">
+            <p role="alert" className="notice notice-error">
               {exportError}
             </p>
           )}

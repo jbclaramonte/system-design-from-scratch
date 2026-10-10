@@ -82,9 +82,11 @@ function StepLessonStream({
         )}
       </p>
       {running && (
-        <p className="protocol-pending" role="status" data-testid="step-lesson-status">
-          <span className="protocol-spinner" aria-hidden />
-          <span>{state.text ? 'Writing the lesson...' : 'Preparing the lesson...'}</span>
+        <p className="status-strip" role="status" data-testid="step-lesson-status">
+          <span className="spinner" aria-hidden />
+          <span className="status-strip-text">
+            {state.text ? 'Writing the lesson...' : 'Preparing the lesson...'}
+          </span>
           <button type="button" className="btn-sm" onClick={cancel}>
             Cancel
           </button>

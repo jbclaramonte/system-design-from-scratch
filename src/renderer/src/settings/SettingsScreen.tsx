@@ -97,7 +97,7 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
 
   return (
     <main className="settings-screen" data-testid="settings-screen">
-      <header className="settings-header">
+      <header className="page-header">
         <h1>Settings</h1>
         <button type="button" className="btn-sm" onClick={onClose}>
           Back
@@ -236,7 +236,7 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
           </section>
         </div>
         {error && (
-          <p role="alert" className="settings-error">
+          <p role="alert" className="notice notice-error">
             {error}
           </p>
         )}
@@ -250,7 +250,7 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
             Save
           </button>
           {status && (
-            <span role="status" data-testid="settings-status" className="settings-saved">
+            <span role="status" data-testid="settings-status" className="notice notice-success">
               {status}
             </span>
           )}
@@ -298,7 +298,7 @@ function AuthStatusView({
         </dd>
       </dl>
       {!status.loggedIn && (
-        <p role="alert" data-testid="settings-auth-help" className="settings-error">
+        <p role="alert" data-testid="settings-auth-help" className="notice notice-error">
           This profile is not logged in, so every generation will fail. Either log it in: run{' '}
           <code>CLAUDE_CONFIG_DIR={dir} claude</code> in a terminal and use <code>/login</code>, or
           set the Claude config directory above to the profile that is logged in, then Test again

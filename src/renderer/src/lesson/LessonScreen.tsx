@@ -114,7 +114,7 @@ export function LessonScreen({
     <section className="lesson-screen" data-testid="lesson-screen">
       <header className="lesson-header">
         {!embedded && <h2>{topic.title}</h2>}
-        <div className="lesson-badges">
+        <div className="chip-row">
           {grounded ? (
             <span className="chip" title="Grounded on the System Design Primer">
               System Design Primer
@@ -146,10 +146,10 @@ export function LessonScreen({
           </nav>
         )}
         {status && (
-          <p className="lesson-status" role="status" data-testid="lesson-status">
-            <span className="lesson-spinner" aria-hidden /> {status}{' '}
+          <p className="status-strip" role="status" data-testid="lesson-status">
+            <span className="spinner" aria-hidden /> {status}{' '}
             {running && (
-              <button type="button" onClick={cancel} data-testid="lesson-cancel">
+              <button type="button" className="btn-sm" onClick={cancel} data-testid="lesson-cancel">
                 Cancel
               </button>
             )}

@@ -61,7 +61,7 @@ function SourceDetails({ source }: { source: string }) {
 function DiagramFallback({ source, error }: { source: string; error: DiagramError }) {
   return (
     <div className="diagram-fallback" data-testid="diagram-fallback" data-code={error.code}>
-      <p className="diagram-fallback-note" role="note">
+      <p className="notice notice-attention diagram-fallback-note" role="note">
         This diagram could not be drawn.{' '}
         <span className="diagram-fallback-reason">{error.message}</span>
       </p>

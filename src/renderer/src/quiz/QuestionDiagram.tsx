@@ -50,7 +50,7 @@ export function DiagramFlagOffer({ questionId, reason }: { questionId: number; r
 
   if (flagged) {
     return (
-      <p className="quiz-flag-done" role="status" data-testid="question-flagged">
+      <p className="notice notice-attention" role="status" data-testid="question-flagged">
         Question flagged as faulty. You can still answer it.
       </p>
     )

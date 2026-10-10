@@ -43,8 +43,8 @@ export function DiagramDevScreen({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <main className="lesson-view" data-testid="diagram-dev">
-      <nav className="lesson-nav">
+    <main className="screen-fill" data-testid="diagram-dev">
+      <nav className="screen-nav">
         <button type="button" onClick={onClose}>
           Back
         </button>

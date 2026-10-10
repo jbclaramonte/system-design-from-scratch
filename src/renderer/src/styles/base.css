@@ -3,6 +3,7 @@
  * Element rules style the plain markup, so a bare `button`, `input` or `table` looks right
  * without a class. Shared classes: .btn-primary, .btn-ghost, .chip, .card, .progress,
  * .label-caps, .label-mono, .muted. Colors, sizes and radii come from design-tokens.css only.
+ * Patterns shared by several screens (notices, page header, stat, tabs, ...) are in components.css.
  */
 
 *,
@@ -124,6 +125,19 @@ a:hover {
   outline: 2px solid var(--color-border-focus);
   outline-offset: 2px;
   box-shadow: 0 0 0 5px var(--color-focus-ring);
+}
+
+/*
+ * A heading focused by script (on mount of a screen, a question or a panel, tabindex -1) is not
+ * something to operate: a thin outline marks where focus went, without the ring and glow of
+ * interactive elements. Mouse and touch never match :focus-visible, so they show nothing.
+ */
+
+:is(h1, h2, h3, h4, h5, h6)[tabindex='-1']:focus-visible {
+  outline: 1px solid var(--color-border-focus);
+  outline-offset: 4px;
+  border-radius: var(--radius-sm);
+  box-shadow: none;
 }
 
 /* Scrollbars (Chromium) */

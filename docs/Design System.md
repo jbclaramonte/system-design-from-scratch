@@ -16,8 +16,9 @@ Tokens, fonts and shared base styles of the renderer. The visual spec is `DESIGN
 | File | Role |
 |---|---|
 | `src/renderer/src/styles/design-tokens.css` | CSS custom properties on `:root` (`color-scheme: dark`). The only source of colors, radii, spacing, type scale, elevation and motion. |
-| `src/renderer/src/styles/base.css` | Reset, element styles (headings, links, focus ring, scrollbars, code, tables, form controls, buttons) and the shared classes below. |
-| `src/renderer/src/main.tsx` | Import order: fonts, `design-tokens.css`, `base.css`, then `App` (which imports the screen stylesheets). The order matters: base rules must come before screen rules. |
+| `src/renderer/src/styles/base.css` | Reset, element styles (headings, links, focus ring, scrollbars, code, tables, form controls, buttons) and the small shared classes (`.btn-*`, `.chip`, `.card`, `.progress`, text helpers). |
+| `src/renderer/src/styles/components.css` | Patterns shared by several screens: page header, notices, status strip, stat, note card, status marks, card table, card disclosure, tabs, clickable card. See [[#Shared patterns]]. |
+| `src/renderer/src/main.tsx` | Import order: fonts, `design-tokens.css`, `base.css`, `components.css`, then `App` (which imports the screen stylesheets). The order matters: shared rules come before screen rules, so a screen rule of equal specificity can adjust spacing in its own context. |
 | `src/renderer/src/shell/` | The app shell: `AppShell.tsx`, `shell.css`, `navigation.ts` (screens, nav items, layouts; tested). See [[#App shell]]. |
 | `src/renderer/src/*/*.css` | Screen styles next to their components, using tokens only. |
 
@@ -49,7 +50,7 @@ Names below drop the `--` prefix families: `--color-*`, `--radius-*`, `--space-*
 | Elevation | `shadow-layer-2` (inset top highlight), `shadow-layer-3` + `blur-layer-3` (floating menus), `glow-mastered/progress/attention` |
 | Motion | `ease-out` cubic-bezier(.16, 1, .3, 1), `duration-fast`, `duration-slow` |
 | Progress | `progress-height` 4px, `progress-gradient` indigo to emerald |
-| Layout | `layout-max-width` 1100px (shell container), `layout-header-height` 3.5rem |
+| Layout | `layout-max-width` 1100px (shell container), `layout-header-height` 3.5rem, `layout-reading-width` 48rem (quiz reading column) |
 
 Text contrast: `text-primary` and `text-secondary` pass WCAG AA on every surface. `text-muted` is about 4.1:1 on the canvas, so use it for footnotes and structural glyphs only.
 
@@ -72,7 +73,33 @@ Plain markup looks right without a class: `body` (Geist 14px/22px on the canvas)
 | `.label-caps`, `.label-mono` | Metadata in JetBrains Mono: latencies, counts, partition keys, section labels. |
 | `.muted`, `.faint` | Secondary text (`text-secondary`) and footnote text (`text-muted`). |
 
-Existing screen classes (`.path-badge`, `.mastery-badge`, `.lesson-badge`, `.dash-card`, `.path-progress`) already use the tokens with the same looks. Issues #30 to #34 should migrate them to the shared classes above.
+Screen stylesheets only lay a screen out (grids, columns, sticky bars). A look that two screens share is a shared class, not a copy.
+
+## Shared patterns
+
+Issue #36. All in `components.css`. Tones are named after the status colors: `mastered`, `progress`, `attention`, `error` (plus `neutral` or none).
+
+| Class | Use |
+|---|---|
+| `.page-header` | Header of a page screen: `h1` on the left, a small Back button (`btn-sm`) on the right, 1.5rem below. Dashboard, Settings, About. |
+| `.screen-nav` | Topic screens: a compact Back button with an arrow, then the `h1`, optional aside at the end. `.screen-fill` makes a screen fill the content area height (flex column, `min-height: 0`). |
+| `.reading-column` | Centered column, `layout-reading-width` (48rem) wide. Quiz picker, player, results and the quiz screen head. Lesson prose (`.lesson-body`) is 50rem on purpose. |
+| `.notice` | One message in a tinted box (6px radius). Plain is information. `.notice-error` for errors (Settings, Dashboard, Design Exercise), `.notice-attention` for a flag or a fallback, `.notice-success` for a confirmation ("Saved": inline, check mark in front). |
+| `.notice-card` | Titled notice with actions and folded details: `GenerationErrorView`. `.notice-card-error` adds the red tint and the "!" mark before the title. |
+| `.status-strip` | A call in progress: indigo-tinted strip with a `.spinner` (or a dot), the step in progress (`.status-strip-text` grows) and a `btn-sm` Cancel pushed right. Lesson, Remediation Lesson, round preparation, grading, Protocol calls. The spinner slows down under `prefers-reduced-motion`. |
+| `.stat` | A `.label-caps` label over a mono `.stat-value`, with an optional `.stat-detail`. Size on the stat: default `headline-sm`, `.stat-md`, `.stat-lg`, `.stat-xl`. Dashboard overview, Learning Path counters, topic header, quiz score. Dividers between stats stay in the screen. |
+| `.chip-row` | Chips (and small controls) on one wrapping line, 0.5rem apart. |
+| `.note-card` | A `.label-caps` title over text or a list, on `surface-base`. `.note-card-compact` (tighter), `.note-card-attention`, `.note-card-progress` (tinted; the label takes the tone). Quiz explanation notes, Protocol "Next". |
+| `.status-mark` | The 20px circle before a title, with `.status-mark-ring`, `-glyph`, `-dot` parts; tone `.status-mark-mastered`, `-progress`, `-attention`, `-error`, `-neutral` (default locked). Decorative: the chip says the status in words. |
+| `.mark-row` | A bordered row with `.mark-row-glyph`, `.mark-row-text` and `.mark-row-chips`. Tone `.mark-row-mastered`, `-attention`, `-error`; `.mark-row-outline` for the correct answer left unpicked. Quiz choices and expected points. |
+| `.card-table` | A table in a card: put `.card .card-flush` (no padding, scrolls sideways) on the wrapper and `.card-table` on the table. Mono caps header, rules between rows, 1rem on the outer sides of the first and last cells. Dashboard topics and history, quiz notion scores. |
+| `.card-disclosure` | A `details` framed like a card; its open summary gets a rule below. `.card-disclosure-inset` for a fold inside a card (canvas color, 6px radius). Dashboard history, About folds, Protocol submissions. |
+| `.tabs` > `.tab` | Underline filter tabs: buttons marked with `aria-pressed="true"` or `aria-selected="true"`. Learning Path filter. |
+| `.card-clickable` | A card that opens something as a whole. First child `.card-clickable-main` (a button that stretches over the card, or a `div` with `aria-disabled="true"`); inner actions carry `.card-clickable-action` to stay clickable above it. Hover raises the border; the focus ring is drawn around the card. Learning Path steps. |
+
+Focus on a heading set by script (`tabindex="-1"` on a screen, question or panel heading, for screen readers) gets a thin 1px indigo outline at 4px offset without the glow; it only shows when the focus came from the keyboard. Buttons, links and fields keep the full ring.
+
+`lesson-*` classes belong to the Lesson: `.lesson-screen`, `.lesson-header`, `.lesson-notions`, `.lesson-sources` for the Lesson screen, and the prose classes `.lesson-body`, `.lesson-scroll`, `.lesson-table`, `.lesson-notion-anchor`, used wherever a Lesson text is shown (topic screen panel, Remediation Lesson, Protocol Step Lesson).
 
 ## App shell
 
@@ -104,7 +131,24 @@ To add a screen: add it to the `Screen` union, give it a nav item and a layout i
 4. Colors carry meaning: emerald is mastered only, indigo is in progress and focus, amber is trade-offs and attention, red is errors and Round Limit. Do not use them as decoration.
 5. Technical values (QPS, percentages, counts) use `label-mono`; prose uses Geist. Lesson prose is `body-lg` (16px/26px).
 6. Keep the visible focus ring; never `outline: none` without a replacement.
-7. Update this note and the glossary when a token or shared class is added.
+7. A pattern used by two screens goes to `components.css` and is listed in [[#Shared patterns]]; do not copy it into a screen stylesheet.
+8. Update this note and the glossary when a token or shared class is added.
+
+## Design Canvas component colors
+
+The component shapes of the Design Canvas (`design/componentTypes.ts`, `COMPONENT_LOOKS` and the dark palette) keep their colors as data: they are the semantic hues of the Design Export (the LLM reads the type from the color too), not theme tokens. The live canvas uses the dark palette (stroke one step lighter than the light stroke, over a deep tint of the same hue); exports use the light one.
+
+| Type | Light fill | Light stroke | Dark fill | Dark stroke |
+|---|---|---|---|---|
+| `client` | #f1f5f9 | #475569 | #1e293b | #94a3b8 |
+| `cdn` | #ccfbf1 | #0d9488 | #0b2c2b | #2dd4bf |
+| `load-balancer` | #dbeafe | #2563eb | #0f2547 | #60a5fa |
+| `service` | #e0e7ff | #4f46e5 | #1e1b4b | #818cf8 |
+| `cache` | #ffedd5 | #ea580c | #34200f | #fb923c |
+| `database` | #dcfce7 | #16a34a | #0d2c1d | #34d399 |
+| `queue` | #f3e8ff | #9333ea | #2b1545 | #c084fc |
+
+Labels: `#1d1d1d` on a light fill, the `text-primary` token on the dark canvas. Keep this table in sync with `componentTypes.ts`.
 
 ## Third-party content on a dark app
 

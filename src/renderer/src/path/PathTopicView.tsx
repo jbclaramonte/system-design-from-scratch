@@ -39,8 +39,8 @@ export function PathTopicView({
   )
 
   return (
-    <main className="lesson-view" data-testid="path-topic-view">
-      <nav className="lesson-nav">
+    <main className="screen-fill" data-testid="path-topic-view">
+      <nav className="screen-nav">
         <button type="button" onClick={onBack} data-testid="path-back">
           {backLabel}
         </button>

@@ -61,11 +61,6 @@
 
 .diagram-fallback-note {
   margin: 0 0 var(--space-sm);
-  padding: var(--space-sm) var(--space-md);
-  border: 1px solid var(--color-attention-border);
-  border-radius: var(--radius-md);
-  background: var(--color-attention-fill);
-  color: var(--color-attention-text);
 }
 
 .diagram-fallback-reason {

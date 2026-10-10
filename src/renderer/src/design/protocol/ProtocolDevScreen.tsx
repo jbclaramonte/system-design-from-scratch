@@ -59,7 +59,7 @@ export function ProtocolDevScreen({ onClose }: { onClose: () => void }) {
         ))}
       </ul>
       {error && (
-        <p role="alert" className="protocol-notice protocol-notice-error">
+        <p role="alert" className="notice notice-error">
           {error}
         </p>
       )}

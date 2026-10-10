@@ -72,7 +72,7 @@ export function RemediationLesson({
 
   return (
     <article className="mastery-remediation" data-testid="remediation-lesson" aria-busy={running}>
-      <p className="lesson-badges">
+      <p className="chip-row">
         <span className="chip chip-progress" data-testid="remediation-angle">
           Angle: {angleLabels[target.angle]}
         </span>
@@ -83,10 +83,15 @@ export function RemediationLesson({
         )}
       </p>
       {running && (
-        <p className="lesson-status" role="status" data-testid="remediation-status">
-          <span className="lesson-spinner" aria-hidden />{' '}
+        <p className="status-strip" role="status" data-testid="remediation-status">
+          <span className="spinner" aria-hidden />{' '}
           {state.text ? 'Writing the Remediation Lesson...' : 'Preparing the Remediation Lesson...'}{' '}
-          <button type="button" onClick={cancel} data-testid="remediation-cancel">
+          <button
+            type="button"
+            className="btn-sm"
+            onClick={cancel}
+            data-testid="remediation-cancel"
+          >
             Cancel
           </button>
         </p>

@@ -100,7 +100,7 @@ export function GenerationErrorView({
 
   return (
     <div
-      className={cancelled ? 'lesson-notice' : 'lesson-error'}
+      className={cancelled ? 'notice-card' : 'notice-card notice-card-error'}
       role="alert"
       data-testid={testId}
       data-code={code}

@@ -55,7 +55,7 @@ export function QuizPicker({ onStart }: { onStart: (quizId: number) => void }) {
   const withQuizzes = topics?.filter((topic) => topic.quizCount > 0) ?? []
 
   return (
-    <section className="quiz-picker" data-testid="quiz-picker">
+    <section className="reading-column quiz-picker" data-testid="quiz-picker">
       <h2>Choose a quiz</h2>
       {error && <p role="alert">{error}</p>}
       {topics === null ? (
