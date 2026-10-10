@@ -25,7 +25,7 @@ function TopicList({ onOpen }: { onOpen: (topic: TopicSummary) => void }) {
             <span className="lesson-topic-title">{topic.title}</span>
             {!topic.grounded && <OutsidePrimerBadge />}
             <span className="lesson-topic-meta">
-              {topic.notionCount > 0 ? `${topic.notionCount} notions` : 'Not started'}
+              {topic.notionCount > 0 ? `${topic.notionCount} notions` : 'No notions yet'}
             </span>
           </button>
         </li>

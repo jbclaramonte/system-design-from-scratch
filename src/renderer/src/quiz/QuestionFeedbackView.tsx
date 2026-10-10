@@ -5,13 +5,13 @@ import type {
   FreeAnswerQuestionFeedback,
   QuestionFeedback
 } from '../../../shared/quiz'
-import { formatPercent } from './progress'
-
-const resultLabels: Record<AttemptResult, string> = {
-  correct: 'Correct',
-  partially_correct: 'Partially correct',
-  incorrect: 'Incorrect'
-}
+import {
+  choiceFeedbackMessage,
+  choiceTally,
+  freeAnswerFeedbackMessage,
+  resultLabels,
+  type FeedbackMessage
+} from './feedbackText'
 
 const resultColors: Record<AttemptResult, string> = {
   correct: '#1b7a3a',
@@ -28,20 +28,24 @@ export function QuestionFeedbackView({ feedback }: { feedback: QuestionFeedback 
   )
 }
 
+/** The verdict line: the label, then what happened in plain words. */
+function Verdict({ result, message }: { result: AttemptResult; message: FeedbackMessage }) {
+  return (
+    <p style={{ fontWeight: 'bold', color: resultColors[result] }} data-testid="feedback-verdict">
+      {message.label}
+      {message.detail && <span style={{ fontWeight: 'normal' }}>: {message.detail}</span>}
+    </p>
+  )
+}
+
 /** A choice question: every choice marked, and the stored explanation. */
 function ChoiceFeedbackView({ feedback }: { feedback: ChoiceQuestionFeedback }) {
   return (
     <div data-testid="question-feedback" data-result={feedback.result}>
-      <p style={{ fontWeight: 'bold', color: resultColors[feedback.result] }}>
-        {resultLabels[feedback.result]}
-        {feedback.partialCredit !== null && feedback.result === 'partially_correct' && (
-          <span style={{ fontWeight: 'normal' }}>
-            {' '}
-            ({formatPercent(Math.round(feedback.partialCredit * 100))} of the way: a multiple-choice
-            question only counts when every correct choice and no wrong one is selected)
-          </span>
-        )}
-      </p>
+      <Verdict
+        result={feedback.result}
+        message={choiceFeedbackMessage(choiceTally(feedback.choices))}
+      />
       <ul lang="fr" style={{ paddingLeft: 0, listStyle: 'none' }}>
         {feedback.choices.map((choice, index) => (
           <li
@@ -106,16 +110,14 @@ function FreeAnswerFeedbackView({ feedback }: { feedback: FreeAnswerQuestionFeed
   const covered = feedback.expectedPoints.filter((point) => point.covered).length
   return (
     <div data-testid="question-feedback" data-result={feedback.result} data-kind="free_answer">
-      <p style={{ fontWeight: 'bold', color: resultColors[feedback.result] }}>
-        {resultLabels[feedback.result]}
-        {feedback.result === 'partially_correct' && (
-          <span style={{ fontWeight: 'normal' }}>
-            {' '}
-            ({covered} of {feedback.expectedPoints.length} expected points: a free answer only
-            counts when every expected point is covered without a major error)
-          </span>
+      <Verdict
+        result={feedback.result}
+        message={freeAnswerFeedbackMessage(
+          feedback.result,
+          covered,
+          feedback.expectedPoints.length
         )}
-      </p>
+      />
       <p style={{ marginBottom: 4 }}>Your answer:</p>
       <blockquote
         lang="fr"

@@ -1,15 +1,15 @@
 import { useEffect, useReducer, useRef, useState } from 'react'
 import type { ProtocolStep } from '../../../../shared/protocol'
+import { GenerationErrorView } from '../../generation/GenerationErrorView'
 import { LessonMarkdown } from '../../lesson/LessonMarkdown'
 import {
-  errorTitle,
+  lessonErrorTitle,
   initialLessonState,
   isLessonRunning,
   lessonReducer,
   type LessonState
 } from '../../lesson/lessonState'
 import { createTextBuffer } from '../../lesson/textBuffer'
-import { SettingsErrorAction } from '../../settings/SettingsErrorAction'
 
 /**
  * Streams the Protocol Step Lesson of a step and cancels it on unmount. Each effect run has its
@@ -87,20 +87,14 @@ function StepLessonStream({
         </p>
       )}
       {state.error && (
-        <div
-          className={state.status === 'cancelled' ? 'lesson-notice' : 'lesson-error'}
-          role="alert"
-          data-testid="step-lesson-error"
-        >
-          <strong>
-            {state.status === 'cancelled' ? 'Lesson cancelled' : errorTitle(state.error.code)}
-          </strong>
-          {state.status !== 'cancelled' && <p>{state.error.message}</p>}
-          <SettingsErrorAction code={state.error.code} />
-          <button type="button" onClick={onRetry} data-testid="step-lesson-retry">
-            Retry
-          </button>
-        </div>
+        <GenerationErrorView
+          code={state.error.code}
+          message={state.error.message}
+          title={lessonErrorTitle(state.error.code)}
+          onRetry={onRetry}
+          retryTestId="step-lesson-retry"
+          testId="step-lesson-error"
+        />
       )}
       <div className="lesson-body" data-testid="step-lesson-body">
         <LessonMarkdown markdown={state.text} sources={state.sources} streaming={running} />

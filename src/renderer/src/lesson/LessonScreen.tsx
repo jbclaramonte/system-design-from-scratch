@@ -1,15 +1,15 @@
 import { useEffect, useLayoutEffect, useReducer, useRef } from 'react'
 import type { TopicSummary } from '../../../shared/topic'
+import { GenerationErrorView } from '../generation/GenerationErrorView'
 import { shortSourceLabel } from './citations'
 import { LessonMarkdown } from './LessonMarkdown'
 import {
-  errorTitle,
+  lessonErrorTitle,
   initialLessonState,
   isLessonRunning,
   lessonReducer,
   type LessonState
 } from './lessonState'
-import { SettingsErrorAction } from '../settings/SettingsErrorAction'
 import { OutsidePrimerBadge } from './OutsidePrimerBadge'
 import { createTextBuffer, isNearBottom } from './textBuffer'
 
@@ -156,18 +156,14 @@ export function LessonScreen({
           </p>
         )}
         {state.error && (
-          <div
-            className={state.status === 'cancelled' ? 'lesson-notice' : 'lesson-error'}
-            role="alert"
-            data-testid="lesson-error"
-          >
-            <strong>{errorTitle(state.error.code)}</strong>
-            {state.status !== 'cancelled' && <p>{state.error.message}</p>}
-            <SettingsErrorAction code={state.error.code} />
-            <button type="button" onClick={onRetry} data-testid="lesson-retry">
-              Retry
-            </button>
-          </div>
+          <GenerationErrorView
+            code={state.error.code}
+            message={state.error.message}
+            title={lessonErrorTitle(state.error.code)}
+            onRetry={onRetry}
+            retryTestId="lesson-retry"
+            testId="lesson-error"
+          />
         )}
       </header>
       <div

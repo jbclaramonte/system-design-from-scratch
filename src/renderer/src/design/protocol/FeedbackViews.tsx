@@ -5,7 +5,7 @@ import {
   type StepFeedback,
   type SubmissionView
 } from '../../../../shared/protocol'
-import { SettingsErrorAction } from '../../settings/SettingsErrorAction'
+import { GenerationErrorView } from '../../generation/GenerationErrorView'
 import type { ProtocolCallError } from './useProtocolCall'
 import { checklistScore, verdictLabels } from './protocolText'
 
@@ -179,10 +179,11 @@ export function CallStatus({
     )
   }
   return (
-    <p className="lesson-error" role="alert" data-testid="protocol-error" data-code={error.code}>
-      {error.message}
-      {error.code !== 'refused' && ' Your work is kept: try again.'}{' '}
-      <SettingsErrorAction code={error.code} />
-    </p>
+    <GenerationErrorView
+      code={error.code}
+      message={error.message}
+      hint={error.code !== 'refused' ? 'Your work is kept: try again.' : undefined}
+      testId="protocol-error"
+    />
   )
 }

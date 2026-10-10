@@ -28,7 +28,7 @@ stateDiagram-v2
 
 | Step | When | Topic mastery |
 |---|---|---|
-| `lesson` | No round yet. `lessonReady` once a `lessons` row exists. | `not_started` (no lesson, no round) or `in_progress` |
+| `lesson` | No round yet. `lessonReady` once a `lessons` row exists. | `not_started` (no lesson, no round) or `in_progress` (lesson recorded, or a round opened and left) |
 | `round` | A round is open (started, not completed) with a number above the last completed one: it is **resumed**, never restarted. | `in_progress` |
 | `remediation` | The latest completed round failed and the limit is not reached, or the learner chose another angle. Targets: the missed notions with their angle and whether their Remediation Lesson is recorded. | `in_progress` |
 | `limit_reached` | Failed rounds since the last passed one >= Round Limit, no choice recorded on the latest round. | `limit_reached` |
@@ -37,6 +37,7 @@ stateDiagram-v2
 
 Rules:
 
+- **Topic status** (#25): the status of `deriveMastery` is the only topic status of the app, read through `getTopicMastery` by the topic header (`mastery:getState`), the [[Learning Path]] (and so its recommended step) and the [[Dashboard]] topics table. A topic is `not_started` until a [[Lesson]] is recorded (`lessons` row, written before the lesson's `done` event is sent) or a [[Round]] is opened (an open or abandoned one included); then `in_progress` until `mastered`, `skipped` or `limit_reached`. A topic with progress is never `locked` on the path. The topic screen reloads the state when the lesson is done and when a round opens, so the header shows "In progress" with the round/attempt line during the lesson and round 1; before the lesson it reads "Read the lesson, then take round 1".
 - **Round Limit count** = completed rounds below the threshold since the last passed round (`failedRoundsSinceLastPass`). An open (abandoned) round never counts; it keeps its number when resumed, so a number is never burnt twice. Numbers are unique per topic and never restart ([[Quiz Engine#Round lifecycle]]).
 - **Missed notion** = per-notion score below the current Mastery Threshold (`missedNotions`). If a failed round has none (possible below 100%: a question on two notions counts for both), the notions with a wrong answer are targeted, so a failed round always has remediation.
 - **Threshold changes**: `rounds.passed` is stored at completion, so a later change never passes or fails a past round; it changes the targets of the current remediation and the next rounds. A changed Round Limit applies at once (a remediation step can turn into `limit_reached`).
@@ -100,7 +101,7 @@ Applied without restart: the threshold and limit are read on every action; a CLI
 
 `claude_config_dir` was added without a migration (the `settings` table is key/value): `getSettings` reads it as `null` until the first save writes the row (`unseededDefaults` in `src/main/db/repositories/settings.ts`).
 
-"Open Settings": every Generation error display (lesson, Remediation Lesson, quiz preparation, free-answer grading, Protocol Step Lesson and protocol calls, dev Generation panel) renders `SettingsErrorAction` (`src/renderer/src/settings/`) next to Retry; for `not_logged_in` it explains that Retry will fail until the profile is logged in and opens the Settings screen (`OpenSettingsContext`, provided by `App`; Back returns to the screen it was opened from).
+"Open Settings": every Generation error display (lesson, Remediation Lesson, quiz preparation, free-answer grading, Protocol Step Lesson and protocol calls, dev Generation panel) is `GenerationErrorView` ([[Generation Service#Error display]]); for `not_logged_in` and `cli_not_found` it shows "Open Settings" next to Retry, which opens the Settings screen (`OpenSettingsContext`, provided by `App`; Back returns to the screen it was opened from).
 
 ## Data
 

@@ -95,7 +95,11 @@ function remediationTargets(
   })
 }
 
-/** The state of a topic in the Mastery Loop. */
+/**
+ * The state of a topic in the Mastery Loop. Its status is the only topic status of the app:
+ * `not_started` until a Lesson is recorded or a Round is opened (an open or abandoned one
+ * included), then `in_progress` until mastered, skipped or at the Round Limit.
+ */
 export function deriveMastery(snapshot: MasterySnapshot): DerivedMastery {
   const rounds = [...snapshot.rounds].sort((a, b) => a.number - b.number)
   const completed = rounds.filter((round) => round.completed)

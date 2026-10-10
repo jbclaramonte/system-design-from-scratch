@@ -82,16 +82,16 @@ export function lessonReducer(state: LessonState, action: LessonAction): LessonS
 export const isLessonRunning = (status: LessonStatus) =>
   status !== 'done' && status !== 'cancelled' && status !== 'error'
 
-const errorTitles: Record<GenerationErrorCode, string> = {
-  cli_not_found: 'Claude Code CLI not found',
-  not_logged_in: 'Claude Code is not logged in',
-  quota_or_rate_limit: 'Claude usage limit reached',
-  bad_model: 'Model not available',
+/**
+ * Titles of lesson errors that name the lesson. The other codes keep the title of
+ * `GenerationErrorView` (src/renderer/src/generation/generationErrorText.ts).
+ */
+const lessonErrorTitles: Partial<Record<GenerationErrorCode, string>> = {
   timeout: 'The lesson took too long',
   invalid_output: 'The generated lesson was invalid',
   cancelled: 'Lesson cancelled',
-  topic_locked: 'This topic is locked on the Learning Path',
   unknown: 'The lesson could not be generated'
 }
 
-export const errorTitle = (code: GenerationErrorCode) => errorTitles[code]
+export const lessonErrorTitle = (code: GenerationErrorCode): string | undefined =>
+  lessonErrorTitles[code]

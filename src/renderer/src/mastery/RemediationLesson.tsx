@@ -1,15 +1,14 @@
 import { useEffect, useReducer, useState } from 'react'
 import type { RemediationTarget } from '../../../shared/mastery'
+import { GenerationErrorView } from '../generation/GenerationErrorView'
 import { LessonMarkdown } from '../lesson/LessonMarkdown'
 import {
-  errorTitle,
   initialLessonState,
   isLessonRunning,
   lessonReducer,
   type LessonState
 } from '../lesson/lessonState'
 import { createTextBuffer } from '../lesson/textBuffer'
-import { SettingsErrorAction } from '../settings/SettingsErrorAction'
 import { angleLabels } from './masteryText'
 
 /**
@@ -93,22 +92,14 @@ export function RemediationLesson({
         </p>
       )}
       {state.error && (
-        <div
-          className={state.status === 'cancelled' ? 'lesson-notice' : 'lesson-error'}
-          role="alert"
-          data-testid="remediation-error"
-        >
-          <strong>
-            {state.status === 'cancelled'
-              ? 'Remediation Lesson cancelled'
-              : errorTitle(state.error.code)}
-          </strong>
-          {state.status !== 'cancelled' && <p>{state.error.message}</p>}
-          <SettingsErrorAction code={state.error.code} />
-          <button type="button" onClick={onRetry} data-testid="remediation-retry">
-            Retry
-          </button>
-        </div>
+        <GenerationErrorView
+          code={state.error.code}
+          message={state.error.message}
+          title={state.status === 'cancelled' ? 'Remediation Lesson cancelled' : undefined}
+          onRetry={onRetry}
+          retryTestId="remediation-retry"
+          testId="remediation-error"
+        />
       )}
       <div className="lesson-body" data-testid="remediation-body">
         <LessonMarkdown markdown={state.text} sources={state.sources} streaming={running} />

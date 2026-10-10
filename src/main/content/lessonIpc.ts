@@ -144,11 +144,15 @@ export function createLessonIpc(deps: PipelineDeps, options: LessonIpcOptions = 
         sources: lessonSources(corpus, request.groundedSourceSections ?? [])
       })
       for await (const event of service.generate(request).events) {
+        // Recorded before `done` is sent: the topic screen reloads its mastery on `done`, and
+        // the `lessons` row is what makes the topic `in_progress`.
+        const markdown =
+          event.type === 'done' && typeof event.output.content === 'string'
+            ? event.output.content
+            : null
+        if (event.type === 'done' && markdown !== null) recordLesson(topicId, event.output)
         send(event)
-        if (event.type === 'done' && typeof event.output.content === 'string') {
-          recordLesson(topicId, event.output)
-          pregenerateQuiz(topicId, event.output.content)
-        }
+        if (markdown !== null) pregenerateQuiz(topicId, markdown)
       }
     } catch (error) {
       send({ type: 'error', error: toErrorInfo(error) })

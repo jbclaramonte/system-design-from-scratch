@@ -7,6 +7,7 @@ import type {
 import type { TopicStep } from '../../../shared/learningPath'
 import type { AttemptResult, QuestionType } from '../../../shared/quiz'
 import { lockMessage } from '../path/pathText'
+import { resultLabels as feedbackLabels } from '../quiz/feedbackText'
 import { formatPercent } from '../quiz/progress'
 
 export const questionTypeLabels: Record<QuestionType, string> = {
@@ -18,9 +19,9 @@ export const questionTypeLabels: Record<QuestionType, string> = {
 
 /** Result labels, with a symbol so the result never relies on colour alone. */
 export const resultLabels: Record<AttemptResult, string> = {
-  correct: '✓ Correct',
-  partially_correct: '◐ Partially correct',
-  incorrect: '✗ Incorrect'
+  correct: `✓ ${feedbackLabels.correct}`,
+  partially_correct: `◐ ${feedbackLabels.partially_correct}`,
+  incorrect: `✗ ${feedbackLabels.incorrect}`
 }
 
 export const roundStatusLabels: Record<DashboardRoundStatus, string> = {

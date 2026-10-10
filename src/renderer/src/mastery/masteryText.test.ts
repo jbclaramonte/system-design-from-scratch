@@ -33,6 +33,12 @@ describe('roundProgress', () => {
       'Mastered · Mastery Threshold 80%'
     )
   })
+
+  it('has no attempt to count before the lesson is recorded', () => {
+    expect(
+      roundProgress(state({ status: 'not_started', step: { name: 'lesson', lessonReady: false } }))
+    ).toBe('Read the lesson, then take round 1 · Mastery Threshold 100%')
+  })
 })
 
 describe('roundPreparation', () => {

@@ -11,9 +11,11 @@ import {
   createProtocolStepSubmission,
   listDesignExercises
 } from '../db/repositories/designPractice'
-import { createTopic, getTopicBySlug } from '../db/repositories/learningContent'
+import { createDashboardIpc } from '../dashboard/dashboardIpc'
+import { createLesson, createTopic, getTopicBySlug } from '../db/repositories/learningContent'
 import { setRoundLimitChoice } from '../db/repositories/mastery'
 import { updateSettings } from '../db/repositories/settings'
+import { getTopicMastery } from '../mastery/queries'
 import { DESIGN_EXERCISES, seedDesignExercises } from '../protocol/designExercises'
 import { DESIGN_EXERCISE_PREREQUISITES } from './designExercisePrerequisites'
 import { createExerciseLockGuard } from './lock'
@@ -84,6 +86,28 @@ describe('getLearningPath', () => {
     expect(statusOf(path, 'http')).toBe('skipped')
     expect(statusOf(path, teachable[0]!)).toBe('locked')
     expect(path.nextStepKey).toBe('topic:http')
+  })
+
+  it('shows a topic in progress once its lesson is recorded or a round is opened (#25)', () => {
+    const clientServer = getTopicBySlug(db, 'client-server')!
+    createLesson(db, { topicId: clientServer.id, content: '# Leçon', grounded: false })
+    // A round opened on the next topic (from a dev screen) and left open.
+    const http = getTopicBySlug(db, 'http')!
+    const quiz = createQuiz(db, { topicId: http.id, grounded: false, questions: [] })
+    createRound(db, { topicId: http.id, quizId: quiz.id, number: 1 })
+
+    // The topic header, the Learning Path, the recommended step and the Dashboard agree.
+    expect(getTopicMastery(db, clientServer.id)).toBe('in_progress')
+    expect(getTopicMastery(db, http.id)).toBe('in_progress')
+    const path = getLearningPath({ db, corpus })
+    expect(statusOf(path, 'client-server')).toBe('in_progress')
+    expect(statusOf(path, 'http')).toBe('in_progress')
+    expect(path.nextStepKey).toBe('topic:client-server')
+    const dashboard = createDashboardIpc({ db, corpus }).get({})
+    expect(dashboard.topics.slice(0, 2).map((topic) => topic.step.status)).toEqual([
+      'in_progress',
+      'in_progress'
+    ])
   })
 
   it('keeps a topic mastered after a later failed round and after a threshold change', () => {

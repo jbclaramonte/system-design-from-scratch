@@ -43,8 +43,8 @@ Topics that are neither (the dev fixture topic of the Quiz dev screen) are left 
 |---|---|---|
 | `mastered` | A round of the topic once passed (`rounds.passed`), whatever came after | Not used |
 | `locked` | Not the first step, previous topic not `mastered`, no progress of its own | Implemented, not started, a prerequisite not `mastered` or the previous exercise not `completed` |
-| `available` | Unlocked, mastery `not_started` | Implemented, not started, every prerequisite `mastered` and the previous exercise `completed` |
-| `in_progress` | Unlocked, the topic's mastery | A step was submitted (any `protocol_step_submissions` row), no final review yet |
+| `available` | Unlocked, mastery `not_started` (no lesson recorded, no round opened) | Implemented, not started, every prerequisite `mastered` and the previous exercise `completed` |
+| `in_progress` | The topic's mastery: a lesson recorded or a round opened (an abandoned one included), not mastered, skipped or at the Round Limit | A step was submitted (any `protocol_step_submissions` row), no final review yet |
 | `skipped`, `limit_reached` | Unlocked, the topic's mastery | Not used |
 | `completed` | Not used | A final review is recorded (`design_feedback` kind `final_review`); it stays completed |
 | `coming_soon` | Not used | Not implemented yet (`IMPLEMENTED_DESIGN_EXERCISES`) |
@@ -52,7 +52,7 @@ Topics that are neither (the dev fixture topic of the Quiz dev screen) are left 
 - **Strict unlock**: only `mastered` unlocks the next step. A `skipped` or `limit_reached` topic keeps the next one locked; the lock message says why ("Master X first. It was skipped: come back to it with another angle.") with a "Go to X" button, and the recommended step points to that topic, so the learner is never stuck.
 - **No regression**: once a round passed, the topic stays `mastered` even if a later round failed (possible from the dev Quiz screen).
 - **Threshold changes never re-lock**: `rounds.passed` is stored at completion against the threshold of that time ([[Mastery Loop Implementation#State machine]]); the path only reads it.
-- **Progress keeps a step open**: a topic that already has progress (lesson read, rounds played) is never shown `locked`, for example when Foundations Module topics are inserted before topics already started.
+- **Progress keeps a step open**: a topic that already has progress (lesson read, a round opened or played) is never shown `locked`, for example when Foundations Module topics are inserted before topics already started. "Progress" is exactly mastery other than `not_started`, the same derivation as the topic header and the Dashboard ([[Mastery Loop Implementation#State machine]], #25).
 - **Design Exercises** need their own prerequisite topics and, for an implemented exercise after the first, the previous one `completed` (`previousExercise`, from `previousDesignExercise`; the lock message says "Complete X first."). A prerequisite or a previous exercise missing from the path never counts. A started exercise is never locked again. An exercise that is not implemented is `coming_soon` and never startable, but still lists its missing prerequisites. Rationale in [[Design Exercises#Prerequisites and completion]].
 - **Recommended step** (`nextStepKey`, the "Continue" call to action): the first topic that is neither `mastered` nor `locked` (a skipped or limit_reached topic included), else the first Design Exercise `available` or `in_progress`, else none.
 - **Progress**: mastered topics over all topics (percent rounded down), and Design Exercises whose prerequisites are all mastered.

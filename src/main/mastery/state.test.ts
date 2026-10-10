@@ -235,6 +235,40 @@ describe('deriveMastery', () => {
     })
   })
 
+  describe('topic status (#25)', () => {
+    const status = (changes: Partial<MasterySnapshot>) => deriveMastery(snapshot(changes)).status
+
+    it('is not_started without a lesson or a round', () => {
+      expect(status({ lessonReady: false })).toBe('not_started')
+    })
+
+    it('is in_progress once the lesson is recorded, before any round', () => {
+      expect(status({ lessonReady: true })).toBe('in_progress')
+    })
+
+    it('is in_progress with an open round, even without a recorded lesson', () => {
+      expect(status({ lessonReady: false, rounds: [open(1)] })).toBe('in_progress')
+    })
+
+    it('is in_progress with an abandoned round, which never counts toward the limit', () => {
+      // Round 1 left open, then round 2 opened: no completed round yet.
+      const state = deriveMastery(snapshot({ lessonReady: false, rounds: [open(1), open(2)] }))
+      expect(state).toMatchObject({ status: 'in_progress', step: { name: 'round', roundId: 20 } })
+      expect(state.failedRounds).toBe(0)
+    })
+
+    it('is in_progress after a completed failed round', () => {
+      expect(status({ rounds: [completed(1, false)] })).toBe('in_progress')
+    })
+
+    it('keeps mastered, skipped and limit_reached', () => {
+      expect(status({ rounds: [completed(1, true)] })).toBe('mastered')
+      const failed = [completed(1, false), completed(2, false), completed(3, false)]
+      expect(status({ rounds: failed })).toBe('limit_reached')
+      expect(status({ rounds: failed, choices: [{ roundId: 30, choice: 'skip' }] })).toBe('skipped')
+    })
+  })
+
   describe('Mastery Threshold changes between rounds', () => {
     // 3 questions: notion 1 on all three (2 right), notion 2 on one (right): quiz score 66.7%.
     const scores = [score(1, 2, 3), score(2, 1, 1)]

@@ -56,6 +56,11 @@ gantt
     #22 Mermaid rendering in markdown         :done, crit, g1, 2026-10-12, 2d
     #23 Diagrams in lessons and step lessons  :done, g2, after g1, 3d
     #24 Diagrams in quiz scenarios            :done, g3, after g1, 3d
+
+    section UX fixes
+    #25 Topic status during round 1           :done, u1, 2026-10-12, 1d
+    #26 Partially correct wording             :done, u2, 2026-10-12, 1d
+    #27 Readable generation errors            :done, u3, 2026-10-12, 1d
 ```
 
 ## Dependency table
@@ -86,6 +91,9 @@ gantt
 | #22 | none |
 | #23 | #22 |
 | #24 | #22 |
+| #25 | none |
+| #26 | none |
+| #27 | none |
 
 ## Conventions
 

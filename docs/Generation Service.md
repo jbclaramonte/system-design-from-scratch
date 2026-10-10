@@ -131,7 +131,7 @@ Every failure ends the stream with `{ type: 'error', error: { code, message } }`
 | Code | When | What the learner should do |
 |---|---|---|
 | `cli_not_found` | Binary not resolved, or `spawn` fails with `ENOENT`/`EACCES` | Install Claude Code or fix its path in the settings |
-| `not_logged_in` | Failed run whose message mentions an authentication failure: "Failed to authenticate", "OAuth" (for example "OAuth session expired and could not be refreshed"), "Not logged in", `/login`, an invalid API key, "authentication", "unauthorized" or 401 | Log in again with the CLI for the profile the app uses (`CLAUDE_CONFIG_DIR=<dir> claude`, then `/login`), or set the Claude config directory in Settings. Retry alone cannot help: every Generation error display shows an "Open Settings" button for this code (`SettingsErrorAction`) |
+| `not_logged_in` | Failed run whose message mentions an authentication failure: "Failed to authenticate", "OAuth" (for example "OAuth session expired and could not be refreshed"), "Not logged in", `/login`, an invalid API key, "authentication", "unauthorized" or 401 | Log in again with the CLI for the profile the app uses (`CLAUDE_CONFIG_DIR=<dir> claude`, then `/login`), or set the Claude config directory in Settings. Retry alone cannot help: every Generation error display shows an "Open Settings" button for this code (`GenerationErrorView`) |
 | `quota_or_rate_limit` | Failed run mentioning a usage limit, rate limit, quota, 429 or overload | Wait for the limit to reset |
 | `bad_model` | Failed run with `[claude-code:unrecognized_model]` or "issue with the selected model" | Pick another model |
 | `timeout` | No result within `timeoutMs` (default 120 s) | Retry |
@@ -141,6 +141,16 @@ Every failure ends the stream with `{ type: 'error', error: { code, message } }`
 | `unknown` | Anything else (non-zero exit, no `result` event) | Retry |
 
 A run fails when the `result` event has `is_error: true`, even if `subtype` is `"success"` (observed in the spike), or when the process exits without a successful result. The `bad_model` shape and the expired OAuth session ("Failed to authenticate: OAuth session expired and could not be refreshed") were observed for real; the other login and quota patterns are best-effort. The patterns are tried in table order (`bad_model`, then `not_logged_in`, then `quota_or_rate_limit`), tested in `cliRunner.test.ts`.
+
+### Error display
+
+The renderer never shows the raw message first: CLI output and JSON can run to pages. `GenerationErrorView` (`src/renderer/src/generation/`) is the only Generation error display (lesson, Remediation Lesson, quiz preparation and the topic screen, free-answer grading and contest, Protocol Step Lesson and protocol calls, dev Generation panel) (#27):
+
+1. A title and one or two plain sentences by code (`generationErrorText`, the message table in `generationErrorText.ts`). A screen may name what failed in the title ("The quiz could not be prepared: ...", "The lesson took too long") and add what to do on that screen ("Your work is kept: try again.").
+2. The actions: "Open Settings" for `cli_not_found` and `not_logged_in` (Settings holds the CLI path and the Claude config directory), Retry when the screen offers it, the screen's own actions (Back).
+3. A collapsed "Technical details" disclosure with the raw message in a read-only text area, cut to 2000 characters (`truncateDetails`, with a note of how much was left out), and a Copy button. No new IPC channel: the button tries `navigator.clipboard`, which the app's deny-all permission handler (`src/main/index.ts`) refuses, then selects the text and runs the `copy` editing command; when that is refused too, the text stays selected for Cmd+C. The textarea also selects everything on focus.
+
+The raw message is always logged in full with `console.error` when the display mounts, so it is never lost. A `cancelled` error shows the notice style without details; a call refused by the main process (`refused`, not a Generation error) shows its own message as the advice. Tests: `src/renderer/src/generation/generationError.test.ts` (message table, truncation, server-side rendering).
 
 On invalid output the service retries once, appending the validation error to the prompt, and sends a `retry` event (the renderer drops the text streamed so far).
 

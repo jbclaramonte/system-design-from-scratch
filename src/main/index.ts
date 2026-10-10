@@ -19,7 +19,7 @@ import { createFreeAnswerGrader } from './quiz/freeAnswerGrader'
 import { localGraders } from './quiz/grading'
 import { createQuizService } from './quiz/service'
 import { registerHandlers } from './ipc/registerHandlers'
-import { isExternalWebUrl } from './security'
+import { isAllowedPermission, isExternalWebUrl } from './security'
 
 function openExternally(url: string): void {
   if (isExternalWebUrl(url)) {
@@ -93,8 +93,8 @@ void app.whenReady().then(() => {
   const seededExercises = seedDesignExercises(db, corpus)
   if (seededExercises > 0) console.log(`Seeded ${seededExercises} Design Exercises`)
 
-  session.defaultSession.setPermissionRequestHandler((_contents, _permission, callback) =>
-    callback(false)
+  session.defaultSession.setPermissionRequestHandler((_contents, permission, callback) =>
+    callback(isAllowedPermission(permission))
   )
   const quizService = createQuizService(db, localGraders, {
     freeAnswerGrader: createFreeAnswerGrader(generation)

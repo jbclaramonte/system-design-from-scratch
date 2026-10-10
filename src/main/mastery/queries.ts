@@ -63,7 +63,11 @@ export function loadMasterySnapshot(db: Database, topicId: number): MasterySnaps
   }
 }
 
-/** Mastery of a topic: not_started, in_progress, mastered, limit_reached or skipped. */
+/**
+ * Mastery of a topic: not_started, in_progress, mastered, limit_reached or skipped. The one
+ * derivation (`deriveMastery`) behind the topic header, the Learning Path, the Dashboard and the
+ * recommended step: a topic is `in_progress` once a Lesson is recorded or a Round was opened.
+ */
 export function getTopicMastery(db: Database, topicId: number): TopicMastery {
   return deriveMastery(loadMasterySnapshot(db, topicId)).status
 }

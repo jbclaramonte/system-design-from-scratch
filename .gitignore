@@ -20,3 +20,6 @@ docs/.obsidian/cache
 
 # Test tooling cache
 .vitest/
+
+# Local design screenshots (generated, see screenshots/README.md)
+screenshots/

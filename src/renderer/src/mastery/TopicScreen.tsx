@@ -2,11 +2,11 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { MasteryState, RemediationTarget } from '../../../shared/mastery'
 import type { RoundResult, RoundStart } from '../../../shared/quiz'
 import type { TopicSummary } from '../../../shared/topic'
+import { GenerationErrorView } from '../generation/GenerationErrorView'
+import { generationErrorText } from '../generation/generationErrorText'
 import { LessonScreen } from '../lesson/LessonScreen'
-import { errorTitle } from '../lesson/lessonState'
 import { OutsidePrimerBadge } from '../lesson/OutsidePrimerBadge'
 import { errorMessage } from '../quiz/errorMessage'
-import { SettingsErrorAction } from '../settings/SettingsErrorAction'
 import { formatPercent } from '../quiz/progress'
 import { QuizPlayer } from '../quiz/QuizPlayer'
 import { QuizResults } from '../quiz/QuizResults'
@@ -50,6 +50,25 @@ export function TopicScreen({
   const [attempt, setAttempt] = useState(0)
   const requestRef = useRef<{ id: string; ended: boolean } | null>(null)
 
+  /**
+   * Reloads the loop state without changing the screen, so the header shows the status the main
+   * process derives (in progress once the lesson is recorded or a round is opened).
+   */
+  const refreshState = useCallback(
+    () =>
+      window.api
+        .getMasteryState({ topicId: topic.id })
+        .then(setState)
+        .catch((reason: unknown) => setError(errorMessage(reason))),
+    [topic.id]
+  )
+
+  // Stable: the lesson screen calls it from an effect that depends on it.
+  const lessonRecorded = useCallback(() => {
+    setLessonDone(true)
+    void refreshState()
+  }, [refreshState])
+
   const startRound = useCallback(() => {
     const requestId = crypto.randomUUID()
     const request = { id: requestId, ended: false }
@@ -62,7 +81,10 @@ export function TopicScreen({
         request.ended = true
         unsubscribe()
       }
-      if (event.type === 'round_ready') return setOverlay({ name: 'play', start: event.start })
+      if (event.type === 'round_ready') {
+        setOverlay({ name: 'play', start: event.start })
+        return void refreshState()
+      }
       setOverlay((current) =>
         current?.name === 'preparing' && current.requestId === requestId
           ? { ...current, preparation: roundPreparation(current.preparation, event) }
@@ -75,7 +97,7 @@ export function TopicScreen({
       setOverlay(null)
       setError(errorMessage(reason))
     })
-  }, [topic.id])
+  }, [topic.id, refreshState])
 
   /**
    * Reloads the loop state and shows its step. An open round (left mid-quiz, or after a
@@ -162,7 +184,7 @@ export function TopicScreen({
             embedded
             topic={topic}
             onRetry={() => setAttempt((n) => n + 1)}
-            onDone={() => setLessonDone(true)}
+            onDone={lessonRecorded}
           />
           <footer className="mastery-footer">
             <button
@@ -270,11 +292,7 @@ export function TopicHeader({
         )}
         {roundProgress(state)}
       </p>
-      {error && (
-        <p role="alert" className="lesson-error">
-          {error}
-        </p>
-      )}
+      {error && <GenerationErrorView code="refused" message={error} testId="mastery-error" />}
     </header>
   )
 }
@@ -294,25 +312,22 @@ function Preparing({
 }) {
   if (preparation.status === 'error' || preparation.status === 'cancelled') {
     return (
-      <div
-        className={preparation.status === 'cancelled' ? 'lesson-notice' : 'lesson-error'}
-        role="alert"
-        data-testid="mastery-round-error"
-      >
-        <strong>
-          {preparation.status === 'cancelled'
+      <GenerationErrorView
+        code={preparation.code}
+        message={preparation.message}
+        title={
+          preparation.status === 'cancelled'
             ? 'Quiz preparation cancelled'
-            : `The quiz could not be prepared: ${errorTitle(preparation.code)}`}
-        </strong>
-        {preparation.status === 'error' && <p>{preparation.message}</p>}
-        {preparation.status === 'error' && <SettingsErrorAction code={preparation.code} />}
-        <button type="button" onClick={onRetry} data-testid="mastery-round-retry">
-          Retry
-        </button>{' '}
+            : `The quiz could not be prepared: ${generationErrorText(preparation.code).title}`
+        }
+        onRetry={onRetry}
+        retryTestId="mastery-round-retry"
+        testId="mastery-round-error"
+      >
         <button type="button" onClick={onBack}>
           Back
         </button>
-      </div>
+      </GenerationErrorView>
     )
   }
   return (

@@ -38,9 +38,23 @@ An answer is first normalized: duplicate indexes are collapsed and sorted; an in
 | `free_answer` | The verdict of the grading Generation: `correct` when every expected point is covered and there is no misconception; `partially_correct` when at least one expected point is covered; `incorrect` otherwise (empty, off-topic or wrong answers included) | 1 only when `correct`, else 0 |
 
 > [!note] Why multiple choice is all-or-nothing
-> A "select all that apply" question tests whether the learner can tell every right option from every wrong one: a missing or extra pick is a misconception on the notion, and remediation should target it. Partial credit would let a quiz reach a threshold below 100% without that, and would make a notion look half-mastered on the [[Notion Map]]. The score stays 0 or 1, like the other choice types, so scores add up the same way. How close the learner was is still shown: `partialCredit` = (correct picks - wrong picks) / correct choices, floored at 0, is in the feedback (not stored; it can be recomputed from the stored answer).
+> A "select all that apply" question tests whether the learner can tell every right option from every wrong one: a missing or extra pick is a misconception on the notion, and remediation should target it. Partial credit would let a quiz reach a threshold below 100% without that, and would make a notion look half-mastered on the [[Notion Map]]. The score stays 0 or 1, like the other choice types, so scores add up the same way. `partialCredit` = (correct picks - wrong picks) / correct choices, floored at 0, is still in the feedback (not stored; it can be recomputed from the stored answer), but the UI does not show it as a percentage: "67% of the way" read as a partial score.
 
-Free answers are mapped like multiple choice for the same reason: a `partially_correct` free answer scores 0, so its notions are `missed` and go to remediation. `partialCredit` = covered expected points / expected points is in the feedback for the UI only.
+Free answers are mapped like multiple choice for the same reason: a `partially_correct` free answer scores 0, so its notions are `missed` and go to remediation. `partialCredit` = covered expected points / expected points is in the feedback.
+
+### Feedback wording
+
+The verdict line says what happened and why a near miss still counts as missed (#26). `partially_correct` stays the stored value; the learner reads "Not quite". Pure helpers in `src/renderer/src/quiz/feedbackText.ts` (tested in `feedbackText.test.ts`), used by `QuestionFeedbackView`, so by the quiz player feedback and the results answers list; the Dashboard attempt history uses the same labels:
+
+- `choiceTally(choices)` counts the correct picks, the correct choices and the wrong picks; `choiceFeedbackMessage(tally)` builds the line. Single choice and scenario: "Correct" or "Incorrect", the choices marked below. Multiple choice:
+  - correct picks missing: "Not quite: you found 2 of the 3 correct answers. You need all of them, and none of the wrong ones, to validate this question."
+  - wrong picks only: "Not quite: you found all 3 correct answers but also picked 1 wrong answer. You need all of them, ..."
+  - both: "Not quite: you found 1 of the 3 correct answers and picked 2 wrong answers. You need all of them, ..."
+  - fully wrong: "Incorrect: you found none of the 3 correct answers and picked 2 wrong answers. The correct ones are marked below."
+  - fully right: "Correct: you found all 3 correct answers."
+- `freeAnswerFeedbackMessage(result, covered, expected)`: "Not quite: you covered 2 of the 3 expected points. You need every expected point, without a major error, to validate this question."; "Correct" or "Incorrect" otherwise.
+
+No percentage or "of the way" phrasing in the feedback.
 
 The Attempt stores the normalized answer, `result`, `score` and `feedback = null` for a choice question. Its notion tags are copied from the question by `recordAttempt`.
 

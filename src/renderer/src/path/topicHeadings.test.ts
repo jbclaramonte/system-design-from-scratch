@@ -6,8 +6,6 @@ import { describe, expect, it } from 'vitest'
 import type { MasteryState, TopicMasterySummary } from '../../../shared/mastery'
 import { LessonScreen } from '../lesson/LessonScreen'
 import { TopicHeader } from '../mastery/TopicScreen'
-import { OpenSettingsContext } from '../settings/openSettings'
-import { SettingsErrorAction } from '../settings/SettingsErrorAction'
 import { PathTopicView } from './PathTopicView'
 
 const topic: TopicMasterySummary = {
@@ -71,28 +69,5 @@ describe('topic screen headings', () => {
     expect(headings(lesson)).toEqual([`h2:${topic.title}`])
     expect(count(lesson, 'Outside the primer')).toBe(1)
     expect(headings(header)).toEqual([`h2:${topic.title}`])
-  })
-})
-
-describe('SettingsErrorAction', () => {
-  const render = (code: 'not_logged_in' | 'unknown', openSettings: (() => void) | null) =>
-    renderToStaticMarkup(
-      createElement(
-        OpenSettingsContext.Provider,
-        { value: openSettings },
-        createElement(SettingsErrorAction, { code })
-      )
-    )
-
-  it('offers Open Settings for a not_logged_in error only', () => {
-    expect(render('not_logged_in', () => {})).toContain('Open Settings')
-    expect(render('unknown', () => {})).toBe('')
-  })
-
-  it('still explains without a way to open the settings', () => {
-    const html = render('not_logged_in', null)
-
-    expect(html).toContain('logged in')
-    expect(html).not.toContain('Open Settings')
   })
 })
