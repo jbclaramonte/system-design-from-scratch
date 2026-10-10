@@ -55,6 +55,7 @@ export function createHandlers({
     'lesson:cancel': (request) => lesson.cancel(request),
     'mastery:listTopics': () => mastery.listTopics(),
     'mastery:getState': (request) => mastery.getState(request),
+    'mastery:getLessonReview': (request) => mastery.getLessonReview(request),
     'mastery:startRound': (request, event) => mastery.startRound(request, event.sender),
     'mastery:startRemediation': (request, event) => mastery.startRemediation(request, event.sender),
     'mastery:cancel': (request) => mastery.cancel(request),

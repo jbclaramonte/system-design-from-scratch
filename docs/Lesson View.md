@@ -60,6 +60,7 @@ Declared in `src/shared/ipc.ts`, types in `src/shared/topic.ts` and `src/shared/
 | `startLesson({ requestId, topicId })` | `lesson:start` | events follow on `lesson:event` |
 | `cancelLesson({ requestId })` | `lesson:cancel` | |
 | `onLessonEvent(listener)` | `lesson:event` | `{ requestId, event: LessonEvent }` |
+| `getLessonReview({ topicId })` | `mastery:getLessonReview` | Read-only, from the database (see [[#Rereading a Lesson during a round]]); declared with the [[Mastery Loop Implementation|Mastery Loop]] channels |
 
 `LessonEvent` = `notion_outline` | `prepared` | every `GenerationEvent`. Requests are validated with Zod in the main process.
 
@@ -76,6 +77,16 @@ Declared in `src/shared/ipc.ts`, types in `src/shared/topic.ts` and `src/shared/
 - `embedded` (default `false`): inside the topic screen of the [[Mastery Loop Implementation|Mastery Loop]], `LessonScreen` shows neither the topic title nor the Outside the primer badge, which the topic screen's heading and progress line already show (#21). The standalone Lessons (dev) screen keeps both.
 
 Not done: syntax highlighting (no highlighter bundled). Mermaid Diagrams are rendered (#22, mermaid loaded lazily) and the lesson prompts ask for them (#23). Diagrams are checked and repaired in the main process after the stream ends (see [[Mermaid Diagrams#Generation side (#23)]]), so the text of the `done` event can differ from the streamed text in its ```` ```mermaid ```` blocks: the reducer already replaces the streamed text with `done`'s content, which is what the [[Content Cache]] and the `lessons` row hold. The repair adds a few seconds between the end of the stream and `done`, shown as still generating.
+
+## Rereading a Lesson during a round
+
+Issue #35: once the first round starts, the topic screen no longer shows the Lesson, and reopening a topic resumes the open round directly. The **Lesson** button of the topic header (see [[Mastery Loop Implementation#Topic screen]]) opens the recorded Lesson and the Remediation Lessons again at any time, including in the middle of a question.
+
+- **Not a generation**: the panel reads the `lessons` and `remediation_lessons` rows through `mastery:getLessonReview` (`src/main/mastery/review.ts`). It never starts a `lesson:start` request, never goes through the Generation Service, never misses the [[Content Cache]], never calls the CLI, and writes nothing. The Markdown is what the learner read: for a Lesson, the `done` text, Diagrams checked and repaired included.
+- **Rendering**: `LessonReviewPanel` (`src/renderer/src/mastery/`) puts `LessonMarkdown` in the same `.lesson-scroll` / `.lesson-body` reading column and the same Sources footer (`LessonSources.tsx`, extracted from `LessonScreen`) as the lesson screen, so source chips and Mermaid Diagrams work the same. The panel shows the "System Design Primer" chip of a grounded reading. The Outside the primer badge stays on the progress line.
+- **Selection**: tabs, "Lesson" first, then the Remediation Lessons newest round first, each labelled with its notion (French), round and angle. No tab when there is a single reading.
+- **Locked topics**: the IPC calls the same `assertTopicUnlocked` guard as a Round; outside dev builds a locked topic gets the `topic_locked` error, shown in the panel.
+- **No lost state**: the quiz is hidden, not unmounted, while the panel is open (see [[Mastery Loop Implementation#Topic screen]]).
 
 ## Visual design
 
@@ -97,7 +108,8 @@ Built app driven over the Chrome DevTools protocol, `CLAUDE_CLI_PATH` pointing t
 ## In code
 
 - `src/main/content/`: `seedTopics`, `listTopicSummaries`, `getTopicDetail` (`topics.ts`); `createLessonIpc` (`lessonIpc.ts`); tests in `content.test.ts`.
-- `src/renderer/src/lesson/`: `LessonView`, `LessonScreen`, `LessonMarkdown`; tests in `lesson.test.ts`.
+- `src/renderer/src/lesson/`: `LessonView`, `LessonScreen`, `LessonMarkdown`, `LessonSources`; tests in `lesson.test.ts`.
+- Rereading (#35): `src/main/mastery/review.ts` (`getLessonReview`), `src/renderer/src/mastery/LessonReviewPanel.tsx` and `lessonReview.ts`; tests `review.test.ts`, `lessonReview.test.ts`.
 - `src/renderer/src/markdown/`: `MarkdownContent`, `MermaidDiagram` ([[Mermaid Diagrams]]); tests in `markdown.test.ts`.
 
 ## Related

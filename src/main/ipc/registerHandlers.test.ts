@@ -44,6 +44,9 @@ const handlers: IpcHandlers = {
   'mastery:getState': () => {
     throw new Error('no topic')
   },
+  'mastery:getLessonReview': () => {
+    throw new Error('no topic')
+  },
   'mastery:startRound': () => undefined,
   'mastery:startRemediation': () => undefined,
   'mastery:cancel': () => undefined,
@@ -153,6 +156,7 @@ describe('registerHandlers', () => {
       'lesson:start',
       'mastery:cancel',
       'mastery:choose',
+      'mastery:getLessonReview',
       'mastery:getState',
       'mastery:listTopics',
       'mastery:startRemediation',

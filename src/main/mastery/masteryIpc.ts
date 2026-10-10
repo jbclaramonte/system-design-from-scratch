@@ -9,6 +9,8 @@ import type { TopicLockGuard } from '../path/lock'
 import {
   roundLimitChoices,
   type MasteryCancelRequest,
+  type LessonReview,
+  type LessonReviewRequest,
   type MasteryChooseRequest,
   type MasteryEvent,
   type MasteryRemediationRequest,
@@ -17,6 +19,7 @@ import {
   type MasteryTopicRequest,
   type TopicMasterySummary
 } from '../../shared/mastery'
+import { getLessonReview } from './review'
 import type { MasteryService, MasteryServiceDeps } from './service'
 
 // The renderer is not trusted to send well-formed requests: validate before use.
@@ -31,6 +34,8 @@ const chooseRequest = z.object({ topicId: id, choice: z.enum(roundLimitChoices) 
 export interface MasteryIpc {
   listTopics(): TopicMasterySummary[]
   getState(request: MasteryTopicRequest): MasteryState
+  /** Recorded Lesson and Remediation Lessons, read-only (never generates). */
+  getLessonReview(request: LessonReviewRequest): LessonReview
   startRound(request: MasteryStartRoundRequest, client: GenerationClient): void
   startRemediation(request: MasteryRemediationRequest, client: GenerationClient): void
   cancel(request: MasteryCancelRequest): void
@@ -75,6 +80,14 @@ export function createMasteryIpc(
     listTopics: () => mastery.listTopics(),
 
     getState: (request) => mastery.getState(topicRequest.parse(request).topicId),
+
+    getLessonReview(request) {
+      const { topicId } = topicRequest.parse(request)
+      mastery.getState(topicId)
+      // Same rule as the Lesson and the Rounds: the main process refuses a locked topic.
+      assertTopicUnlocked(topicId)
+      return getLessonReview(deps.db, deps.corpus, topicId)
+    },
 
     startRound(request, client) {
       const { requestId: rid, topicId } = startRoundRequest.parse(request)

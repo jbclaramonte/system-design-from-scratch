@@ -14,6 +14,8 @@ import type { DesignExport, DesignExportSummary } from './designGraph'
 import type { LessonCancelRequest, LessonStartRequest, LessonStreamEvent } from './lesson'
 import type { TopicDetail, TopicGetRequest, TopicSummary } from './topic'
 import type {
+  LessonReview,
+  LessonReviewRequest,
   MasteryCancelRequest,
   MasteryChooseRequest,
   MasteryRemediationRequest,
@@ -123,6 +125,11 @@ export interface IpcChannels {
   'mastery:listTopics': { request: void; response: TopicMasterySummary[] }
   /** Where the topic is in the Mastery Loop, derived from the database. */
   'mastery:getState': { request: MasteryTopicRequest; response: MasteryState }
+  /**
+   * The recorded Lesson and Remediation Lessons of the topic, newest round first. Read-only:
+   * never generates, never records; refused for a locked topic like the Lesson.
+   */
+  'mastery:getLessonReview': { request: LessonReviewRequest; response: LessonReview }
   /** Resumes the open round or prepares and starts the next one; events on `mastery:event`. */
   'mastery:startRound': { request: MasteryStartRoundRequest; response: void }
   /** Streams the Remediation Lesson of a missed notion; events on `mastery:event`. */
@@ -237,6 +244,7 @@ export const apiChannels = {
   cancelLesson: 'lesson:cancel',
   listMasteryTopics: 'mastery:listTopics',
   getMasteryState: 'mastery:getState',
+  getLessonReview: 'mastery:getLessonReview',
   startMasteryRound: 'mastery:startRound',
   startRemediation: 'mastery:startRemediation',
   cancelMastery: 'mastery:cancel',

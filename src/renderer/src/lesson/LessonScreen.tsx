@@ -1,8 +1,8 @@
 import { useEffect, useLayoutEffect, useReducer, useRef } from 'react'
 import type { TopicSummary } from '../../../shared/topic'
 import { GenerationErrorView } from '../generation/GenerationErrorView'
-import { shortSourceLabel } from './citations'
 import { LessonMarkdown } from './LessonMarkdown'
+import { LessonSources } from './LessonSources'
 import {
   lessonErrorTitle,
   initialLessonState,
@@ -174,40 +174,7 @@ export function LessonScreen({
         <article className="lesson-body" data-testid="lesson-body" aria-busy={running}>
           <LessonMarkdown markdown={state.text} sources={state.sources} streaming={running} />
         </article>
-        {state.status === 'done' && state.sources.length > 0 && (
-          <footer className="lesson-sources">
-            <h3>Sources</h3>
-            <p>
-              Excerpts of the{' '}
-              <a
-                href="https://github.com/donnemartin/system-design-primer"
-                target="_blank"
-                rel="noreferrer"
-              >
-                System Design Primer
-              </a>{' '}
-              (
-              <a
-                href="https://creativecommons.org/licenses/by/4.0/"
-                target="_blank"
-                rel="noreferrer"
-              >
-                CC BY 4.0
-              </a>
-              ), adapted and translated by a generated lesson:
-            </p>
-            <ul>
-              {state.sources.map((source) => (
-                <li key={source.sectionId}>
-                  <a href={source.url} target="_blank" rel="noreferrer" title={source.label}>
-                    {shortSourceLabel(source.label)}
-                  </a>{' '}
-                  <code>{source.sectionId}</code>
-                </li>
-              ))}
-            </ul>
-          </footer>
-        )}
+        {state.status === 'done' && <LessonSources sources={state.sources} />}
       </div>
     </section>
   )

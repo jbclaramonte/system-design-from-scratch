@@ -70,6 +70,7 @@ gantt
     #32 Topic, Lesson, Remediation redesign   :done, v5, after v2, 2d
     #33 Quiz redesign                         :done, v6, after v2, 2d
     #34 Design exercise and canvas redesign   :done, v7, after v2, 2d
+    #35 Review the lesson during a round      :done, v8, after v5, 1d
 ```
 
 ## Dependency table
@@ -110,6 +111,7 @@ gantt
 | #32 | #29 |
 | #33 | #29 |
 | #34 | #29 |
+| #35 | #32 |
 
 ## Conventions
 

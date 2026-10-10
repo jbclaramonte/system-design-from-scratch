@@ -110,6 +110,63 @@
   background: var(--color-error);
 }
 
+/* The header button that opens the Lesson reading panel. */
+
+.mastery-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+/* Steps: one wrapper, hidden (not unmounted) while the Lesson reading panel is open, so the quiz
+   keeps its question, choices and typed answer. */
+
+.mastery-step {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.mastery-step[hidden] {
+  display: none;
+}
+
+/* Lesson reading panel: replaces the step area, same reading column as the Lesson. */
+
+.mastery-review {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  padding-top: var(--space-sm);
+}
+
+.mastery-review-header {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+}
+
+.mastery-review-header h2 {
+  margin: 0;
+  font-size: var(--type-headline-md-size);
+  line-height: var(--type-headline-md-line);
+}
+
+.mastery-review > .mastery-targets {
+  flex: none;
+  margin-bottom: var(--space-md);
+}
+
+.mastery-review > .lesson-scroll > .lesson-badges {
+  margin-bottom: var(--space-md);
+}
+
 /* Steps. */
 
 .mastery-scroll {

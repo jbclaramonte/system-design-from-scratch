@@ -3,7 +3,7 @@
  * (src/renderer/src/mastery). The loop state is derived from the database, so it survives
  * restarts: an open round is resumed, a remediation step shows the lessons already generated.
  */
-import type { LessonEvent } from './lesson'
+import type { LessonEvent, LessonSource } from './lesson'
 import type { NotionRef, RoundStart, RoundView } from './quiz'
 import type { TopicSummary } from './topic'
 
@@ -93,6 +93,41 @@ export interface NotionLatestScore extends NotionRef {
 }
 
 export interface MasteryTopicRequest {
+  topicId: number
+}
+
+/** A Lesson or Remediation Lesson already recorded, as the topic's reading panel shows it. */
+export interface ReviewedLesson {
+  id: number
+  /** The recorded Markdown, as the learner read it. */
+  markdown: string
+  grounded: boolean
+  /** The primer sections it cites, ready to show as source chips. */
+  sources: LessonSource[]
+  /** ISO 8601 timestamp of the recording. */
+  recordedAt: string
+}
+
+export interface ReviewedRemediationLesson extends ReviewedLesson {
+  notion: NotionRef
+  angle: RemediationAngle
+  /** Number of the failed round it followed; null when the round is not known. */
+  roundNumber: number | null
+}
+
+/**
+ * What the learner can reread on a topic at any time: the Lesson and the Remediation Lessons
+ * already generated, newest round first. Read from the database only: reading never generates,
+ * never records anything.
+ */
+export interface LessonReview {
+  topicId: number
+  /** The latest recorded Lesson; null before the first one. */
+  lesson: ReviewedLesson | null
+  remediationLessons: ReviewedRemediationLesson[]
+}
+
+export interface LessonReviewRequest {
   topicId: number
 }
 

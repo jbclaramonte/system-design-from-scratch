@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode, type Ref } from 'react'
 import type { MasteryState, RemediationTarget } from '../../../shared/mastery'
 import type { RoundResult, RoundStart } from '../../../shared/quiz'
 import type { TopicSummary } from '../../../shared/topic'
@@ -11,6 +11,8 @@ import { formatPercent } from '../quiz/progress'
 import { QuizPlayer } from '../quiz/QuizPlayer'
 import { QuizResults } from '../quiz/QuizResults'
 import './mastery.css'
+import { LessonReviewPanel } from './LessonReviewPanel'
+import { canReviewLesson } from './lessonReview'
 import {
   attemptsStat,
   firstRemediationIndex,
@@ -52,6 +54,12 @@ export function TopicScreen({
   // Bumped by Retry: remounts the lesson or a Remediation Lesson.
   const [attempt, setAttempt] = useState(0)
   const requestRef = useRef<{ id: string; ended: boolean } | null>(null)
+  // The Lesson reading panel (#35). The step content stays mounted but hidden while it is open,
+  // so the quiz keeps its question, choices and typed answer, and a Remediation Lesson keeps
+  // streaming.
+  const [reviewRequested, setReviewRequested] = useState(false)
+  const reviewButtonRef = useRef<HTMLButtonElement>(null)
+  const reviewWasOpen = useRef(false)
 
   /**
    * Reloads the loop state without changing the screen, so the header shows the status the main
@@ -142,6 +150,15 @@ export function TopicScreen({
 
   const backToLoop = () => void showLoop()
 
+  const canReview = state !== null && canReviewLesson(state, overlay?.name ?? null)
+  const reviewOpen = reviewRequested && canReview
+  const closeReview = useCallback(() => setReviewRequested(false), [])
+  // Closing returns the focus to the Lesson button.
+  useEffect(() => {
+    if (reviewWasOpen.current && !reviewOpen) reviewButtonRef.current?.focus()
+    reviewWasOpen.current = reviewOpen
+  }, [reviewOpen])
+
   if (!state) {
     return error ? (
       <p role="alert">{error}</p>
@@ -154,142 +171,190 @@ export function TopicScreen({
 
   return (
     <section className="mastery-topic" data-testid="mastery-topic">
-      <TopicHeader state={state} grounded={topic.grounded} showTitle={showTitle} error={error} />
+      <TopicHeader
+        state={state}
+        grounded={topic.grounded}
+        showTitle={showTitle}
+        error={error}
+        actions={
+          canReview && (
+            <LessonButton
+              ref={reviewButtonRef}
+              open={reviewOpen}
+              onClick={() => setReviewRequested((open) => !open)}
+            />
+          )
+        }
+      />
+      {reviewOpen && <LessonReviewPanel topicId={topic.id} onClose={closeReview} />}
 
-      {overlay?.name === 'preparing' && (
-        <Preparing
-          preparation={overlay.preparation}
-          roundNumber={state.roundNumber}
-          onCancel={() => void window.api.cancelMastery({ requestId: overlay.requestId })}
-          onRetry={startRound}
-          onBack={backToLoop}
-        />
-      )}
-      {overlay?.name === 'play' && (
-        <div className="mastery-scroll">
-          <QuizPlayer
-            key={overlay.start.round.id}
-            start={overlay.start}
-            onCompleted={(result) => setOverlay({ name: 'results', result })}
+      <div className="mastery-step" hidden={reviewOpen} data-testid="mastery-step">
+        {overlay?.name === 'preparing' && (
+          <Preparing
+            preparation={overlay.preparation}
+            roundNumber={state.roundNumber}
+            onCancel={() => void window.api.cancelMastery({ requestId: overlay.requestId })}
+            onRetry={startRound}
+            onBack={backToLoop}
           />
-        </div>
-      )}
-      {overlay?.name === 'results' && (
-        <div className="mastery-scroll">
-          <p>
-            <button
-              type="button"
-              className="btn-primary"
-              data-testid="mastery-continue"
-              onClick={backToLoop}
-              autoFocus
-            >
-              {overlay.result.round.passed ? 'Continue' : 'Continue to the Remediation Lessons'}
-            </button>
-          </p>
-          {/* The Outside the primer badge is already on the progress line. */}
-          <QuizResults result={overlay.result} />
-        </div>
-      )}
-
-      {overlay === null && state.step.name === 'lesson' && (
-        <>
-          <LessonScreen
-            key={attempt}
-            embedded
-            topic={topic}
-            onRetry={() => setAttempt((n) => n + 1)}
-            onDone={lessonRecorded}
-          />
-          <footer className="mastery-footer">
-            <button
-              type="button"
-              className="btn-primary"
-              data-testid="mastery-start-round"
-              disabled={!lessonDone && !state.step.lessonReady}
-              onClick={startRound}
-            >
-              Take the quiz (round {state.roundNumber})
-            </button>
-          </footer>
-        </>
-      )}
-      {overlay === null && state.step.name === 'round' && (
-        <p className="muted" role="status">
-          Resuming round {state.roundNumber}...
-        </p>
-      )}
-      {overlay === null && state.step.name === 'remediation' && (
-        <RemediationStep
-          key={`${state.step.roundId}:${attempt}`}
-          state={state}
-          targets={state.step.targets}
-          anotherAngle={state.step.anotherAngle}
-          onLessonDone={backToLoop}
-          onRetry={() => setAttempt((n) => n + 1)}
-          onStartRound={startRound}
-        />
-      )}
-      {overlay === null && state.step.name === 'limit_reached' && (
-        <section
-          className="mastery-outcome mastery-outcome-limit"
-          data-testid="mastery-limit-reached"
-        >
-          <h3>Round Limit reached</h3>
-          <p>
-            {state.failedRounds} rounds without reaching the Mastery Threshold (
-            {state.masteryThreshold}%). Repeating the same explanation will not help: pick how to go
-            on.
-          </p>
-          <div className="mastery-choices">
-            <div className="card card-elevated mastery-choice">
+        )}
+        {overlay?.name === 'play' && (
+          <div className="mastery-scroll">
+            <QuizPlayer
+              key={overlay.start.round.id}
+              start={overlay.start}
+              onCompleted={(result) => setOverlay({ name: 'results', result })}
+            />
+          </div>
+        )}
+        {overlay?.name === 'results' && (
+          <div className="mastery-scroll">
+            <p>
               <button
                 type="button"
                 className="btn-primary"
-                data-testid="choose-another-angle"
-                onClick={() => choose('another_angle')}
+                data-testid="mastery-continue"
+                onClick={backToLoop}
+                autoFocus
               >
-                Try another angle
+                {overlay.result.round.passed ? 'Continue' : 'Continue to the Remediation Lessons'}
               </button>
-              <p>New Remediation Lessons in a style you have not read yet, then a new round.</p>
-            </div>
-            <div className="card card-elevated mastery-choice">
-              <button type="button" data-testid="choose-skip" onClick={() => choose('skip')}>
-                Skip and come back later
-              </button>
-              <p>The topic stays marked as skipped; reopen it whenever you want.</p>
-            </div>
+            </p>
+            {/* The Outside the primer badge is already on the progress line. */}
+            <QuizResults result={overlay.result} />
           </div>
-        </section>
-      )}
-      {overlay === null && state.step.name === 'skipped' && (
-        <section className="mastery-outcome mastery-outcome-skipped" data-testid="mastery-skipped">
-          <h3>Topic skipped</h3>
-          <p>You chose to come back to this topic later.</p>
-          <button
-            type="button"
-            className="btn-primary"
-            data-testid="choose-come-back"
-            onClick={() => choose('another_angle')}
-          >
-            Come back now with another angle
-          </button>
-        </section>
-      )}
-      {overlay === null && state.step.name === 'mastered' && (
-        <section
-          className="mastery-outcome mastery-outcome-mastered"
-          data-testid="mastery-mastered"
-        >
-          <h3>Topic mastered</h3>
-          <p>
-            Round {state.lastRound?.number} passed with{' '}
-            {formatPercent(state.lastRound?.scorePercent ?? 0)} (Mastery Threshold{' '}
-            {state.masteryThreshold}%).
+        )}
+
+        {overlay === null && state.step.name === 'lesson' && (
+          <>
+            <LessonScreen
+              key={attempt}
+              embedded
+              topic={topic}
+              onRetry={() => setAttempt((n) => n + 1)}
+              onDone={lessonRecorded}
+            />
+            <footer className="mastery-footer">
+              <button
+                type="button"
+                className="btn-primary"
+                data-testid="mastery-start-round"
+                disabled={!lessonDone && !state.step.lessonReady}
+                onClick={startRound}
+              >
+                Take the quiz (round {state.roundNumber})
+              </button>
+            </footer>
+          </>
+        )}
+        {overlay === null && state.step.name === 'round' && (
+          <p className="muted" role="status">
+            Resuming round {state.roundNumber}...
           </p>
-        </section>
-      )}
+        )}
+        {overlay === null && state.step.name === 'remediation' && (
+          <RemediationStep
+            key={`${state.step.roundId}:${attempt}`}
+            state={state}
+            targets={state.step.targets}
+            anotherAngle={state.step.anotherAngle}
+            onLessonDone={backToLoop}
+            onRetry={() => setAttempt((n) => n + 1)}
+            onStartRound={startRound}
+          />
+        )}
+        {overlay === null && state.step.name === 'limit_reached' && (
+          <section
+            className="mastery-outcome mastery-outcome-limit"
+            data-testid="mastery-limit-reached"
+          >
+            <h3>Round Limit reached</h3>
+            <p>
+              {state.failedRounds} rounds without reaching the Mastery Threshold (
+              {state.masteryThreshold}%). Repeating the same explanation will not help: pick how to
+              go on.
+            </p>
+            <div className="mastery-choices">
+              <div className="card card-elevated mastery-choice">
+                <button
+                  type="button"
+                  className="btn-primary"
+                  data-testid="choose-another-angle"
+                  onClick={() => choose('another_angle')}
+                >
+                  Try another angle
+                </button>
+                <p>New Remediation Lessons in a style you have not read yet, then a new round.</p>
+              </div>
+              <div className="card card-elevated mastery-choice">
+                <button type="button" data-testid="choose-skip" onClick={() => choose('skip')}>
+                  Skip and come back later
+                </button>
+                <p>The topic stays marked as skipped; reopen it whenever you want.</p>
+              </div>
+            </div>
+          </section>
+        )}
+        {overlay === null && state.step.name === 'skipped' && (
+          <section
+            className="mastery-outcome mastery-outcome-skipped"
+            data-testid="mastery-skipped"
+          >
+            <h3>Topic skipped</h3>
+            <p>You chose to come back to this topic later.</p>
+            <button
+              type="button"
+              className="btn-primary"
+              data-testid="choose-come-back"
+              onClick={() => choose('another_angle')}
+            >
+              Come back now with another angle
+            </button>
+          </section>
+        )}
+        {overlay === null && state.step.name === 'mastered' && (
+          <section
+            className="mastery-outcome mastery-outcome-mastered"
+            data-testid="mastery-mastered"
+          >
+            <h3>Topic mastered</h3>
+            <p>
+              Round {state.lastRound?.number} passed with{' '}
+              {formatPercent(state.lastRound?.scorePercent ?? 0)} (Mastery Threshold{' '}
+              {state.masteryThreshold}%).
+            </p>
+          </section>
+        )}
+      </div>
     </section>
+  )
+}
+
+/**
+ * Opens the reading panel with the Lesson and the Remediation Lessons already recorded. Shown
+ * from the moment a Lesson exists, in every step of the loop.
+ */
+function LessonButton({
+  open,
+  onClick,
+  ref
+}: {
+  open: boolean
+  onClick: () => void
+  ref: Ref<HTMLButtonElement>
+}) {
+  return (
+    <button
+      ref={ref}
+      type="button"
+      data-testid="lesson-review-button"
+      aria-expanded={open}
+      aria-controls="lesson-review"
+      title="Read the Lesson again without leaving the round"
+      onClick={onClick}
+    >
+      Lesson
+    </button>
   )
 }
 
@@ -301,12 +366,15 @@ export function TopicHeader({
   state,
   grounded,
   showTitle,
-  error
+  error,
+  actions
 }: {
   state: MasteryState
   grounded: boolean
   showTitle: boolean
   error: string | null
+  /** Buttons at the end of the progress line (the Lesson button). */
+  actions?: ReactNode
 }) {
   return (
     <header className="mastery-header">
@@ -322,6 +390,7 @@ export function TopicHeader({
           <p className="mastery-summary">{roundProgress(state)}</p>
         </div>
         <RoundStats state={state} />
+        {actions && <div className="mastery-actions">{actions}</div>}
       </div>
       {error && <GenerationErrorView code="refused" message={error} testId="mastery-error" />}
     </header>
