@@ -30,7 +30,11 @@ const assetUrls = {
   icons: { ...bundledAssetUrls.icons, ...iconUrlsByName(iconUrls) }
 }
 
-/** Empty in dev is fine (tldraw shows a dev watermark); a packaged build needs a valid key. */
+/**
+ * Read at build time. Empty (or unset) is fine in dev, where tldraw shows a dev watermark; a
+ * packaged build needs a valid key, or tldraw stops rendering the editor 5 seconds after it mounts
+ * (`npm run package` warns about it). See docs/Packaging.md, "tldraw license".
+ */
 const licenseKey = import.meta.env.VITE_TLDRAW_LICENSE_KEY || undefined
 
 const AUTOSAVE_DELAY_MS = 500

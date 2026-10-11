@@ -3,11 +3,15 @@
 //   - the Chromium licenses (LICENSES.chromium.html) and the Electron LICENSE are in the app;
 //   - app.asar holds the runtime files and none of the files that must never ship (.env*, src,
 //     docs, spikes, screenshots, scripts, .github, tests, node_modules);
-//   - the main and preload bundles do not require a package that the app does not contain.
+//   - the main and preload bundles do not require a package that the app does not contain;
+//   - the tldraw license key, when one is configured at build time, is inside app.asar (renderer
+//     bundle, expected: it is a client-side key) and nowhere in the main and preload bundles. The
+//     key is compared, never printed.
 // `--app-only` skips the .dmg check (npm run package:dir). See docs/Packaging.md.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { builtinModules } from 'node:module'
 import { join, resolve } from 'node:path'
+import { readTldrawLicenseKey } from './tldraw-license-key.mjs'
 
 const root = resolve(import.meta.dirname, '..')
 const distDir = join(root, 'dist')
@@ -116,7 +120,25 @@ for (const dir of ['out/main', 'out/preload']) {
   }
 }
 
-// 4. The disk image.
+// 4. The tldraw license key: baked into the renderer when configured, absent from the main process.
+// Without a key the package is still valid (see scripts/check-tldraw-key.mjs for the warning).
+const licenseKey = readTldrawLicenseKey()
+if (licenseKey) {
+  if (existsSync(asarPath) && !readFileSync(asarPath).includes(licenseKey)) {
+    fail(
+      'a tldraw license key is configured but app.asar does not contain it: rebuild with `npm run package`'
+    )
+  }
+  for (const dir of ['out/main', 'out/preload']) {
+    for (const file of readdirSync(join(root, dir)).filter((name) => name.endsWith('.js'))) {
+      if (readFileSync(join(root, dir, file), 'utf8').includes(licenseKey)) {
+        fail(`${dir}/${file} contains the tldraw license key (it belongs to the renderer only)`)
+      }
+    }
+  }
+}
+
+// 5. The disk image.
 if (!appOnly) {
   const dmg = readdirSync(distDir).find((name) => name.endsWith('.dmg'))
   if (!dmg) fail(`no .dmg in ${distDir}`)

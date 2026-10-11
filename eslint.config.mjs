@@ -13,9 +13,18 @@ export default defineConfig(
     extends: [reactHooks.configs.flat.recommended]
   },
   {
-    // Plain Node scripts (build-icon.mjs, check-package.mjs).
+    // Plain Node scripts (build-icon.mjs, check-package.mjs, smoke-packaged.mjs).
     files: ['scripts/**/*.mjs'],
-    languageOptions: { globals: { process: 'readonly', console: 'readonly' } }
+    languageOptions: {
+      globals: {
+        process: 'readonly',
+        console: 'readonly',
+        Buffer: 'readonly',
+        setTimeout: 'readonly',
+        fetch: 'readonly',
+        WebSocket: 'readonly'
+      }
+    }
   },
   prettier
 )

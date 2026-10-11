@@ -32,12 +32,14 @@ How the [[Design Canvas]] (tldraw) is embedded in the app and how its [[Design S
 
 ## License key
 
-- tldraw needs a license key in production (see [[tldraw|spike]]). The renderer passes `import.meta.env.VITE_TLDRAW_LICENSE_KEY` to `<Tldraw licenseKey>`. Set it in `.env.local` at the repo root (see `.env.example`). It ends up in the bundle; tldraw keys are designed to be public.
+- tldraw needs a license key in production (see [[tldraw|spike]]). The renderer passes `import.meta.env.VITE_TLDRAW_LICENSE_KEY` to `<Tldraw licenseKey>` (an empty value counts as no key). Set it in `.env.local` at the repo root (see `.env.example`). It is read at build time and ends up in the renderer bundle, and nowhere else in the package; tldraw keys are designed to be public. How it flows through `npm run package`, expiry of the evaluation key and what to do when the hobby key arrives: [[Packaging#tldraw license]].
 - Empty is fine in dev (`npm run dev`, served from `http://localhost`): tldraw shows a "Get a license for production" watermark.
-- A production build (`npm run build`, renderer loaded from `file://`) needs a valid key, otherwise tldraw stops rendering the editor after 5 seconds.
+- A production build (`npm run build`, the packaged app: renderer loaded from `file://`) needs a valid key. Without one tldraw stops rendering the editor 5 seconds after it mounts (blank canvas, disabled palette, no crash). Checked in the packaged app (#38). `npm run package` prints a warning when the key is missing; it still builds.
+- With a valid evaluation key (checked on 2026-10-11, packaged app): the canvas opens with its icons and fonts, no watermark, no license banner, and keeps rendering well after the 5 second gate. With an expired evaluation key the behavior is the one of a missing key. A hobby key will add the "made with tldraw" watermark, which must stay.
+- `npm run smoke:packaged` checks the canvas of a package (rendered after the gate, no license message, assets loaded) and fails when the key is missing, invalid or expired ([[Packaging#Smoke test]]).
 
 > [!warning] Evaluation key telemetry
-> With an evaluation key in a production build, tldraw tries to fetch `https://cdn.tldraw.com/<version>/watermarks/watermark-track.svg?...` with the license id and the page URL (which contains the local file path). The CSP blocks it; the editor kept rendering in the check below. Whether blocking this is acceptable under the license is an open question; a hobby key should not send it (spike, section 1).
+> With an evaluation key in a production build, tldraw tries to fetch `https://cdn.tldraw.com/<version>/watermarks/watermark-track.svg?...` with the license id and the page URL (which contains the local file path). The CSP blocks it; the editor keeps rendering (seen again in the packaged app, as two console errors per canvas open). So does a missing key, and a hobby key by the 5.5.2 code (it tracks keys that show a watermark). Whether blocking this is acceptable under the license is an open question, with a draft message to tldraw in [[Packaging#Watermark tracking request]]; it is not sent.
 
 ## Offline assets and CSP
 
@@ -66,6 +68,7 @@ Driven over the Chrome DevTools protocol with a scratch `--user-data-dir`:
 
 - Dev server (`http://localhost`): palette adds shapes, label edited in place, arrow drawn with the arrow tool bound at both ends (load balancer to database, read from the saved snapshot), bound arrows follow a moved shape, scene restored after an app restart. No CSP violation, no request outside localhost, 16 fonts loaded.
 - Built renderer from `file://` (`electron-vite preview`, with the dev entry temporarily ungated): the 4 other component types render, icons and the 16 fonts load, scene restored after restart. The only CSP violation is the evaluation-key telemetry above.
+- Packaged app (2026-10-11, issue #38 and #39): launched from the `.app` over CDP with a scratch user data folder, an exercise canvas opens with its 37 bundled icons and fonts, a typed shape can be added, nothing is rendered differently from the preview run. Same single CSP violation. Automated since by `npm run smoke:packaged`.
 
 ## Related
 
@@ -74,6 +77,6 @@ Driven over the Chrome DevTools protocol with a scratch `--user-data-dir`:
 
 ## Open licensing question: watermark tracking request
 
-With an evaluation or hobby key, a production build tries to fetch `cdn.tldraw.com/.../watermark-track.svg`. The request carries the license id and the local file path. The renderer CSP blocks it (decision: keep the block; nothing leaves the machine) and the editor keeps rendering.
+With an evaluation or hobby key (and with no key), a production build tries to fetch `cdn.tldraw.com/.../watermark-track.svg`. The request carries the license id and the local file path. The renderer CSP blocks it (decision: keep the block; nothing leaves the machine) and the editor keeps rendering.
 
-Risk: the tldraw license forbids interfering with key enforcement, and blocking this request may count as such. To clarify with tldraw when the permanent hobby key is granted, before the first packaged build. If they object, allow `https://cdn.tldraw.com` in `img-src` and accept the request.
+Risk: the tldraw license forbids interfering with key enforcement, and blocking this request may count as such. To clarify with tldraw, ideally before relying on the hobby key: a draft message is in [[Packaging#Watermark tracking request]] (issue #38; not sent, the owner decides). If they object, allow `https://cdn.tldraw.com` in `connect-src` (it is a `fetch()`, so `img-src` is not enough) and accept the request.

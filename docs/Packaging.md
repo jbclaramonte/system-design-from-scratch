@@ -1,15 +1,15 @@
 ---
 title: Packaging
 tags: [packaging, product]
-issue: 37
+issue: [37, 38, 39]
 ---
 
 # Packaging
 
 How the macOS app (Apple Silicon, arm64) is built from the repo with [electron-builder](https://www.electron.build/). Personal use, built locally: no signing identity, no notarization, no auto-update, no CI release. Context: [[Attribution and Licenses]] (what must travel with the app), [[SPEC]].
 
-> [!note] Upcoming
-> The tldraw license key handling in a packaged build and an automated smoke test of the package are separate tasks (#38 and #39). Until the key is handled, the Design Canvas of a packaged build stops rendering after 5 seconds without a valid key ([[Design Canvas Integration#License key]]).
+> [!warning] A package needs a tldraw license key
+> Without a valid key at build time, the Design Canvas of the packaged app disappears 5 seconds after it opens. `npm run package` warns when the key is missing. See [[#tldraw license]] below, and [[#Smoke test]] for the automated check of a package.
 
 ## Build
 
@@ -53,9 +53,74 @@ Outside the asar, in `Contents/Resources/`:
 - `LICENSES.chromium.html` or the Electron license is missing from the `.app`;
 - `app.asar` lacks a runtime file (`out/main/index.js`, `out/preload/index.js`, `out/renderer/index.html`, `resources/corpus/primer.json`, `resources/licenses.json`) or contains an environment file (`.env`, `.env.local`...), a top-level `src`, `docs`, `spikes`, `screenshots`, `scripts`, `build`, `.github`, `.vitest` or `node_modules`, or a test file;
 - the main or preload bundle requires a package other than Electron and Node built-ins;
+- a tldraw license key is configured at build time but `app.asar` does not contain it (stale build), or the key shows up in the main or preload bundle (it belongs to the renderer only);
 - there is no `.dmg` (not checked with `--app-only`, used by `package:dir`).
 
-A key baked into the renderer bundle (`VITE_TLDRAW_LICENSE_KEY` from `.env.local`) is not an `.env` file in the package and is not checked here: that is the tldraw key task.
+The key itself is compared with the package, never printed. A package built without a key is valid for the guard script (see [[#tldraw license]]).
+
+`scripts/check-tldraw-key.mjs` runs at the start and at the end of `npm run package` and `npm run package:dir` (so the message is not lost in the electron-builder output). It never fails the build.
+
+## tldraw license
+
+tldraw works in a production build only with a valid license key ([[tldraw|tldraw spike]], [[Design Canvas Integration#License key]], [[Attribution and Licenses#tldraw]]). A packaged app counts as production (`file://` origin, `NODE_ENV=production`).
+
+### How the key flows
+
+1. The key lives in `.env.local` at the repo root, as `VITE_TLDRAW_LICENSE_KEY=<key>` (git-ignored; `.env.example` documents the name). Never commit it, never paste it in an issue, a doc or a log.
+2. At build time, `electron-vite build` (run by `npm run package` and `package:dir`) reads it through Vite's env loading in production mode. A `VITE_TLDRAW_LICENSE_KEY` set in the shell wins over `.env.local`; an empty value counts as no key.
+3. Vite inlines it as a string in the renderer bundle (`out/renderer/assets/index-*.js`, then `app.asar`), and `DesignCanvas.tsx` passes it to `<Tldraw licenseKey>`. It is in no other file of the package: not in the main or preload bundles, and no `.env` file ships (`scripts/check-package.mjs` enforces both and checks that the key is in `app.asar`).
+4. tldraw validates the key in the renderer, offline (a signed token, checked with the Web Crypto API). The key is client-side by design: anyone who has the `.app` can read it. tldraw says keys can be public, but do not publish a build that embeds yours.
+
+`npm run package` and `npm run package:dir` print `tldraw license key found (N chars)` at the start and at the end of the build, or a warning when the variable is missing or empty. The build never fails for that. The value is never printed.
+
+### A build without a key
+
+Checked in the packaged app (2026-10-11, package built with the variable overridden to empty): nothing crashes. The canvas screen opens, then **5 seconds later tldraw stops rendering the editor** (`LICENSE_TIMEOUT` in `LicenseProvider.tsx`, state `unlicensed-production`): the drawing area turns blank, the component palette stays but its buttons are disabled, and a hidden `div[data-testid="tl-license-expired"]` replaces the editor. By its code, tldraw writes "No tldraw license key provided!" to the console. It is not only a watermark: the Design Canvas is unusable. The rest of the app (lessons, quizzes, About) is unaffected.
+
+`npm run smoke:packaged` fails the check "tldraw stays rendered past its 5 s license gate" on such a package.
+
+### Evaluation key and its expiry
+
+The key in use is a 14-day tldraw **evaluation** key, received around 2026-10-09. Estimated expiry: **around 2026-10-23**. This is an estimate from the reception date: the exact date is inside the key (the last day is usable until the end of that day, UTC, and an evaluation key has no grace period). With an evaluation key tldraw enables every feature and shows no watermark.
+
+When it expires, the packaged app behaves as with no key: the canvas disappears 5 seconds after it opens (state `expired`, same gate). Nothing is lost: the saved Design Scenes stay in the database. To find out in advance, run `npm run smoke:packaged` (its canvas check uses the current date, so it fails once the key has expired, without a rebuild).
+
+### When the hobby key arrives
+
+The hobby key request has had no answer yet (as of 2026-10-11). When it comes:
+
+1. Replace the value of `VITE_TLDRAW_LICENSE_KEY` in `.env.local` (one line, no quotes needed).
+2. `npm run package`: the log must say `tldraw license key found`.
+3. `npm run smoke:packaged`: the canvas checks must pass.
+4. Quit the app and replace it in `/Applications` ([[#Rebuild after a change]]). The data folder is untouched.
+5. Expect the "made with tldraw" watermark on the canvas. The hobby license requires it to stay; nothing in the app hides it. The smoke test accepts it (it only rejects a missing, invalid or expired license).
+
+The hobby key may be issued for specific hosts. The packaged renderer loads from `file://.../app.asar/out/renderer/index.html`, which has no hostname, so ask tldraw for a key that validates for that origin (their "native license" mode matches a protocol pattern against the page URL, see the spike). Step 3 tells you at once whether it does: a key that does not match the origin fails with "License key is not valid for this domain" in the console and the 5 second gate.
+
+### Watermark tracking request
+
+In a production build tldraw sends one request when the canvas opens, to `https://cdn.tldraw.com/5.5.2/watermarks/watermark-track.svg` with the query `version`, `license_type`, `license_id`, `sku` and `url` (the page URL: the local path of the app, with the macOS user name) and `environment=production`. Read in `LicenseManager.maybeTrack` of `@tldraw/editor@5.5.2`: it is sent for `unlicensed-production` (no key), for evaluation keys and for keys that show a watermark, so a hobby key too, although the license page says a hobby key sends nothing. It is not sent in development.
+
+The renderer Content-Security-Policy (`connect-src 'self' data:`) blocks it on purpose: the app is offline by design. Seen in the packaged app: the editor keeps rendering, and Chromium logs two console errors per canvas open (a CSP violation and a failed `fetch`). The smoke test tolerates exactly those two, for `cdn.tldraw.com`, and fails on any other console error.
+
+Whether blocking the request is acceptable under the license (it forbids interfering with license key enforcement) is not settled. The decision stays with the owner; the draft below is not sent.
+
+> [!example] Draft message to tldraw (not sent)
+> **Subject:** Hobby license for a personal offline desktop app: watermark tracking request
+>
+> Hello tldraw team,
+>
+> I am building a personal, non-commercial desktop app for learning system design (Electron, built for my own Mac, not distributed). It uses tldraw 5.5.2 for a diagram canvas. I requested a hobby license and I am running on an evaluation key meanwhile.
+>
+> Two questions, so that I stay within the license:
+>
+> 1. The packaged app loads from `file://`, with no hostname. Can the hobby key be issued so that it validates for that origin (for example as a native license matching the `file:` protocol)?
+> 2. In production the SDK requests `https://cdn.tldraw.com/<version>/watermarks/watermark-track.svg` with the license id, the SKU and the page URL (a local path that contains my user name). The app is designed to run offline and its Content-Security-Policy (`connect-src 'self' data:`) blocks every remote request, so this one is blocked. The editor keeps rendering and the watermark stays visible. Is it acceptable that this request is blocked? If not, what do you recommend for an offline desktop hobby app?
+>
+> I would rather follow your recommendation than work around anything. Thank you for your time.
+>
+> [Name]
+
 
 ## User data
 
@@ -80,7 +145,58 @@ Chromium and the other bundled components require their license notices to be ke
 ## Rebuild after a change
 
 1. `npm run licenses:check` (after a `package-lock.json` change, `npm run licenses:build` first).
-2. `npm run package`.
-3. Replace the app in `/Applications` (quit it first). The data folder is untouched.
+2. `npm run package` (check that the log says `tldraw license key found`, see [[#tldraw license]]).
+3. `npm run smoke:packaged` ([[#Smoke test]]).
+4. Replace the app in `/Applications` (quit it first). The data folder is untouched. For the first run of a new package, follow the [[#First launch checklist]].
 
 To try a build without touching your data, launch the binary with a scratch folder: `"dist/mac-arm64/System Design from Scratch.app/Contents/MacOS/System Design from Scratch" --user-data-dir=/some/scratch/dir`.
+
+## Smoke test
+
+`npm run smoke:packaged` (`scripts/smoke-packaged.mjs`, plain Node, no dependency) drives the packaged `.app` the way a Finder launch would, as far as a script can. Run it after `npm run package` or `npm run package:dir`; it takes about 15 seconds. Options: `--app <binary>` (another build), `--shots <dir>` (keep the screenshots, default: inside the scratch folder), `--keep` (keep the scratch folder), and `SMOKE_VERBOSE=1` (print the console messages of the canvas screen).
+
+How it runs:
+
+- The binary of `dist/mac-arm64/System Design from Scratch.app` is spawned with `--remote-debugging-port=<free port>`, a scratch `--user-data-dir` and a **minimal environment**: `PATH=/usr/bin:/bin`, no `SHELL`, and `HOME` set to a scratch folder. The real user data and `~/.claude*` are never touched.
+- A fake Claude Code CLI sits in `<scratch HOME>/.local/bin/claude`. It speaks the stream-json protocol the app expects (`--version`, `auth status`, a Notion Outline, a lesson with a Mermaid flowchart) and logs every call. As `claude` is not on PATH, finding it proves the discovery through the common install locations (`commonCliLocations` in `src/main/generation/resolveCli.ts`) and the stream-json plumbing of a packaged app.
+- The page is driven over the Chrome DevTools protocol (the WebSocket built into Node 22+).
+- Two launches share one scratch user-data folder. The first starts on a fresh folder. Then the app is stopped, every topic is marked mastered in the scratch database (with `node:sqlite`; the app cannot be imported here, so the script inserts a passed round per topic, the way the earlier seed scripts did) and the app is launched again, because a packaged app enforces the Learning Path lock and an exercise opens only when its prerequisites are mastered.
+- The whole process group of the app is killed at the end, also on failure or Ctrl+C. The script exits 1 when a check fails and prints one `PASS`/`FAIL` line per check. It never prints the tldraw key.
+
+Covered:
+
+| Check | What it proves |
+|---|---|
+| Window loads, `file:` origin | The packaged renderer starts, the preload bridge works. |
+| Learning Path shows 21 topics | The Source Corpus is read from the package (`resources/corpus/primer.json` in the asar). |
+| Database created and migrated | Scratch folder has `system-design-from-scratch.db` at the latest schema version, 21 topics and the Design Exercises seeded. |
+| Settings, Test button | The screen renders, the CLI is found in `~/.local/bin` without PATH, version and login state shown. |
+| About | `licenses.json` is readable (374 entries), the tldraw section and the primer attribution render. |
+| Fonts | Geist is loaded (`document.fonts`), the fonts inlined in the bundle work from `file://`. |
+| First lesson | Generated by the fake CLI through the packaged main process, displayed, the CLI got the request. |
+| Mermaid diagram | The lesson's flowchart is rendered as SVG (no fallback to the source). |
+| Exercise canvas | After the topics are mastered, the first exercise opens on its Design Canvas, tldraw stays rendered after its 5 second license gate, with no license message, with its 37 bundled icons and fonts, and a typed shape can be added. |
+| Console | No console error on the first launch. On the canvas screen, the only one tolerated is tldraw's blocked tracking request ([[#Watermark tracking request]]). |
+
+Not covered, to check by hand ([[#First launch checklist]]):
+
+- **The real Claude Code CLI**: login, models, real latency and output, the Claude config directory. The fake CLI proves the plumbing, not the content.
+- **The real network**: nothing is fetched (the CSP forbids it), and no check runs online.
+- **Gatekeeper and quarantine on a downloaded copy**: the locally built `.app` has no quarantine attribute ([[#Open an unsigned build]]).
+- **A launch through LaunchServices** (Finder, Dock, `open`): the script starts the binary directly, with an environment that imitates it. launchd's own environment, the app icon, the window state and the single-instance behavior are not exercised.
+- The `.dmg` itself (never mounted), the copy in `/Applications`, Intel Macs, light mode, and the quality of the generated French content.
+
+A failure keeps the scratch folder and prints its path and the app output.
+
+## First launch checklist
+
+For the first run of a new package on your Mac (after `npm run package` and a passing `npm run smoke:packaged`):
+
+1. Quit the running app if any. Copy `dist/mac-arm64/System Design from Scratch.app` (or the `.app` from the `.dmg`) to `/Applications`, replacing the old one. If the copy came from a download or a message, clear the quarantine attribute first ([[#Open an unsigned build]]).
+2. Open it from `/Applications` (Finder or Spotlight, not from a terminal: that is the case the smoke test cannot reproduce). The Learning Path shows 21 topics and your previous progress.
+3. **Settings**: leave the CLI path empty and press **Test**. Expect the CLI version, its path and your login state. If it says `claude` is not found, set the path (`which claude` in a terminal) and test again.
+4. Open an unlocked topic and read one generated **lesson** to the end: text streams in, a Mermaid diagram renders.
+5. Take one **quiz round**: answer a few questions, including a free answer if the round has one.
+6. During the round, press the **Lesson** button: the lesson opens and closes without losing the round.
+7. **Design exercise**: once the prerequisites of Pastebin are mastered, open it, go to **High-level design**, add a component with the palette, and leave the screen open for more than 5 seconds: the canvas must stay, with no license message (a "made with tldraw" watermark is expected with a hobby key). The exercise stays locked until its topics are mastered, so this step may have to wait; do not edit your real database to unlock it.
+8. **About**: the tldraw license text and the third-party licenses are listed.

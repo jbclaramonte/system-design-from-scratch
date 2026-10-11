@@ -32,12 +32,15 @@ The primer fields are read from the [[Source Corpus]] metadata (`resources/corpu
 
 Obligations shown on the screen, from [[tldraw|the spike]] and [[Design Canvas Integration#License key]]:
 
-- Default terms permit development use only; a production build needs a valid license key (`VITE_TLDRAW_LICENSE_KEY`), otherwise tldraw stops rendering the canvas after 5 seconds.
-- With the planned hobby key, the "made with tldraw" watermark must stay on the canvas; in dev the "Get a license for production" watermark shows. Nothing in the app hides either.
+- Default terms permit development use only; a production build needs a valid license key (`VITE_TLDRAW_LICENSE_KEY`), otherwise tldraw stops rendering the canvas after 5 seconds. The packaged app is built with the key of `.env.local`: it is inlined in the renderer bundle, and the build warns when it is missing ([[Packaging#tldraw license]]).
+- The key in use today is a 14-day evaluation key (no watermark), expiring around 2026-10-23 (estimate). The permanent hobby key is requested and not yet granted; the canvas then needs a rebuild with the new key ([[Packaging#When the hobby key arrives]]).
+- With the hobby key, the "made with tldraw" watermark must stay on the canvas; in dev the "Get a license for production" watermark shows. Nothing in the app hides either.
 - No disabling or interfering with license key enforcement, no removal of notices.
 
+The About screen keeps showing the tldraw license text (the `tldraw` entry of the third-party list and the tldraw section), unchanged by the key handling: the full license text still travels in `licenses.json` inside the package, which the smoke test reads ([[Packaging#Smoke test]]).
+
 > [!warning] Open
-> The watermark tracking request blocked by the CSP ([[Design Canvas Integration#Open licensing question: watermark tracking request]]) is still to clarify with tldraw.
+> The watermark tracking request blocked by the CSP ([[Design Canvas Integration#Open licensing question: watermark tracking request]]) is still to clarify with tldraw. A draft message is ready in [[Packaging#Watermark tracking request]]; nothing was sent.
 
 ## Fonts
 

@@ -26,19 +26,20 @@ Electron no longer downloads its binary at install time. `npm run dev` and `npm 
 
 ## Scripts
 
-| Script                 | What it does                                                           |
-| ---------------------- | ---------------------------------------------------------------------- |
-| `npm run dev`          | Starts the app with the Vite dev server and hot reload.                |
-| `npm run build`        | Builds main, preload and renderer into `out/`.                         |
-| `npm run preview`      | Runs the app from the production build.                                |
-| `npm run package`      | Builds the macOS app and `.dmg` (arm64) into `dist/`, see Packaging.   |
-| `npm run package:dir`  | Same, only the `.app` (faster).                                        |
-| `npm run typecheck`    | Type-checks the Node side (main, preload) and the web side (renderer). |
-| `npm run lint`         | Runs ESLint.                                                           |
-| `npm run format`       | Formats the code with Prettier.                                        |
-| `npm run format:check` | Checks formatting without writing.                                     |
-| `npm test`             | Runs the unit tests with Vitest.                                       |
-| `npm run corpus:build` | Re-fetches the primer at the pinned commit into `resources/corpus/`.   |
+| Script                   | What it does                                                           |
+| ------------------------ | ---------------------------------------------------------------------- |
+| `npm run dev`            | Starts the app with the Vite dev server and hot reload.                |
+| `npm run build`          | Builds main, preload and renderer into `out/`.                         |
+| `npm run preview`        | Runs the app from the production build.                                |
+| `npm run package`        | Builds the macOS app and `.dmg` (arm64) into `dist/`, see Packaging.   |
+| `npm run package:dir`    | Same, only the `.app` (faster).                                        |
+| `npm run smoke:packaged` | Smoke-tests the packaged app over CDP, see Packaging.                  |
+| `npm run typecheck`      | Type-checks the Node side (main, preload) and the web side (renderer). |
+| `npm run lint`           | Runs ESLint.                                                           |
+| `npm run format`         | Formats the code with Prettier.                                        |
+| `npm run format:check`   | Checks formatting without writing.                                     |
+| `npm test`               | Runs the unit tests with Vitest.                                       |
+| `npm run corpus:build`   | Re-fetches the primer at the pinned commit into `resources/corpus/`.   |
 
 CI (`.github/workflows/ci.yml`) runs lint, format check, typecheck and tests on every push and pull
 request.
@@ -72,7 +73,7 @@ src/
                      src/settings/: Settings screen
   shared/            Code shared by both sides, including the IPC contract (ipc.ts)
 resources/corpus/    Generated primer corpus (CC BY 4.0), see docs/Corpus.md
-scripts/             Build-time scripts (corpus, licenses, icon, package check), run with plain node
+scripts/             Build-time scripts (corpus, licenses, icon, package check, smoke test), run with plain node
 build/               App icon for the packaged app (icon.icns)
 electron-builder.yml Packaging config (docs/Packaging.md)
 docs/                Obsidian vault: spec, roadmap, glossary, spike findings
@@ -157,6 +158,7 @@ notarized, no auto-update). Prerequisites: macOS on arm64, `npm ci`, and Electro
 download), then `scripts/check-package.mjs`, which fails if the Chromium licenses
 (`LICENSES.chromium.html`) or Electron's license are missing, or if `.env*`, `src/`, `docs/` and
 similar ended up in the app. The first `.dmg` build downloads electron-builder's dmg tooling once.
+The build prints whether a tldraw license key was found (see the license key below).
 
 - Output (git-ignored): `dist/mac-arm64/System Design from Scratch.app` (about 360 MB) and
   `dist/System Design from Scratch-<version>-arm64.dmg` (about 130 MB). `npm run package:dir` skips
@@ -169,9 +171,18 @@ similar ended up in the app. The first `.dmg` build downloads electron-builder's
   `~/Library/Application Support/system-design-from-scratch/` (database, caches), so existing data
   is reused. The Claude Code CLI is still required (see [Claude Code CLI](#claude-code-cli)).
 - The icon (`build/icon.icns`) comes from `npm run icon:build`.
-- Details, what the package contains and the license requirement:
-  [docs/Packaging.md](docs/Packaging.md). The tldraw license key in a packaged build is a separate
-  task: see [Configuration](#configuration).
+- tldraw license key: a package needs one at build time, from `VITE_TLDRAW_LICENSE_KEY` in
+  `.env.local` (see [Configuration](#configuration)); without it the Design Canvas of the packaged
+  app disappears 5 seconds after it opens. `npm run package` warns when it is missing and never
+  prints it. The key is inlined in the renderer bundle, so do not publish the build.
+- Smoke test: `npm run smoke:packaged` launches the packaged app with a minimal environment
+  (`PATH=/usr/bin:/bin`, a scratch HOME with a fake `claude` in `~/.local/bin`, a scratch
+  `--user-data-dir`), drives it over the DevTools protocol and checks the Learning Path, Settings,
+  About, a lesson with a Mermaid diagram and an exercise canvas. It never touches your real data.
+  It does not cover the real CLI, the network, Gatekeeper on a downloaded copy or a Finder launch:
+  follow the first launch checklist for those.
+- Details, what the package contains, the license requirements, the tldraw license, the smoke test
+  and the first launch checklist: [docs/Packaging.md](docs/Packaging.md).
 
 ## Configuration
 
@@ -181,8 +192,10 @@ renderer, as `import.meta.env.VITE_...`; they end up in the bundle, so treat the
 
 - `VITE_TLDRAW_LICENSE_KEY`: tldraw license key for the Design Canvas. Optional in dev
   (`npm run dev` shows a "Get a license for production" watermark), **required for production
-  builds** (`npm run build` / `npm run preview`, renderer loaded from `file://`): without a valid
-  key tldraw stops rendering the canvas after 5 seconds. See
+  builds** (`npm run build` / `npm run preview` / `npm run package`, renderer loaded from
+  `file://`): without a valid key tldraw stops rendering the canvas after 5 seconds. Read at build
+  time and baked into the bundle: rebuild after changing it. An empty value counts as no key. See
+  [docs/Packaging.md](docs/Packaging.md#tldraw-license) and
   [docs/Design Canvas Integration.md](docs/Design%20Canvas%20Integration.md).
 
 ## License

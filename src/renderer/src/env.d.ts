@@ -4,7 +4,7 @@ import type { Api } from '../../shared/ipc'
 
 declare global {
   interface ImportMetaEnv {
-    /** tldraw license key, see .env.example. Empty in dev is fine. */
+    /** tldraw license key, see .env.example. Empty in dev is fine; a packaged build needs it. */
     readonly VITE_TLDRAW_LICENSE_KEY?: string
   }
 

@@ -11,8 +11,9 @@
   "scripts": {
     "dev": "install-electron && electron-vite dev",
     "build": "electron-vite build",
-    "package": "electron-vite build && electron-builder --mac --arm64 && node scripts/check-package.mjs",
-    "package:dir": "electron-vite build && electron-builder --mac dir --arm64 && node scripts/check-package.mjs --app-only",
+    "package": "node scripts/check-tldraw-key.mjs && electron-vite build && electron-builder --mac --arm64 && node scripts/check-package.mjs && node scripts/check-tldraw-key.mjs",
+    "package:dir": "node scripts/check-tldraw-key.mjs && electron-vite build && electron-builder --mac dir --arm64 && node scripts/check-package.mjs --app-only && node scripts/check-tldraw-key.mjs",
+    "smoke:packaged": "node scripts/smoke-packaged.mjs",
     "preview": "install-electron && electron-vite preview",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
