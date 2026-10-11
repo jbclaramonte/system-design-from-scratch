@@ -14,6 +14,7 @@ Desktop app to learn system design: lesson, quiz, targeted remediation until mas
 - [[Corpus|Source Corpus build and license]]
 - [[Design System|Design System: tokens, fonts, base styles and shared classes]]
 - [[Attribution and Licenses|Attribution and third-party licenses (About screen)]]
+- [[Packaging|Packaging the macOS app (electron-builder, unsigned local build)]]
 - [[Generation Service]]
 - [[Design Canvas Integration]]
 - [[Design Export|Design Export (graph JSON, text, PNG)]]

@@ -31,6 +31,8 @@ Electron no longer downloads its binary at install time. `npm run dev` and `npm 
 | `npm run dev`          | Starts the app with the Vite dev server and hot reload.                |
 | `npm run build`        | Builds main, preload and renderer into `out/`.                         |
 | `npm run preview`      | Runs the app from the production build.                                |
+| `npm run package`      | Builds the macOS app and `.dmg` (arm64) into `dist/`, see Packaging.   |
+| `npm run package:dir`  | Same, only the `.app` (faster).                                        |
 | `npm run typecheck`    | Type-checks the Node side (main, preload) and the web side (renderer). |
 | `npm run lint`         | Runs ESLint.                                                           |
 | `npm run format`       | Formats the code with Prettier.                                        |
@@ -70,7 +72,9 @@ src/
                      src/settings/: Settings screen
   shared/            Code shared by both sides, including the IPC contract (ipc.ts)
 resources/corpus/    Generated primer corpus (CC BY 4.0), see docs/Corpus.md
-scripts/             Build-time scripts (build-corpus.ts), run with plain node
+scripts/             Build-time scripts (corpus, licenses, icon, package check), run with plain node
+build/               App icon for the packaged app (icon.icns)
+electron-builder.yml Packaging config (docs/Packaging.md)
 docs/                Obsidian vault: spec, roadmap, glossary, spike findings
 spikes/              Standalone throwaway prototypes, not part of the app build
 ```
@@ -143,6 +147,31 @@ fixtures. See [docs/Mermaid Diagrams.md](docs/Mermaid%20Diagrams.md).
 The window runs with `contextIsolation`, `sandbox` and no `nodeIntegration`. The renderer has a
 restrictive Content Security Policy, navigation away from the app is blocked, links that open a new
 window go to the OS browser (http and https only), and permission requests are denied.
+
+## Packaging
+
+`npm run package` builds an installable macOS app (Apple Silicon only, personal use: not signed, not
+notarized, no auto-update). Prerequisites: macOS on arm64, `npm ci`, and Electron installed
+(`npx install-electron`, done by `npm run dev`). It runs `electron-vite build`, then electron-builder
+(`electron-builder.yml`, packaging the Electron already in `node_modules`, so no Electron
+download), then `scripts/check-package.mjs`, which fails if the Chromium licenses
+(`LICENSES.chromium.html`) or Electron's license are missing, or if `.env*`, `src/`, `docs/` and
+similar ended up in the app. The first `.dmg` build downloads electron-builder's dmg tooling once.
+
+- Output (git-ignored): `dist/mac-arm64/System Design from Scratch.app` (about 360 MB) and
+  `dist/System Design from Scratch-<version>-arm64.dmg` (about 130 MB). `npm run package:dir` skips
+  the `.dmg`.
+- Install: open the `.dmg` and drag the app onto Applications, or copy the `.app` to
+  `/Applications`. A build made on this machine opens normally. A copy downloaded or sent to
+  another Mac is quarantined: right-click, **Open**, or
+  `xattr -dr com.apple.quarantine "/Applications/System Design from Scratch.app"`.
+- Data: the packaged app uses the same folder as `npm run dev`,
+  `~/Library/Application Support/system-design-from-scratch/` (database, caches), so existing data
+  is reused. The Claude Code CLI is still required (see [Claude Code CLI](#claude-code-cli)).
+- The icon (`build/icon.icns`) comes from `npm run icon:build`.
+- Details, what the package contains and the license requirement:
+  [docs/Packaging.md](docs/Packaging.md). The tldraw license key in a packaged build is a separate
+  task: see [Configuration](#configuration).
 
 ## Configuration
 

@@ -8,7 +8,7 @@ status: live
 
 Gantt chart of the GitHub issues of `jbclaramonte/system-design-from-scratch`. Dependencies in the chart mirror the "Depends on" section of each issue. Dates and durations are estimates (solo, part-time pace not accounted for).
 
-Last updated: 2026-10-10.
+Last updated: 2026-10-11.
 
 ```mermaid
 gantt
@@ -72,6 +72,11 @@ gantt
     #34 Design exercise and canvas redesign   :done, v7, after v2, 2d
     #35 Review the lesson during a round      :done, v8, after v5, 1d
     #36 Visual cleanup, shared classes        :done, v9, after v7, 2d
+
+    section Packaging
+    #37 Package the macOS app                 :done, crit, k1, 2026-10-14, 2d
+    #38 tldraw license key and watermark      :k2, after k1, 1d
+    #39 Smoke-test packaged app, install docs :k3, after k2, 1d
 ```
 
 ## Dependency table
@@ -114,6 +119,9 @@ gantt
 | #34 | #29 |
 | #35 | #32 |
 | #36 | #30, #31, #32, #33, #34 |
+| #37 | none |
+| #38 | #37 |
+| #39 | #37, #38 |
 
 ## Conventions
 

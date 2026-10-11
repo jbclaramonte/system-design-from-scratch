@@ -1,0 +1,44 @@
+# Local macOS package (arm64): `npm run package`. Docs: docs/Packaging.md.
+appId: com.jbclaramonte.system-design-from-scratch
+productName: System Design from Scratch
+copyright: Copyright (c) 2026 Jean-Baptiste Claramonte. Apache-2.0.
+# Package the Electron already in node_modules: no download, works offline.
+electronDist: node_modules/electron/dist
+directories:
+  output: dist
+  buildResources: build
+# The app bundle ships only what runs: the electron-vite output (main and preload bundle their
+# dependencies, the renderer is a Vite bundle) and the resources read at runtime. No node_modules:
+# scripts/check-package.mjs fails if a bundle still requires a package.
+files:
+  - package.json
+  - out/**
+  - resources/**
+  - '!**/node_modules/**'
+  - '!**/.DS_Store'
+asar: true
+npmRebuild: false
+mac:
+  target:
+    - target: dmg
+      arch: arm64
+    - target: dir
+      arch: arm64
+  category: public.app-category.education
+  icon: build/icon.icns
+  # Unsigned, not notarized, personal use. Chromium LICENSES.chromium.html and Electron LICENSE
+  # live next to the Electron.app in node_modules/electron/dist and are not part of the .app:
+  # they are copied into Contents/Resources (the guard script requires them).
+  identity: null
+  hardenedRuntime: false
+  extraResources:
+    - from: node_modules/electron/dist/LICENSE
+      to: LICENSE.electron
+    - from: node_modules/electron/dist/LICENSES.chromium.html
+      to: LICENSES.chromium.html
+dmg:
+  sign: false
+  writeUpdateInfo: false
+# No auto-update: no publish provider, no latest-mac.yml.
+publish: null
+artifactName: ${productName}-${version}-${arch}.${ext}

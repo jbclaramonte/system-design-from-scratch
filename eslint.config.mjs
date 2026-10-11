@@ -12,5 +12,10 @@ export default defineConfig(
     files: ['src/renderer/**/*.{ts,tsx}'],
     extends: [reactHooks.configs.flat.recommended]
   },
+  {
+    // Plain Node scripts (build-icon.mjs, check-package.mjs).
+    files: ['scripts/**/*.mjs'],
+    languageOptions: { globals: { process: 'readonly', console: 'readonly' } }
+  },
   prettier
 )

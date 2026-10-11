@@ -51,7 +51,7 @@ The UI fonts are self-hosted, never fetched: Geist (`@fontsource-variable/geist`
 
 - License id: the lockfile `license` field (SPDX), except the tldraw override above.
 - Texts: files named `LICENSE*`, `LICENCE*`, `COPYING*`, `NOTICE*` in the installed package, line endings normalized. A package without such a file (for example `react-remove-scroll-bar`) shows its declared license only.
-- Electron: only its own `LICENSE`. The Chromium, Node.js and other notices ship with Electron as `LICENSES.chromium.html` (about 19 MB) next to the binary; they are not copied into the list. Open: check that the packaging step keeps that file.
+- Electron: only its own `LICENSE`. The Chromium, Node.js and other notices ship with Electron as `LICENSES.chromium.html` (about 19 MB) next to `Electron.app`; they are not copied into the list. The packaging step keeps them: `electron-builder.yml` copies that file and Electron's `LICENSE` into `Contents/Resources` of the app, and `scripts/check-package.mjs` fails `npm run package` if either is missing ([[Packaging]]).
 - Deterministic: sorted by name then version, no timestamp. No network.
 
 ### Refreshing

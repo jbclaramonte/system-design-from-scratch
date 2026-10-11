@@ -21,6 +21,14 @@ import { createQuizService } from './quiz/service'
 import { registerHandlers } from './ipc/registerHandlers'
 import { isAllowedPermission, isExternalWebUrl } from './security'
 
+// The userData folder (database, caches) is named after the package name, never the productName of
+// the packaged app ("System Design from Scratch"), so dev, preview and the packaged app share one
+// folder. An explicit --user-data-dir (tests, verification runs) still wins.
+const USER_DATA_DIR_NAME = 'system-design-from-scratch'
+if (!app.commandLine.hasSwitch('user-data-dir')) {
+  app.setPath('userData', join(app.getPath('appData'), USER_DATA_DIR_NAME))
+}
+
 function openExternally(url: string): void {
   if (isExternalWebUrl(url)) {
     void shell.openExternal(url)

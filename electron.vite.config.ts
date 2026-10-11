@@ -3,7 +3,14 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'electron-vite'
 
 export default defineConfig({
-  main: {},
+  main: {
+    build: {
+      // The packaged app ships no node_modules: bundle zod into the main process instead of
+      // requiring it at runtime (the default externalizes every `dependencies` entry). Any other
+      // external package would be missing from the package; scripts/check-package.mjs fails then.
+      externalizeDeps: { exclude: ['zod'] }
+    }
+  },
   preload: {},
   renderer: {
     // Read .env and .env.local from the repo root (the renderer root is src/renderer).

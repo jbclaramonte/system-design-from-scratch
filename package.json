@@ -11,6 +11,8 @@
   "scripts": {
     "dev": "install-electron && electron-vite dev",
     "build": "electron-vite build",
+    "package": "electron-vite build && electron-builder --mac --arm64 && node scripts/check-package.mjs",
+    "package:dir": "electron-vite build && electron-builder --mac dir --arm64 && node scripts/check-package.mjs --app-only",
     "preview": "install-electron && electron-vite preview",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
@@ -21,7 +23,8 @@
     "test": "vitest run",
     "corpus:build": "node scripts/build-corpus.ts",
     "licenses:build": "node scripts/build-licenses.ts",
-    "licenses:check": "node scripts/build-licenses.ts --check"
+    "licenses:check": "node scripts/build-licenses.ts --check",
+    "icon:build": "electron scripts/build-icon.mjs"
   },
   "dependencies": {
     "@fontsource-variable/geist": "5.3.0",
@@ -43,6 +46,7 @@
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "5.2.0",
     "electron": "44.7.0",
+    "electron-builder": "26.15.3",
     "electron-vite": "5.0.0",
     "eslint": "10.12.0",
     "eslint-config-prettier": "10.1.8",
