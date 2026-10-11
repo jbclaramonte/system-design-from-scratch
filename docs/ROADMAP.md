@@ -77,7 +77,7 @@ gantt
     #37 Package the macOS app                 :done, crit, k1, 2026-10-14, 2d
     #38 tldraw license key and watermark      :done, k2, after k1, 1d
     #39 Smoke-test packaged app, install docs :done, k3, after k2, 1d
-    #40 Package Linux (AppImage, deb) in CI   :k4, after k3, 2d
+    #40 Package Linux (AppImage, deb) in CI   :active, k4, after k3, 2d
 ```
 
 ## Dependency table

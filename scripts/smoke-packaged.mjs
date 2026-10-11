@@ -1,11 +1,24 @@
-// Smoke test of the packaged macOS app (`npm run smoke:packaged`, after `npm run package` or
-// `npm run package:dir`). Launches the .app binary the way Finder would, as far as a script can:
-// a minimal environment (PATH=/usr/bin:/bin, no SHELL, HOME in a scratch folder), a scratch
-// --user-data-dir and a fake Claude Code CLI installed in <HOME>/.local/bin (a location that
-// src/main/generation/resolveCli.ts tries when `claude` is not on PATH). The app is driven over the
+// Smoke test of the packaged app (`npm run smoke:packaged`, after `npm run package`, `package:dir`,
+// `package:linux` or `package:linux:dir`). Launches the packaged binary the way a desktop launcher
+// would, as far as a script can. The platform is the one it runs on: the macOS .app on darwin
+// (dist/mac-arm64), dist/linux-unpacked on Linux, where it needs a display (CI: `xvfb-run -a npm
+// run smoke:packaged`). The app gets a minimal environment (PATH=/usr/bin:/bin, no SHELL, HOME in a
+// scratch folder), a scratch --user-data-dir and a fake Claude Code CLI installed in
+// <HOME>/.local/bin (a location that src/main/generation/resolveCli.ts tries when `claude` is not
+// on PATH). The app is driven over the
 // Chrome DevTools protocol (built-in WebSocket of Node 22+, no dependency).
 //
-//   node scripts/smoke-packaged.mjs [--app <path to the .app binary>] [--shots <dir>] [--keep]
+//   node scripts/smoke-packaged.mjs [--app <path to the app binary>] [--shots <dir>] [--keep]
+//                                   [--no-sandbox]
+//
+// Linux only: the default Chromium sandbox is kept. It needs either unprivileged user namespaces or
+// a chrome-sandbox helper owned by root with mode 4755 next to the binary (the script says which one
+// it found). `--no-sandbox` (or SMOKE_NO_SANDBOX=1) turns the sandbox off for a machine that has
+// neither, such as a container running as root. SMOKE_APP_ARGS adds Chromium switches (space
+// separated), for example --disable-dev-shm-usage in a container with a small /dev/shm.
+// SMOKE_ALLOW_MISSING_TLDRAW_KEY=1 skips the three tldraw checks of the second launch, for a package
+// built without a license key on purpose (the CI without the repository secret). Never set it
+// otherwise: a package without a key has an unusable Design Canvas.
 //
 // Two launches share one scratch user-data folder:
 //   1. fresh folder: window, Learning Path (21 topics), database, Settings (Test button finds the
@@ -26,6 +39,7 @@ import {
   readFileSync,
   realpathSync,
   rmSync,
+  statSync,
   writeFileSync
 } from 'node:fs'
 import { createServer } from 'node:net'
@@ -45,9 +59,26 @@ function argValue(name) {
   return index === -1 ? undefined : process.argv[index + 1]
 }
 
+const platform = process.platform
+if (platform !== 'darwin' && platform !== 'linux') {
+  console.error(`smoke-packaged: no packaged app for ${platform} (macOS and Linux only).`)
+  process.exit(2)
+}
+
 function findAppBinary() {
   const explicit = argValue('--app')
   if (explicit) return resolve(explicit)
+  if (platform === 'linux') {
+    // electron-builder unpacks the app in dist/linux-unpacked: the Electron executable is the only
+    // executable file of that folder over 50 MB (its name is the package name by default).
+    const unpacked = join(root, 'dist', 'linux-unpacked')
+    if (!existsSync(unpacked)) return undefined
+    const binary = readdirSync(unpacked).find((name) => {
+      const stats = statSync(join(unpacked, name))
+      return stats.isFile() && stats.size > 50_000_000 && (stats.mode & 0o111) !== 0
+    })
+    return binary ? join(unpacked, binary) : undefined
+  }
   const macosDir = join(
     root,
     'dist',
@@ -63,13 +94,27 @@ function findAppBinary() {
 
 const appBinary = findAppBinary()
 if (!appBinary || !existsSync(appBinary)) {
-  console.error('smoke-packaged: no packaged app found. Run `npm run package:dir` first.')
+  console.error(
+    `smoke-packaged: no packaged app found. Run \`npm run ${platform === 'linux' ? 'package:linux:dir' : 'package:dir'}\` first.`
+  )
   process.exit(2)
 }
-if (process.platform !== 'darwin') {
-  console.error('smoke-packaged: the packaged app is a macOS app.')
-  process.exit(2)
+
+/**
+ * Linux: what lets Chromium sandbox the renderer. The setuid helper must be owned by root with the
+ * setuid bit (electron-builder cannot do it: it does not run as root); without it Chromium falls
+ * back to unprivileged user namespaces, which some distributions restrict (Ubuntu 24.04 AppArmor).
+ */
+function describeLinuxSandbox() {
+  const helper = join(appBinary, '..', 'chrome-sandbox')
+  if (!existsSync(helper)) return 'no chrome-sandbox helper next to the binary'
+  const stats = statSync(helper)
+  return stats.uid === 0 && (stats.mode & 0o4000) !== 0
+    ? 'chrome-sandbox helper is setuid root'
+    : 'chrome-sandbox helper is not setuid root (relies on unprivileged user namespaces)'
 }
+const noSandbox =
+  platform === 'linux' && (process.argv.includes('--no-sandbox') || !!process.env.SMOKE_NO_SANDBOX)
 
 const keep = process.argv.includes('--keep')
 // The scratch folder lives under the OS temp folder; realpath so that the paths we compare with
@@ -203,10 +248,21 @@ async function launchApp() {
   const port = await freePort()
   childExited = false
   appOutput = ''
-  child = spawn(appBinary, [`--user-data-dir=${userData}`, `--remote-debugging-port=${port}`], {
-    // What a Finder launch gives, minus the things only the system adds: a minimal PATH, no SHELL,
-    // a HOME that holds nothing but the fake CLI.
-    env: { PATH: '/usr/bin:/bin', HOME: home },
+  // The scratch --user-data-dir is always passed, so the real userData folder is never opened.
+  const args = [`--user-data-dir=${userData}`, `--remote-debugging-port=${port}`]
+  if (noSandbox) args.push('--no-sandbox')
+  args.push(...(process.env.SMOKE_APP_ARGS ?? '').split(/\s+/).filter(Boolean))
+  // What a desktop launch gives, minus the things only the system adds: a minimal PATH, no SHELL,
+  // a HOME that holds nothing but the fake CLI. On Linux the display (xvfb-run sets DISPLAY and
+  // XAUTHORITY) is the only variable passed through: Chromium cannot start without one.
+  const env = { PATH: '/usr/bin:/bin', HOME: home }
+  if (platform === 'linux') {
+    for (const name of ['DISPLAY', 'XAUTHORITY']) {
+      if (process.env[name]) env[name] = process.env[name]
+    }
+  }
+  child = spawn(appBinary, args, {
+    env,
     detached: true,
     stdio: ['ignore', 'pipe', 'pipe']
   })
@@ -237,6 +293,7 @@ function redact(text) {
     .replace(/tldraw-[A-Za-z0-9+/=._-]{20,}/g, '<tldraw key>')
     .replace(/license_id=[^&\s"')]+/g, 'license_id=<id>')
     .replace(/[\w/.-]*\/Contents\/Resources\//g, '<app>/Resources/')
+    .replace(/[\w/.-]*\/linux-unpacked\//g, '<app>/')
     .slice(0, 400)
 }
 
@@ -576,6 +633,15 @@ async function phaseTwo() {
   })
   if (!canvasOpened) return
 
+  if (process.env.SMOKE_ALLOW_MISSING_TLDRAW_KEY) {
+    console.log(
+      'SKIP  tldraw license, assets and console checks (SMOKE_ALLOW_MISSING_TLDRAW_KEY: package built without a key)'
+    )
+    c.close()
+    await stopApp()
+    return
+  }
+
   await check(
     'tldraw stays rendered past its 5 s license gate, with no license error',
     async () => {
@@ -642,6 +708,16 @@ async function phaseTwo() {
 // ---------------------------------------------------------------------------------------------
 
 console.log(`smoke-packaged: ${appBinary}`)
+if (platform === 'linux') {
+  console.log(
+    `smoke-packaged: DISPLAY=${process.env.DISPLAY ?? '(unset)'}, ${noSandbox ? 'sandbox OFF (--no-sandbox)' : `sandbox ON, ${describeLinuxSandbox()}`}`
+  )
+  if (!process.env.DISPLAY) {
+    console.log(
+      'smoke-packaged: WARNING no DISPLAY: run it under `xvfb-run -a npm run smoke:packaged`'
+    )
+  }
+}
 console.log(
   `smoke-packaged: scratch folder ${scratch} (HOME and user data; the real ones are untouched)`
 )

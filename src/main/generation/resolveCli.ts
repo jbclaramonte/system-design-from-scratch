@@ -13,7 +13,7 @@ export interface ResolveCliOptions {
   env?: NodeJS.ProcessEnv
   /** Defaults to `os.homedir()`. */
   home?: string
-  /** Login shell used for the last fallback. Defaults to `$SHELL`, then `/bin/zsh`. */
+  /** Login shell used for the last fallback. Defaults to `$SHELL`, then `defaultLoginShell`. */
   shell?: string
   /** Set to false to skip the login shell fallback. */
   useLoginShell?: boolean
@@ -29,12 +29,21 @@ function isExecutableFile(path: string): boolean {
   }
 }
 
+/**
+ * Login shell when `$SHELL` is unset (a desktop launcher may not set it): zsh is the macOS default
+ * and is usually not installed on Linux, where bash is.
+ */
+export function defaultLoginShell(platform: NodeJS.Platform = process.platform): string {
+  return platform === 'darwin' ? '/bin/zsh' : '/bin/bash'
+}
+
 /** Install locations to try when `claude` is not on PATH (a GUI-launched app gets a minimal PATH). */
 export function commonCliLocations(home: string, env: NodeJS.ProcessEnv): string[] {
   const dirs = [
     join(home, '.claude', 'local'),
     join(home, '.local', 'bin'),
     '/opt/homebrew/bin',
+    '/home/linuxbrew/.linuxbrew/bin',
     '/usr/local/bin',
     join(home, '.npm-global', 'bin'),
     env['npm_config_prefix'] && join(env['npm_config_prefix'], 'bin')
@@ -82,7 +91,7 @@ export async function resolveCliPath(options: ResolveCliOptions = {}): Promise<s
   if (found) return found
 
   if (options.useLoginShell !== false && process.platform !== 'win32') {
-    const shell = options.shell ?? env['SHELL'] ?? '/bin/zsh'
+    const shell = options.shell ?? env['SHELL'] ?? defaultLoginShell()
     const fromShell = await lookupInLoginShell(shell, env)
     if (fromShell) return fromShell
   }

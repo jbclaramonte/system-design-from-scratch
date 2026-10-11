@@ -26,20 +26,21 @@ Electron no longer downloads its binary at install time. `npm run dev` and `npm 
 
 ## Scripts
 
-| Script                   | What it does                                                           |
-| ------------------------ | ---------------------------------------------------------------------- |
-| `npm run dev`            | Starts the app with the Vite dev server and hot reload.                |
-| `npm run build`          | Builds main, preload and renderer into `out/`.                         |
-| `npm run preview`        | Runs the app from the production build.                                |
-| `npm run package`        | Builds the macOS app and `.dmg` (arm64) into `dist/`, see Packaging.   |
-| `npm run package:dir`    | Same, only the `.app` (faster).                                        |
-| `npm run smoke:packaged` | Smoke-tests the packaged app over CDP, see Packaging.                  |
-| `npm run typecheck`      | Type-checks the Node side (main, preload) and the web side (renderer). |
-| `npm run lint`           | Runs ESLint.                                                           |
-| `npm run format`         | Formats the code with Prettier.                                        |
-| `npm run format:check`   | Checks formatting without writing.                                     |
-| `npm test`               | Runs the unit tests with Vitest.                                       |
-| `npm run corpus:build`   | Re-fetches the primer at the pinned commit into `resources/corpus/`.   |
+| Script                   | What it does                                                              |
+| ------------------------ | ------------------------------------------------------------------------- |
+| `npm run dev`            | Starts the app with the Vite dev server and hot reload.                   |
+| `npm run build`          | Builds main, preload and renderer into `out/`.                            |
+| `npm run preview`        | Runs the app from the production build.                                   |
+| `npm run package`        | Builds the macOS app and `.dmg` (arm64) into `dist/`, see Packaging.      |
+| `npm run package:dir`    | Same, only the `.app` (faster).                                           |
+| `npm run package:linux`  | Builds the Linux app (x64 AppImage and deb), meant for CI, see Packaging. |
+| `npm run smoke:packaged` | Smoke-tests the packaged app over CDP, see Packaging.                     |
+| `npm run typecheck`      | Type-checks the Node side (main, preload) and the web side (renderer).    |
+| `npm run lint`           | Runs ESLint.                                                              |
+| `npm run format`         | Formats the code with Prettier.                                           |
+| `npm run format:check`   | Checks formatting without writing.                                        |
+| `npm test`               | Runs the unit tests with Vitest.                                          |
+| `npm run corpus:build`   | Re-fetches the primer at the pinned commit into `resources/corpus/`.      |
 
 CI (`.github/workflows/ci.yml`) runs lint, format check, typecheck and tests on every push and pull
 request.
@@ -74,7 +75,7 @@ src/
   shared/            Code shared by both sides, including the IPC contract (ipc.ts)
 resources/corpus/    Generated primer corpus (CC BY 4.0), see docs/Corpus.md
 scripts/             Build-time scripts (corpus, licenses, icon, package check, smoke test), run with plain node
-build/               App icon for the packaged app (icon.icns)
+build/               App icons for the packaged apps (icon.icns, icons/*.png)
 electron-builder.yml Packaging config (docs/Packaging.md)
 docs/                Obsidian vault: spec, roadmap, glossary, spike findings
 spikes/              Standalone throwaway prototypes, not part of the app build
@@ -107,9 +108,11 @@ on your Claude subscription. Requirements:
 
 - `claude` installed and logged in (run `claude` once in a terminal). If it is missing or logged
   out, generations fail with an explicit `cli_not_found` or `not_logged_in` error.
-- An app launched from Finder or the Dock does not see your shell PATH. The app looks for `claude`
-  on PATH, then in `~/.claude/local`, `~/.local/bin`, `/opt/homebrew/bin`, `/usr/local/bin`,
-  `~/.npm-global/bin`, then asks your login shell. To force a path, set it in **Settings > Claude
+- An app launched from Finder or the Dock (macOS), or from a Linux application menu or `.desktop`
+  launcher, does not see your shell PATH. The app looks for `claude` on PATH, then in
+  `~/.claude/local`, `~/.local/bin` (where the native installer puts it on Linux and macOS),
+  `/opt/homebrew/bin`, `/home/linuxbrew/.linuxbrew/bin`, `/usr/local/bin`, `~/.npm-global/bin`, then
+  asks your login shell (`$SHELL`, else zsh on macOS and bash on Linux). To force a path, set it in **Settings > Claude
   Code CLI path** (applied at once; the **Test** button runs `claude --version` and
   `claude auth status` on it). The
   `CLAUDE_CLI_PATH=/absolute/path/to/claude` environment variable is still read when the setting
@@ -183,6 +186,26 @@ The build prints whether a tldraw license key was found (see the license key bel
   follow the first launch checklist for those.
 - Details, what the package contains, the license requirements, the tldraw license, the smoke test
   and the first launch checklist: [docs/Packaging.md](docs/Packaging.md).
+
+### Linux (x64)
+
+The Linux app is built by GitHub Actions on an Ubuntu runner, not from macOS: the workflow
+`.github/workflows/package.yml` (**Actions > Package > Run workflow**, or a `v*` tag) runs
+`npm run package:linux` (AppImage and `.deb`, unsigned, no auto-update), the guard script
+(`scripts/check-package.mjs --platform linux`), the smoke test under `xvfb-run`, and uploads the
+two files as the artifact `linux-x64` (kept 14 days). The tldraw license key comes from the
+repository secret `VITE_TLDRAW_LICENSE_KEY`.
+
+- AppImage: `chmod +x system-design-from-scratch-<version>-x86_64.AppImage`, then run it. It needs
+  FUSE 2 (`sudo apt install libfuse2t64` on Ubuntu 24.04, `libfuse2` before) or start it with
+  `APPIMAGE_EXTRACT_AND_RUN=1 ./<file>.AppImage` (no FUSE needed). On Ubuntu 24.04 and other systems that restrict unprivileged user
+  namespaces an AppImage may refuse to start (Chromium sandbox); see
+  [docs/Packaging.md](docs/Packaging.md#linux-x64).
+- deb (Debian, Ubuntu): `sudo apt install ./system-design-from-scratch-<version>-amd64.deb`. It sets
+  up the sandbox helper and the AppArmor profile; the app appears in the Education category.
+- Data: `~/.config/system-design-from-scratch/`. The Claude Code CLI is still required.
+- Not verified: no real display and no real Claude Code CLI in CI, and no run on a real desktop
+  (Wayland, window manager, launcher icon). See [docs/Packaging.md](docs/Packaging.md#linux-x64).
 
 ## Configuration
 

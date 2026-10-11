@@ -1,13 +1,20 @@
-// Guard run after electron-builder (`npm run package`): fails when the macOS package is not fit to
-// keep. Plain Node, no dependency. Checks, on dist/mac-arm64/<productName>.app:
-//   - the Chromium licenses (LICENSES.chromium.html) and the Electron LICENSE are in the app;
+// Guard run after electron-builder (`npm run package`, `npm run package:linux`): fails when the
+// package is not fit to keep. Plain Node, no dependency.
+//
+//   node scripts/check-package.mjs [--platform mac|linux] [--app-only]
+//
+// Checks, on dist/mac-arm64/<productName>.app (mac, the default) or dist/linux-unpacked (linux):
+//   - the Chromium licenses (LICENSES.chromium.html) and the Electron LICENSE are in the app
+//     (Contents/Resources on macOS, resources/ on Linux);
 //   - app.asar holds the runtime files and none of the files that must never ship (.env*, src,
 //     docs, spikes, screenshots, scripts, .github, tests, node_modules);
 //   - the main and preload bundles do not require a package that the app does not contain;
 //   - the tldraw license key, when one is configured at build time, is inside app.asar (renderer
 //     bundle, expected: it is a client-side key) and nowhere in the main and preload bundles. The
 //     key is compared, never printed.
-// `--app-only` skips the .dmg check (npm run package:dir). See docs/Packaging.md.
+//   - the disk image (.dmg) or the AppImage and the .deb exist next to the app.
+// `--app-only` skips that last check (npm run package:dir, npm run package:linux:dir). See
+// docs/Packaging.md.
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { builtinModules } from 'node:module'
 import { join, resolve } from 'node:path'
@@ -16,6 +23,12 @@ import { readTldrawLicenseKey } from './tldraw-license-key.mjs'
 const root = resolve(import.meta.dirname, '..')
 const distDir = join(root, 'dist')
 const appOnly = process.argv.includes('--app-only')
+const platformIndex = process.argv.indexOf('--platform')
+const platform = platformIndex === -1 ? 'mac' : process.argv[platformIndex + 1]
+if (platform !== 'mac' && platform !== 'linux') {
+  console.error(`check-package: unknown platform "${platform}" (expected mac or linux)`)
+  process.exit(2)
+}
 const failures = []
 const fail = (message) => failures.push(message)
 
@@ -37,21 +50,47 @@ function listAsar(asarPath) {
   return paths
 }
 
-const appDirs = existsSync(distDir)
-  ? readdirSync(distDir)
-      .filter((name) => /^mac(-arm64)?$/.test(name))
-      .map((name) => join(distDir, name))
-  : []
-const appPath = appDirs
-  .flatMap((dir) => readdirSync(dir).map((name) => join(dir, name)))
-  .find((path) => path.endsWith('.app'))
+/** The directory that holds the unpacked app and its resources folder, for the platform. */
+function findApp() {
+  if (platform === 'linux') {
+    const unpacked = join(distDir, 'linux-unpacked')
+    return existsSync(unpacked)
+      ? { path: unpacked, resources: join(unpacked, 'resources') }
+      : undefined
+  }
+  const appDirs = existsSync(distDir)
+    ? readdirSync(distDir)
+        .filter((name) => /^mac(-arm64)?$/.test(name))
+        .map((name) => join(distDir, name))
+    : []
+  const appPath = appDirs
+    .flatMap((dir) => readdirSync(dir).map((name) => join(dir, name)))
+    .find((path) => path.endsWith('.app'))
+  return appPath ? { path: appPath, resources: join(appPath, 'Contents', 'Resources') } : undefined
+}
 
-if (!appPath) {
-  console.error(`check-package: no .app found in ${join(distDir, 'mac-arm64')}`)
+const app = findApp()
+if (!app) {
+  console.error(
+    platform === 'linux'
+      ? `check-package: no linux-unpacked folder in ${distDir}`
+      : `check-package: no .app found in ${join(distDir, 'mac-arm64')}`
+  )
   process.exit(1)
 }
-console.log(`check-package: ${appPath}`)
-const resources = join(appPath, 'Contents', 'Resources')
+console.log(`check-package: ${platform}: ${app.path}`)
+const resources = app.resources
+
+if (platform === 'linux') {
+  // The Electron executable (the only executable over 50 MB at the top level) and its sandbox helper.
+  const top = readdirSync(app.path).map((name) => join(app.path, name))
+  const executable = top.find(
+    (path) =>
+      statSync(path).isFile() && statSync(path).size > 50_000_000 && statSync(path).mode & 0o111
+  )
+  if (!executable) fail(`no Electron executable at the top of ${app.path}`)
+  if (!existsSync(join(app.path, 'chrome-sandbox'))) fail('chrome-sandbox is missing')
+}
 
 // 1. Licenses that must travel with the app (Chromium, Node.js and others: LICENSES.chromium.html).
 const chromium = join(resources, 'LICENSES.chromium.html')
@@ -138,10 +177,17 @@ if (licenseKey) {
   }
 }
 
-// 5. The disk image.
+// 5. The installable artifacts, next to the app. A size floor catches an empty or truncated file.
 if (!appOnly) {
-  const dmg = readdirSync(distDir).find((name) => name.endsWith('.dmg'))
-  if (!dmg) fail(`no .dmg in ${distDir}`)
+  const names = readdirSync(distDir)
+  const expected = platform === 'linux' ? ['.AppImage', '.deb'] : ['.dmg']
+  for (const extension of expected) {
+    const name = names.find((entry) => entry.endsWith(extension))
+    if (!name) fail(`no ${extension} in ${distDir}`)
+    else if (statSync(join(distDir, name)).size < 50_000_000) {
+      fail(`${name} is smaller than 50 MB: truncated?`)
+    }
+  }
 }
 
 if (failures.length > 0) {

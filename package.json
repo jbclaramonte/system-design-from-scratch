@@ -3,7 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "description": "Desktop app for learning system design from scratch.",
+  "author": "Jean-Baptiste Claramonte",
   "license": "Apache-2.0",
+  "homepage": "https://github.com/jbclaramonte/system-design-from-scratch",
+  "desktopName": "system-design-from-scratch.desktop",
   "main": "./out/main/index.js",
   "engines": {
     "node": ">=22.18.0"
@@ -13,6 +16,8 @@
     "build": "electron-vite build",
     "package": "node scripts/check-tldraw-key.mjs && electron-vite build && electron-builder --mac --arm64 && node scripts/check-package.mjs && node scripts/check-tldraw-key.mjs",
     "package:dir": "node scripts/check-tldraw-key.mjs && electron-vite build && electron-builder --mac dir --arm64 && node scripts/check-package.mjs --app-only && node scripts/check-tldraw-key.mjs",
+    "package:linux": "install-electron && node scripts/check-tldraw-key.mjs && electron-vite build && electron-builder --linux --x64 && node scripts/check-package.mjs --platform linux && node scripts/check-tldraw-key.mjs",
+    "package:linux:dir": "install-electron && node scripts/check-tldraw-key.mjs && electron-vite build && electron-builder --linux dir --x64 && node scripts/check-package.mjs --platform linux --app-only && node scripts/check-tldraw-key.mjs",
     "smoke:packaged": "node scripts/smoke-packaged.mjs",
     "preview": "install-electron && electron-vite preview",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json",

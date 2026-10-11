@@ -1,7 +1,10 @@
-// Generates build/icon.icns, the app icon of the packaged macOS app.
+// Generates the app icons of the packaged apps: build/icon.icns (macOS, needs `iconutil`) and
+// build/icons/<size>x<size>.png (Linux: electron-builder reads that folder for the AppImage, the
+// deb and the .desktop entry), all from the same drawing.
 //
-// Run with Electron (already a devDependency, no extra tooling) on macOS:
+// Run with Electron (already a devDependency, no extra tooling), on macOS for the .icns:
 //   npm run icon:build
+// On another OS the PNG set is still written and the .icns step is skipped.
 //
 // The icon is the brand mark of the app header (src/renderer/src/shell/AppShell.tsx) on a dark
 // rounded square (Design System tokens: surface-base #0b0f19, indigo #6366f1, emerald #10b981).
@@ -45,7 +48,10 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${SIZE}" height="${S
 </svg>`
 
 const outDir = resolve(import.meta.dirname, '..', 'build')
+const pngDir = join(outDir, 'icons')
 const iconset = join(tmpdir(), `sdfs-icon-${process.pid}.iconset`)
+// Sizes of the Linux PNG set (hicolor theme sizes).
+const LINUX_SIZES = [16, 24, 32, 48, 64, 128, 256, 512]
 
 // Electron would otherwise create an "Electron" userData folder in the user's Application Support.
 app.setPath('userData', join(tmpdir(), `sdfs-icon-userdata-${process.pid}`))
@@ -70,18 +76,30 @@ void app.whenReady().then(async () => {
       ? captured
       : captured.resize({ width: SIZE, height: SIZE, quality: 'best' })
 
-  rmSync(iconset, { recursive: true, force: true })
-  mkdirSync(iconset, { recursive: true })
   mkdirSync(outDir, { recursive: true })
-  const sizes = [16, 32, 128, 256, 512]
-  for (const size of sizes) {
-    const one = master.resize({ width: size, height: size, quality: 'best' })
-    const two = master.resize({ width: size * 2, height: size * 2, quality: 'best' })
-    writeFileSync(join(iconset, `icon_${size}x${size}.png`), one.toPNG())
-    writeFileSync(join(iconset, `icon_${size}x${size}@2x.png`), two.toPNG())
+
+  rmSync(pngDir, { recursive: true, force: true })
+  mkdirSync(pngDir, { recursive: true })
+  for (const size of LINUX_SIZES) {
+    const png = master.resize({ width: size, height: size, quality: 'best' }).toPNG()
+    writeFileSync(join(pngDir, `${size}x${size}.png`), png)
   }
-  execFileSync('iconutil', ['-c', 'icns', iconset, '-o', join(outDir, 'icon.icns')])
-  rmSync(iconset, { recursive: true, force: true })
-  console.log(`Wrote ${join(outDir, 'icon.icns')}`)
+  console.log(`Wrote ${LINUX_SIZES.length} PNG icons in ${pngDir}`)
+
+  if (process.platform === 'darwin') {
+    rmSync(iconset, { recursive: true, force: true })
+    mkdirSync(iconset, { recursive: true })
+    for (const size of [16, 32, 128, 256, 512]) {
+      const one = master.resize({ width: size, height: size, quality: 'best' })
+      const two = master.resize({ width: size * 2, height: size * 2, quality: 'best' })
+      writeFileSync(join(iconset, `icon_${size}x${size}.png`), one.toPNG())
+      writeFileSync(join(iconset, `icon_${size}x${size}@2x.png`), two.toPNG())
+    }
+    execFileSync('iconutil', ['-c', 'icns', iconset, '-o', join(outDir, 'icon.icns')])
+    rmSync(iconset, { recursive: true, force: true })
+    console.log(`Wrote ${join(outDir, 'icon.icns')}`)
+  } else {
+    console.log('Skipped build/icon.icns: it needs macOS iconutil.')
+  }
   app.quit()
 })

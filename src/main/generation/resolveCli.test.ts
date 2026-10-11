@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { GenerationError } from './errors'
-import { resolveCliPath } from './resolveCli'
+import { commonCliLocations, defaultLoginShell, resolveCliPath } from './resolveCli'
 
 let root: string
 
@@ -77,6 +77,15 @@ describe.skipIf(process.platform === 'win32')('resolveCliPath', () => {
     ).resolves.toBe(bin)
   })
 
+  it('asks the login shell named by $SHELL when none is given', async () => {
+    const bin = executable(join(root, 'hidden', 'claude'))
+    const shell = executable(join(root, 'fake-shell'), `#!/bin/sh\necho "${bin}"\n`)
+
+    await expect(
+      resolveCliPath({ env: { PATH: '/nonexistent', SHELL: shell }, home: emptyHome() })
+    ).resolves.toBe(bin)
+  })
+
   it('rejects an alias printed by the login shell', async () => {
     const shell = executable(
       join(root, 'fake-shell'),
@@ -86,5 +95,31 @@ describe.skipIf(process.platform === 'win32')('resolveCliPath', () => {
     await expect(
       resolveCliPath({ env: { PATH: '/nonexistent' }, home: emptyHome(), shell })
     ).rejects.toMatchObject({ code: 'cli_not_found' })
+  })
+})
+
+describe('defaultLoginShell', () => {
+  it('is zsh on macOS and bash elsewhere (Linux has no zsh by default)', () => {
+    expect(defaultLoginShell('darwin')).toBe('/bin/zsh')
+    expect(defaultLoginShell('linux')).toBe('/bin/bash')
+  })
+})
+
+describe('commonCliLocations', () => {
+  it('lists the Linux install locations under the home folder, native installer first', () => {
+    const locations = commonCliLocations('/home/ada', {})
+
+    expect(locations).toContain('/home/ada/.local/bin/claude')
+    expect(locations).toContain('/home/ada/.npm-global/bin/claude')
+    expect(locations).toContain('/home/linuxbrew/.linuxbrew/bin/claude')
+    expect(locations.indexOf('/home/ada/.local/bin/claude')).toBeLessThan(
+      locations.indexOf('/usr/local/bin/claude')
+    )
+  })
+
+  it('adds the npm prefix of the environment', () => {
+    expect(commonCliLocations('/home/ada', { npm_config_prefix: '/opt/npm' })).toContain(
+      '/opt/npm/bin/claude'
+    )
   })
 })
