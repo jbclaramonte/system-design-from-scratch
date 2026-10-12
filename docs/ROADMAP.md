@@ -78,7 +78,12 @@ gantt
     #38 tldraw license key and watermark      :done, k2, after k1, 1d
     #39 Smoke-test packaged app, install docs :done, k3, after k2, 1d
     #40 Package Linux (AppImage, deb) in CI   :done, k4, after k3, 2d
-    #41 GitHub Releases, README download      :active, k5, after k4, 1d
+    #41 GitHub Releases, README download      :done, k5, after k4, 1d
+
+    section Canvas migration
+    #42 React Flow spike                      :done, m1, 2026-10-13, 2d
+    #43 Replace tldraw by React Flow          :active, m2, after m1, 4d
+    #44 Remove tldraw, first release          :m3, after m2, 1d
 ```
 
 ## Dependency table
@@ -126,6 +131,9 @@ gantt
 | #39 | #37, #38 |
 | #40 | #37, #38, #39 |
 | #41 | #37, #38, #40 |
+| #42 | none |
+| #43 | #42 |
+| #44 | #41, #43 |
 
 ## Conventions
 

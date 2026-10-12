@@ -19,6 +19,7 @@ export type Screen =
   | { name: 'dev-lessons' }
   | { name: 'dev-quiz' }
   | { name: 'dev-design-canvas' }
+  | { name: 'dev-flow-canvas' }
   | { name: 'dev-design-exercise' }
   | { name: 'dev-diagrams' }
 
@@ -54,6 +55,7 @@ export function activeNavItem(screen: Screen): NavItemId {
     case 'dev-lessons':
     case 'dev-quiz':
     case 'dev-design-canvas':
+    case 'dev-flow-canvas':
     case 'dev-design-exercise':
     case 'dev-diagrams':
       return 'learning-path'
@@ -73,6 +75,7 @@ export function screenLayout(screen: Screen): ShellLayout {
   switch (screen.name) {
     case 'exercise':
     case 'dev-design-canvas':
+    case 'dev-flow-canvas':
     case 'dev-design-exercise':
       return 'canvas'
     case 'topic':
