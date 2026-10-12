@@ -69,4 +69,5 @@ dmg:
   writeUpdateInfo: false
 # No auto-update: no publish provider, no latest-mac.yml.
 publish: null
-artifactName: ${productName}-${version}-${arch}.${ext}
+# File names carry no space: GitHub rewrites spaces in release asset names.
+artifactName: ${name}-${version}-${arch}.${ext}

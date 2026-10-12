@@ -6,6 +6,20 @@ the topic is mastered, then moves on to design exercises on a diagram canvas. Co
 driving the Claude Code CLI and grounded on the System Design Primer. See [docs/Home.md](docs/Home.md)
 for the product spec, roadmap and glossary.
 
+## Download
+
+Packaged apps are attached to each [GitHub Release](https://github.com/jbclaramonte/system-design-from-scratch/releases/latest). Personal use: unsigned, not notarized, no auto-update. Each release also has a `SHA256SUMS` file.
+
+| Platform                    | File                                                   | Install                                                                                                                                                                                          |
+| --------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| macOS (Apple Silicon)       | `system-design-from-scratch-<version>-arm64.dmg`       | Open the dmg and drag the app onto Applications. The download is quarantined: right-click the app, **Open**, or `xattr -dr com.apple.quarantine "/Applications/System Design from Scratch.app"`. |
+| Linux x64, Debian or Ubuntu | `system-design-from-scratch-<version>-amd64.deb`       | `sudo apt install ./system-design-from-scratch-<version>-amd64.deb`                                                                                                                              |
+| Linux x64, any distribution | `system-design-from-scratch-<version>-x86_64.AppImage` | `chmod +x` the file and run it. Needs FUSE 2 (see [Linux](#linux-x64)).                                                                                                                          |
+
+The [Claude Code CLI](#claude-code-cli) must be installed and logged in: the app drives it for every
+generation. There is no Windows build. Releases are cut by pushing a `v*` tag, see
+[docs/Packaging.md](docs/Packaging.md#releases).
+
 ## Prerequisites
 
 - Node.js 24 LTS (22.18 or later works, the tests need the built-in `node:sqlite`; CI runs on 24)
@@ -154,7 +168,7 @@ window go to the OS browser (http and https only), and permission requests are d
 
 ## Packaging
 
-`npm run package` builds an installable macOS app (Apple Silicon only, personal use: not signed, not
+To build it yourself, `npm run package` builds an installable macOS app (Apple Silicon only, personal use: not signed, not
 notarized, no auto-update). Prerequisites: macOS on arm64, `npm ci`, and Electron installed
 (`npx install-electron`, done by `npm run dev`). It runs `electron-vite build`, then electron-builder
 (`electron-builder.yml`, packaging the Electron already in `node_modules`, so no Electron
@@ -164,7 +178,7 @@ similar ended up in the app. The first `.dmg` build downloads electron-builder's
 The build prints whether a tldraw license key was found (see the license key below).
 
 - Output (git-ignored): `dist/mac-arm64/System Design from Scratch.app` (about 360 MB) and
-  `dist/System Design from Scratch-<version>-arm64.dmg` (about 130 MB). `npm run package:dir` skips
+  `dist/system-design-from-scratch-<version>-arm64.dmg` (about 130 MB). `npm run package:dir` skips
   the `.dmg`.
 - Install: open the `.dmg` and drag the app onto Applications, or copy the `.app` to
   `/Applications`. A build made on this machine opens normally. A copy downloaded or sent to
@@ -206,6 +220,9 @@ repository secret `VITE_TLDRAW_LICENSE_KEY`.
 - Data: `~/.config/system-design-from-scratch/`. The Claude Code CLI is still required.
 - Not verified: no real display and no real Claude Code CLI in CI, and no run on a real desktop
   (Wayland, window manager, launcher icon). See [docs/Packaging.md](docs/Packaging.md#linux-x64).
+
+The same workflow builds the macOS dmg on a macOS runner and, on a `v*` tag, attaches both packages
+to a draft GitHub Release ([Download](#download)).
 
 ## Configuration
 

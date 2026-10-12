@@ -1,7 +1,9 @@
 name: Package
 
-# Builds the Linux x64 app (AppImage and deb) on an Ubuntu runner, checks the package, smoke-tests it
-# under xvfb and uploads the artifacts. Manual, or on a version tag. Docs: docs/Packaging.md.
+# Builds the Linux x64 app (AppImage and deb) on an Ubuntu runner and the macOS arm64 app (dmg) on a
+# macOS runner, checks each package, smoke-tests it and uploads the artifacts. Manual, or on a
+# version tag; a version tag also creates a DRAFT GitHub Release with the packages attached, to be
+# published by hand. Docs: docs/Packaging.md.
 on:
   workflow_dispatch:
   push:
@@ -22,6 +24,16 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+
+      # A release is cut from a tag named after the version in package.json.
+      - name: Check the tag matches the version
+        if: github.ref_type == 'tag'
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          if [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $version (expected v$version)."
+            exit 1
+          fi
 
       # xvfb: a virtual display for the smoke test. libfuse2t64: runs an AppImage without
       # extracting it. binutils: `ar`, used by the deb builder (fpm). The rest is what the Electron
@@ -49,6 +61,11 @@ jobs:
           else
             echo "present=false" >> "$GITHUB_OUTPUT"
             echo "::warning::Repository secret VITE_TLDRAW_LICENSE_KEY is not set: this package has an unusable Design Canvas."
+            # A release without the key would ship a blank Design Canvas.
+            if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+              echo "::error::A release needs the repository secret VITE_TLDRAW_LICENSE_KEY."
+              exit 1
+            fi
           fi
 
       # install-electron (in the script) downloads the Electron binary; electron-builder packages
@@ -96,3 +113,104 @@ jobs:
           path: smoke-shots/
           if-no-files-found: ignore
           retention-days: 14
+
+  macos:
+    runs-on: macos-14
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+
+      # A release is cut from a tag named after the version in package.json.
+      - name: Check the tag matches the version
+        if: github.ref_type == 'tag'
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          if [ "$GITHUB_REF_NAME" != "v$version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $version (expected v$version)."
+            exit 1
+          fi
+
+      # Same secret check as the Linux job: presence only, never the value.
+      - name: Check the tldraw license key secret
+        id: tldraw
+        env:
+          TLDRAW_KEY: ${{ secrets.VITE_TLDRAW_LICENSE_KEY }}
+        run: |
+          if [ -n "$TLDRAW_KEY" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Repository secret VITE_TLDRAW_LICENSE_KEY is not set: this package has an unusable Design Canvas."
+            if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+              echo "::error::A release needs the repository secret VITE_TLDRAW_LICENSE_KEY."
+              exit 1
+            fi
+          fi
+
+      # install-electron (in the script) downloads the darwin-arm64 Electron binary; electron-builder
+      # packages it into the .app and the .dmg, then the guard script runs.
+      - name: Build the macOS package
+        run: npm run package
+        env:
+          VITE_TLDRAW_LICENSE_KEY: ${{ secrets.VITE_TLDRAW_LICENSE_KEY }}
+
+      - name: Smoke test the packaged app
+        run: npm run smoke:packaged -- --shots smoke-shots
+        env:
+          SMOKE_ALLOW_MISSING_TLDRAW_KEY: ${{ steps.tldraw.outputs.present != 'true' && '1' || '' }}
+
+      - name: Upload the macOS package
+        uses: actions/upload-artifact@v7
+        with:
+          name: macos-arm64
+          path: dist/*.dmg
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload the smoke test screenshots
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: smoke-shots-macos
+          path: smoke-shots/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  # Tags only. A DRAFT release: nothing is public until it is published from the Releases page.
+  # The packages embed the tldraw license key (docs/Packaging.md, "tldraw license"), so review the
+  # draft before publishing it.
+  release:
+    if: github.ref_type == 'tag'
+    needs: [linux, macos]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          path: packages
+          merge-multiple: true
+
+      - name: Write the checksums
+        working-directory: packages
+        run: |
+          ls -l
+          sha256sum * > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Create the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" packages/* \
+            --draft \
+            --verify-tag \
+            --title "System Design from Scratch ${GITHUB_REF_NAME#v}" \
+            --notes-file .github/release-notes.md \
+            --generate-notes

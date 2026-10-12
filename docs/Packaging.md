@@ -1,12 +1,12 @@
 ---
 title: Packaging
 tags: [packaging, product]
-issue: [37, 38, 39, 40]
+issue: [37, 38, 39, 40, 41]
 ---
 
 # Packaging
 
-How the macOS app (Apple Silicon, arm64, built locally) and the Linux app (x64 AppImage and deb, built in CI, see [[#Linux (x64)]]) are built from the repo with [electron-builder](https://www.electron.build/). Personal use: no signing identity, no notarization, no auto-update, no published release. Context: [[Attribution and Licenses]] (what must travel with the app), [[SPEC]].
+How the macOS app (Apple Silicon, arm64, built locally) and the Linux app (x64 AppImage and deb, built in CI, see [[#Linux (x64)]]) are built from the repo with [electron-builder](https://www.electron.build/). Personal use: no signing identity, no notarization, no auto-update. Releases: [[#Releases]]. Context: [[Attribution and Licenses]] (what must travel with the app), [[SPEC]].
 
 > [!warning] A package needs a tldraw license key
 > Without a valid key at build time, the Design Canvas of the packaged app disappears 5 seconds after it opens. `npm run package` warns when the key is missing. See [[#tldraw license]] below, and [[#Smoke test]] for the automated check of a package.
@@ -25,7 +25,7 @@ Output in `dist/` (git-ignored):
 | Path | What |
 |---|---|
 | `dist/mac-arm64/System Design from Scratch.app` | The app, about 360 MB (Electron itself is most of it). |
-| `dist/System Design from Scratch-<version>-arm64.dmg` | Disk image with the app and an Applications shortcut, about 130 MB. |
+| `dist/system-design-from-scratch-<version>-arm64.dmg` | Disk image with the app and an Applications shortcut, about 130 MB. |
 
 The config is `electron-builder.yml`. Notes on the choices:
 
@@ -122,6 +122,26 @@ Whether blocking the request is acceptable under the license (it forbids interfe
 >
 > [Name]
 
+
+## Releases
+
+Download page: GitHub Releases, linked from the README ([[#Download]] in the README). Issue #41.
+
+Cut a release:
+
+1. Bump `version` in `package.json` and `package-lock.json`, commit and push to `main`.
+2. Tag and push: `git tag v<version> && git push origin v<version>`. The tag must equal `v` plus the `package.json` version, or the workflow stops.
+3. `.github/workflows/package.yml` builds both packages (Linux on `ubuntu-latest`, macOS arm64 on `macos-14`), runs the guard script and the smoke test on each, then the `release` job creates a **draft** release named after the tag with the dmg, AppImage, deb and `SHA256SUMS` attached. The notes start from `.github/release-notes.md` (install steps), followed by GitHub's generated change list.
+4. Open the draft on the Releases page, read it, then **Publish**. Nothing is public before that.
+
+A manual run (**Actions > Package > Run workflow**) only uploads workflow artifacts (`linux-x64`, `macos-arm64`, 14 days), no release. A tagged build fails when the `VITE_TLDRAW_LICENSE_KEY` secret is missing: a release without it has a blank Design Canvas.
+
+> [!warning] A public release exposes the tldraw license key
+> The key is inlined in the renderer bundle ([[#How the key flows]]), so anyone who downloads a release can extract it. That is why the release is a draft. Before publishing, check that the key's terms allow it (the evaluation key is time-limited and not meant for distribution; the hobby key request is still open) and that it has not expired: a release built with an expired key opens with a Design Canvas that disappears after 5 seconds ([[#Evaluation key and its expiry]]).
+
+Release assets have no space in their names (GitHub rewrites spaces to dots): electron-builder's `artifactName` is `${name}-${version}-${arch}.${ext}`.
+
+Not verified: a release downloaded on a Mac carries the quarantine attribute ([[#Open an unsigned build]]); the macOS smoke test runs the app from the build folder, not from the downloaded dmg.
 
 ## User data
 
