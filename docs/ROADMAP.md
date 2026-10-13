@@ -83,7 +83,7 @@ gantt
     section Canvas migration
     #42 React Flow spike                      :done, m1, 2026-10-13, 2d
     #43 Replace tldraw by React Flow          :done, m2, after m1, 4d
-    #44 Remove tldraw, first release          :active, m3, after m2, 1d
+    #44 Remove tldraw, first release          :done, m3, after m2, 1d
 ```
 
 ## Dependency table
