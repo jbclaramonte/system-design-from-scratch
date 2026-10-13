@@ -4,7 +4,7 @@
  * scripts/build-licenses.ts). See docs/Attribution and Licenses.md.
  */
 
-/** A license file shipped in a package (or vendored for it), verbatim. */
+/** A license file shipped in a package, verbatim. */
 export interface LicenseFile {
   file: string
   text: string
@@ -12,15 +12,13 @@ export interface LicenseFile {
 
 /** Why an entry needs more than its license text. */
 export type SpecialPackage =
-  /** tldraw license (source-available, not MIT): license key and watermark obligations. */
-  | 'tldraw'
   /** Electron runtime: a devDependency in package.json, but it is the app's runtime. */
-  | 'electron'
+  'electron'
 
 export interface ThirdPartyPackage {
   name: string
   version: string
-  /** SPDX expression, or `LicenseRef-tldraw` for the tldraw license. */
+  /** SPDX expression, as declared by the package. */
   license: string
   /** Empty when the package ships no license file. */
   licenseFiles: LicenseFile[]

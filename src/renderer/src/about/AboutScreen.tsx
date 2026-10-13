@@ -5,7 +5,6 @@ import './about.css'
 import { filterPackages } from './filterPackages'
 
 const AWESOME_RESOURCES_URL = 'https://github.com/ashishps1/awesome-system-design-resources'
-const TLDRAW_LICENSE_PAGE = 'https://tldraw.dev/community/license'
 
 /** External links open in the OS browser (window open handler of the main process). */
 function ExternalLink({ href, children }: { href: string; children: ReactNode }) {
@@ -38,52 +37,6 @@ function LicenseTexts({ pkg }: { pkg: ThirdPartyPackage }) {
   )
 }
 
-/** tldraw is not MIT: its license key and watermark obligations are shown in full. */
-function TldrawLicense({ packages }: { packages: ThirdPartyPackage[] }) {
-  const tldraw = packages.find((pkg) => pkg.name === 'tldraw')
-  const licenseUrl = tldraw
-    ? `https://github.com/tldraw/tldraw/blob/v${tldraw.version}/LICENSE.md`
-    : 'https://github.com/tldraw/tldraw/blob/main/LICENSE.md'
-  return (
-    <section className="card about-card about-card-attention" data-testid="about-tldraw">
-      <h2>
-        tldraw (Design Canvas){' '}
-        <span className="chip chip-attention chip-dot">Source-available</span>
-      </h2>
-      <p>
-        {packages.map((pkg) => `${pkg.name} ${pkg.version}`).join(', ')} are under the{' '}
-        <ExternalLink href={licenseUrl}>tldraw license</ExternalLink>, a source-available license,
-        not MIT or another open source license (
-        <ExternalLink href={TLDRAW_LICENSE_PAGE}>license page</ExternalLink>).
-      </p>
-      <ul>
-        <li>
-          Under its default terms it permits use in development only. A production build needs a
-          valid license key (<code>VITE_TLDRAW_LICENSE_KEY</code>); without one, tldraw stops
-          rendering the canvas after 5 seconds.
-        </li>
-        <li>
-          This app is meant to run with a tldraw hobby license key, under which the &quot;made with
-          tldraw&quot; watermark must be shown on the canvas. In development, without a key, the
-          canvas shows a &quot;Get a license for production&quot; watermark. The app does not hide
-          either watermark.
-        </li>
-        <li>
-          The license forbids disabling, changing or interfering with its license key enforcement
-          and removing copyright or other notices, and requires a verbatim copy of the license in
-          any distribution (below).
-        </li>
-      </ul>
-      {tldraw && (
-        <details className="card-disclosure card-disclosure-inset about-fold">
-          <summary>tldraw license text</summary>
-          <LicenseTexts pkg={tldraw} />
-        </details>
-      )}
-    </section>
-  )
-}
-
 function ThirdPartyLicenses({ about }: { about: AboutInfo }) {
   const [query, setQuery] = useState('')
   const { packages } = about.licenses
@@ -112,12 +65,7 @@ function ThirdPartyLicenses({ about }: { about: AboutInfo }) {
               <summary>
                 <span className="about-pkg-name">{pkg.name}</span>
                 <span className="label-mono faint">{pkg.version}</span>
-                <span className={`chip${pkg.special === 'tldraw' ? ' chip-attention' : ''}`}>
-                  {pkg.license}
-                </span>
-                {pkg.special === 'tldraw' && (
-                  <span className="about-pkg-note">(tldraw license, see above)</span>
-                )}
+                <span className="chip">{pkg.license}</span>
               </summary>
               {pkg.special === 'electron' && (
                 <p className="about-note">
@@ -167,7 +115,6 @@ export function AboutScreen({ onClose }: { onClose: () => void }) {
   }
 
   const { primer } = about
-  const tldrawPackages = about.licenses.packages.filter((pkg) => pkg.special === 'tldraw')
   return (
     <main className="about-screen" data-testid="about-screen">
       {header}
@@ -233,7 +180,6 @@ export function AboutScreen({ onClose }: { onClose: () => void }) {
         </ul>
       </section>
 
-      {tldrawPackages.length > 0 && <TldrawLicense packages={tldrawPackages} />}
       <ThirdPartyLicenses about={about} />
     </main>
   )

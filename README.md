@@ -77,7 +77,7 @@ src/
   preload/           Exposes the typed window.api bridge to the renderer
   renderer/          React app (index.html with the CSP, src/ for components, src/dev/ dev-only)
                      src/design/: Design Canvas (React Flow, typed components, Design Scene
-                     autosave and conversion of legacy tldraw scenes; flow/: the editor, legacy/:
+                     autosave and conversion of legacy tldraw scenes (made before issue #43); flow/: the editor, legacy/:
                      the converter, see docs/Design Canvas Integration.md;
                      export/: Design Export, see docs/Design Export.md;
                      protocol/: Design Exercise screen with the Interview Protocol steps)
@@ -177,7 +177,6 @@ notarized, no auto-update). Prerequisites: macOS on arm64, `npm ci`, and Electro
 download), then `scripts/check-package.mjs`, which fails if the Chromium licenses
 (`LICENSES.chromium.html`) or Electron's license are missing, or if `.env*`, `src/`, `docs/` and
 similar ended up in the app. The first `.dmg` build downloads electron-builder's dmg tooling once.
-The build prints whether a tldraw license key was found (see the license key below).
 
 - Output (git-ignored): `dist/mac-arm64/System Design from Scratch.app` (about 360 MB) and
   `dist/system-design-from-scratch-<version>-arm64.dmg` (about 130 MB). `npm run package:dir` skips
@@ -190,17 +189,13 @@ The build prints whether a tldraw license key was found (see the license key bel
   `~/Library/Application Support/system-design-from-scratch/` (database, caches), so existing data
   is reused. The Claude Code CLI is still required (see [Claude Code CLI](#claude-code-cli)).
 - The icon (`build/icon.icns`) comes from `npm run icon:build`.
-- tldraw license key: a package needs one at build time, from `VITE_TLDRAW_LICENSE_KEY` in
-  `.env.local` (see [Configuration](#configuration)); without it the Design Canvas of the packaged
-  app disappears 5 seconds after it opens. `npm run package` warns when it is missing and never
-  prints it. The key is inlined in the renderer bundle, so do not publish the build.
 - Smoke test: `npm run smoke:packaged` launches the packaged app with a minimal environment
   (`PATH=/usr/bin:/bin`, a scratch HOME with a fake `claude` in `~/.local/bin`, a scratch
   `--user-data-dir`), drives it over the DevTools protocol and checks the Learning Path, Settings,
   About, a lesson with a Mermaid diagram and an exercise canvas. It never touches your real data.
   It does not cover the real CLI, the network, Gatekeeper on a downloaded copy or a Finder launch:
   follow the first launch checklist for those.
-- Details, what the package contains, the license requirements, the tldraw license, the smoke test
+- Details, what the package contains, the license requirements, the smoke test
   and the first launch checklist: [docs/Packaging.md](docs/Packaging.md).
 
 ### Linux (x64)
@@ -209,8 +204,7 @@ The Linux app is built by GitHub Actions on an Ubuntu runner, not from macOS: th
 `.github/workflows/package.yml` (**Actions > Package > Run workflow**, or a `v*` tag) runs
 `npm run package:linux` (AppImage and `.deb`, unsigned, no auto-update), the guard script
 (`scripts/check-package.mjs --platform linux`), the smoke test under `xvfb-run`, and uploads the
-two files as the artifact `linux-x64` (kept 14 days). The tldraw license key comes from the
-repository secret `VITE_TLDRAW_LICENSE_KEY`.
+two files as the artifact `linux-x64` (kept 14 days).
 
 - AppImage: `chmod +x system-design-from-scratch-<version>-x86_64.AppImage`, then run it. It needs
   FUSE 2 (`sudo apt install libfuse2t64` on Ubuntu 24.04, `libfuse2` before) or start it with
@@ -228,18 +222,8 @@ to a draft GitHub Release ([Download](#download)).
 
 ## Configuration
 
-Copy `.env.example` to `.env.local` at the repo root and fill in the values. `.env.local` is
-ignored by git. Only variables prefixed with `VITE_` (or `RENDERER_VITE_`) are exposed to the
-renderer, as `import.meta.env.VITE_...`; they end up in the bundle, so treat them as public.
-
-- `VITE_TLDRAW_LICENSE_KEY`: **no longer read by the app** since the Design Canvas runs on React
-  Flow (issue #43); the tldraw package and this key go away in issue #44. tldraw license key for the Design Canvas. Optional in dev
-  (`npm run dev` shows a "Get a license for production" watermark), **required for production
-  builds** (`npm run build` / `npm run preview` / `npm run package`, renderer loaded from
-  `file://`): without a valid key tldraw stops rendering the canvas after 5 seconds. Read at build
-  time and baked into the bundle: rebuild after changing it. An empty value counts as no key. See
-  [docs/Packaging.md](docs/Packaging.md#tldraw-license) and
-  [docs/Design Canvas Integration.md](docs/Design%20Canvas%20Integration.md).
+Building the app needs no secret, license key or `.env` file. The Claude Code CLI path and its
+profile are set in the in-app **Settings** screen (see [Claude Code CLI](#claude-code-cli)).
 
 ## License
 

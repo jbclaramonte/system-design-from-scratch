@@ -14,10 +14,10 @@
   "scripts": {
     "dev": "install-electron && electron-vite dev",
     "build": "electron-vite build",
-    "package": "install-electron && node scripts/check-tldraw-key.mjs && electron-vite build && electron-builder --mac --arm64 && node scripts/check-package.mjs && node scripts/check-tldraw-key.mjs",
-    "package:dir": "install-electron && node scripts/check-tldraw-key.mjs && electron-vite build && electron-builder --mac dir --arm64 && node scripts/check-package.mjs --app-only && node scripts/check-tldraw-key.mjs",
-    "package:linux": "install-electron && node scripts/check-tldraw-key.mjs && electron-vite build && electron-builder --linux --x64 && node scripts/check-package.mjs --platform linux && node scripts/check-tldraw-key.mjs",
-    "package:linux:dir": "install-electron && node scripts/check-tldraw-key.mjs && electron-vite build && electron-builder --linux dir --x64 && node scripts/check-package.mjs --platform linux --app-only && node scripts/check-tldraw-key.mjs",
+    "package": "install-electron && electron-vite build && electron-builder --mac --arm64 && node scripts/check-package.mjs",
+    "package:dir": "install-electron && electron-vite build && electron-builder --mac dir --arm64 && node scripts/check-package.mjs --app-only",
+    "package:linux": "install-electron && electron-vite build && electron-builder --linux --x64 && node scripts/check-package.mjs --platform linux",
+    "package:linux:dir": "install-electron && electron-vite build && electron-builder --linux dir --x64 && node scripts/check-package.mjs --platform linux --app-only",
     "smoke:packaged": "node scripts/smoke-packaged.mjs",
     "preview": "install-electron && electron-vite preview",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
@@ -35,7 +35,6 @@
   "dependencies": {
     "@fontsource-variable/geist": "5.3.0",
     "@fontsource-variable/jetbrains-mono": "5.3.0",
-    "@tldraw/assets": "5.5.2",
     "@xyflow/react": "12.12.0",
     "dompurify": "3.4.16",
     "html-to-image": "1.11.13",
@@ -44,7 +43,6 @@
     "react-dom": "19.3.0",
     "react-markdown": "10.1.0",
     "remark-gfm": "4.0.1",
-    "tldraw": "5.5.2",
     "zod": "4.6.5"
   },
   "devDependencies": {

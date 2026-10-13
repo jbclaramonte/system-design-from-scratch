@@ -4,14 +4,16 @@ tags: [spike, design-practice]
 issue: 2
 date: 2026-10-08
 status: superseded
-decision: tldraw confirmed (hobby license key required for packaged builds), then replaced by React Flow in #43 (see react-flow spike)
+decision: tldraw confirmed (hobby license key required for packaged builds), then replaced by React Flow in #43 (see react-flow spike); package and license key removed in #44
 tldraw-version: 5.5.2
 ---
 
 # Spike: tldraw license and shape library
 
 > [!warning] Superseded (history)
-> The [[react-flow|React Flow spike]] (#42) found a better fit and issue #43 replaced tldraw in the [[Design Canvas]]; the tldraw package and its license key plumbing are removed in #44. This note stays as the record of why tldraw was picked first and what it cost (license key, watermark, tracking request, 9 MB bundle). Its code is under `spikes/tldraw/`.
+> The [[react-flow|React Flow spike]] (#42) found a better fit and issue #43 replaced tldraw in the [[Design Canvas]]; the tldraw package, its license key plumbing (script, CI secret, `.env` variable, the About section and the vendored license text) were removed in #44. This note stays as the record of why tldraw was picked first and what it cost (license key, watermark, tracking request, 9 MB bundle). Its code is kept under `spikes/tldraw/` (a standalone throwaway project, outside the app build; it keeps its own `package.json` and lockfile).
+>
+> The license key was removed from the repository in #44; the sections below describe it as it was and are no longer instructions.
 
 GitHub issue: #2. Context: [[SPEC]] section 6.1 and section 10, [[Design Canvas]], [[Design Exercise]].
 Code: `spikes/tldraw/` (throwaway proof of concept, not the app).

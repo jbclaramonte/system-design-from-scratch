@@ -45,10 +45,6 @@
   margin-bottom: 0;
 }
 
-.about-card-attention {
-  border-color: var(--color-attention-border);
-}
-
 .about-facts {
   display: grid;
   grid-template-columns: max-content minmax(0, 1fr);
@@ -135,11 +131,6 @@
   font-family: var(--font-mono);
   font-size: var(--type-code-inline-size);
   font-weight: 500;
-}
-
-.about-pkg-note {
-  color: var(--color-attention-text);
-  font-size: var(--type-body-sm-size);
 }
 
 .about-packages details[open] > summary {

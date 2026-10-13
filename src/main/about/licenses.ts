@@ -1,12 +1,7 @@
 // Third-party license list (resources/licenses.json), built by scripts/build-licenses.ts.
 // Pure: the lockfile and the package files are passed in, so the rule is testable on fixtures.
 // No runtime imports, so plain node can run it (native TypeScript type stripping).
-import type {
-  LicenseFile,
-  LicensesFile,
-  SpecialPackage,
-  ThirdPartyPackage
-} from '../../shared/about'
+import type { LicensesFile, SpecialPackage, ThirdPartyPackage } from '../../shared/about'
 
 /** The subset of a package-lock.json (lockfileVersion 2 or 3) entry used here. */
 export interface LockfilePackage {
@@ -43,17 +38,11 @@ export const LICENSES_RULE =
   'package.json "dependencies"), plus electron (the runtime). This is a superset of what the ' +
   'bundles contain: tree-shaking may drop some of them.'
 
-export const TLDRAW_LICENSE_ID = 'LicenseRef-tldraw'
-const TLDRAW_PACKAGE = /^(tldraw|@tldraw\/.+)$/
-const TLDRAW_DECLARED_LICENSE = 'SEE LICENSE IN LICENSE.md'
-
 const LICENSE_FILE = /^(licen[cs]e|copying|notice)/i
 const MODULES = 'node_modules/'
 
-function specialOf(name: string, license: string): SpecialPackage | null {
-  if (license === TLDRAW_LICENSE_ID) return 'tldraw'
-  if (RUNTIME_DEV_PACKAGES.includes(name)) return 'electron'
-  return null
+function specialOf(name: string): SpecialPackage | null {
+  return RUNTIME_DEV_PACKAGES.includes(name) ? 'electron' : null
 }
 
 const byNameThenVersion = (a: { name: string; version: string }, b: typeof a) =>
@@ -86,11 +75,7 @@ export function shippedPackages(lock: Lockfile): ShippedPackage[] {
     const shipped = !entry.dev || (topLevel && RUNTIME_DEV_PACKAGES.includes(name))
     if (!shipped) continue
     if (!entry.version) throw new Error(`No version for ${path} in package-lock.json`)
-    const declared = entry.license ?? 'UNKNOWN'
-    const license =
-      TLDRAW_PACKAGE.test(name) && declared === TLDRAW_DECLARED_LICENSE
-        ? TLDRAW_LICENSE_ID
-        : declared
+    const license = entry.license ?? 'UNKNOWN'
     const id = `${name}@${entry.version}`
     if (!byId.has(id)) {
       byId.set(id, {
@@ -98,7 +83,7 @@ export function shippedPackages(lock: Lockfile): ShippedPackage[] {
         name,
         version: entry.version,
         license,
-        special: specialOf(name, license)
+        special: specialOf(name)
       })
     }
   }
@@ -114,32 +99,19 @@ export interface PackageFiles {
 
 const normalizeText = (text: string) => text.replace(/\r\n?/g, '\n').trimEnd()
 
-export interface BuildLicensesOptions {
-  /** Extra license files by `name@version` (the vendored full tldraw license). */
-  extraFiles?: Record<string, LicenseFile[]>
-}
-
 /** Builds resources/licenses.json. Deterministic: same lockfile and files, same output. */
-export function buildLicensesFile(
-  lock: Lockfile,
-  files: PackageFiles,
-  options: BuildLicensesOptions = {}
-): LicensesFile {
+export function buildLicensesFile(lock: Lockfile, files: PackageFiles): LicensesFile {
   const packages: ThirdPartyPackage[] = shippedPackages(lock).map((pkg) => {
     const names = (files.list(pkg.path) ?? []).filter((file) => LICENSE_FILE.test(file)).sort()
     const licenseFiles = names.map((file) => ({
       file,
       text: normalizeText(files.read(pkg.path, file))
     }))
-    const extra = options.extraFiles?.[`${pkg.name}@${pkg.version}`] ?? []
     return {
       name: pkg.name,
       version: pkg.version,
       license: pkg.license,
-      licenseFiles: [
-        ...licenseFiles,
-        ...extra.map((file) => ({ file: file.file, text: normalizeText(file.text) }))
-      ],
+      licenseFiles,
       special: pkg.special
     }
   })

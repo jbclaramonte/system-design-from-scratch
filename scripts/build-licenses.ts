@@ -12,47 +12,19 @@ import { fileURLToPath } from 'node:url'
 import {
   buildLicensesFile,
   serializeLicensesFile,
-  shippedPackages,
   type Lockfile
 } from '../src/main/about/licenses.ts'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const OUTPUT = join(ROOT, 'resources', 'licenses.json')
 
-/**
- * The tldraw npm packages only ship a pointer to their license; its full text is vendored from
- * https://github.com/tldraw/tldraw/blob/v5.5.2/LICENSE.md. Re-vendor it when tldraw is bumped.
- */
-const TLDRAW_LICENSE_VERSION = '5.5.2'
-const TLDRAW_LICENSE_FILE = `resources/licenses/tldraw-v${TLDRAW_LICENSE_VERSION}-LICENSE.md`
-
 function main(): void {
   const lock = JSON.parse(readFileSync(join(ROOT, 'package-lock.json'), 'utf8')) as Lockfile
-  const tldraw = shippedPackages(lock).find((pkg) => pkg.name === 'tldraw')
-  if (tldraw && tldraw.version !== TLDRAW_LICENSE_VERSION) {
-    throw new Error(
-      `tldraw is ${tldraw.version}: vendor its LICENSE.md and update TLDRAW_LICENSE_VERSION`
-    )
-  }
-
   const generated = serializeLicensesFile(
-    buildLicensesFile(
-      lock,
-      {
-        list: (path) => (existsSync(join(ROOT, path)) ? readdirSync(join(ROOT, path)) : null),
-        read: (path, file) => readFileSync(join(ROOT, path, file), 'utf8')
-      },
-      {
-        extraFiles: {
-          [`tldraw@${TLDRAW_LICENSE_VERSION}`]: [
-            {
-              file: TLDRAW_LICENSE_FILE,
-              text: readFileSync(join(ROOT, TLDRAW_LICENSE_FILE), 'utf8')
-            }
-          ]
-        }
-      }
-    )
+    buildLicensesFile(lock, {
+      list: (path) => (existsSync(join(ROOT, path)) ? readdirSync(join(ROOT, path)) : null),
+      read: (path, file) => readFileSync(join(ROOT, path, file), 'utf8')
+    })
   )
 
   if (process.argv.includes('--check')) {

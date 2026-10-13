@@ -10,7 +10,7 @@ const pkg = (name: string, license: string): ThirdPartyPackage => ({
   special: null
 })
 
-const packages = [pkg('react', 'MIT'), pkg('tldraw', 'LicenseRef-tldraw'), pkg('tslib', '0BSD')]
+const packages = [pkg('react', 'MIT'), pkg('zod', 'Apache-2.0'), pkg('tslib', '0BSD')]
 
 describe('filterPackages', () => {
   it('returns every package for a blank query', () => {
@@ -18,7 +18,7 @@ describe('filterPackages', () => {
   })
 
   it('matches the name or the license, case-insensitively', () => {
-    expect(filterPackages(packages, 'LI').map((p) => p.name)).toEqual(['tldraw', 'tslib'])
+    expect(filterPackages(packages, 'AP').map((p) => p.name)).toEqual(['zod'])
     expect(filterPackages(packages, '0bsd').map((p) => p.name)).toEqual(['tslib'])
   })
 })

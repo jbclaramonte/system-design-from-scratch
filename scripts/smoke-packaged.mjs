@@ -16,8 +16,6 @@
 // it found). `--no-sandbox` (or SMOKE_NO_SANDBOX=1) turns the sandbox off for a machine that has
 // neither, such as a container running as root. SMOKE_APP_ARGS adds Chromium switches (space
 // separated), for example --disable-dev-shm-usage in a container with a small /dev/shm.
-// SMOKE_ALLOW_MISSING_TLDRAW_KEY is no longer read: the Design Canvas runs on React Flow (#43) and
-// needs no license key, so no canvas check is skipped. #44 removes the variable from the CI.
 //
 // Two launches share one scratch user-data folder:
 //   1. fresh folder: window, Learning Path (21 topics), database, Settings (Test button finds the
@@ -26,8 +24,8 @@
 //      Flow) where a typed component can be added, and no console error.
 // It never touches the real userData folder or ~/.claude*, always passes --user-data-dir, kills the
 // whole process tree it started (also on failure or Ctrl+C), prints one PASS/FAIL line per check
-// and exits 1 when a check fails. Never prints the tldraw license key. What it does not cover is
-// listed in docs/Packaging.md ("Smoke test").
+// and exits 1 when a check fails. What it does not cover is listed in docs/Packaging.md
+// ("Smoke test").
 import { execFileSync, spawn } from 'node:child_process'
 import {
   chmodSync,
@@ -289,8 +287,6 @@ let consoleProblems = []
 
 function redact(text) {
   return String(text)
-    .replace(/tldraw-[A-Za-z0-9+/=._-]{20,}/g, '<tldraw key>')
-    .replace(/license_id=[^&\s"')]+/g, 'license_id=<id>')
     .replace(/[\w/.-]*\/Contents\/Resources\//g, '<app>/Resources/')
     .replace(/[\w/.-]*\/linux-unpacked\//g, '<app>/')
     .slice(0, 400)
@@ -486,7 +482,7 @@ async function phaseOne() {
     assert(text.includes(cliPath), `the CLI was not found at ${cliPath}: ${text.slice(0, 160)}`)
   })
 
-  await check('About renders with licenses.json and the tldraw license', async () => {
+  await check('About renders with licenses.json', async () => {
     await c.click('open-about')
     await c.waitFor(`!!${c.testId('about-screen')}`, 'About')
     await c.waitFor(
@@ -496,8 +492,6 @@ async function phaseOne() {
     const entries = await c.evaluate(
       `document.querySelectorAll('[data-testid="about-license-entry"]').length`
     )
-    const tldraw = await c.evaluate(`${c.testId('about-tldraw')}?.textContent ?? ''`)
-    assert(/tldraw/i.test(tldraw) && tldraw.length > 200, 'the tldraw section is missing or empty')
     const primer = await c.evaluate(`${c.testId('about-attribution')}?.textContent ?? ''`)
     assert(primer.length > 20, 'the primer attribution is missing')
     return `${entries} license entries`

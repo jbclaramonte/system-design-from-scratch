@@ -7,7 +7,6 @@ import {
   serializeLicensesFile,
   shippedPackages,
   staleEntries,
-  TLDRAW_LICENSE_ID,
   type Lockfile,
   type PackageFiles
 } from './licenses'
@@ -18,8 +17,6 @@ const lock: Lockfile = {
     '': { name: 'app', version: '1.0.0', license: 'Apache-2.0' },
     'node_modules/zod': { version: '4.0.0', license: 'MIT' },
     'node_modules/react': { version: '19.0.0', license: 'MIT' },
-    'node_modules/tldraw': { version: '5.5.2', license: 'SEE LICENSE IN LICENSE.md' },
-    'node_modules/@tldraw/editor': { version: '5.5.2', license: 'SEE LICENSE IN LICENSE.md' },
     'node_modules/electron': { version: '44.0.0', license: 'MIT', dev: true },
     'node_modules/@electron/get': { version: '5.0.0', license: 'MIT', dev: true },
     'node_modules/vitest': { version: '5.0.0', license: 'MIT', dev: true },
@@ -35,8 +32,6 @@ const lock: Lockfile = {
 const files: Record<string, Record<string, string>> = {
   'node_modules/zod': { LICENSE: 'MIT zod\r\n\r\n', 'package.json': '{}', 'README.md': '' },
   'node_modules/react': { LICENSE: 'MIT react' },
-  'node_modules/tldraw': { 'LICENSE.md': 'This code is licensed under the tldraw license' },
-  'node_modules/@tldraw/editor': { 'LICENSE.md': 'pointer' },
   'node_modules/electron': { LICENSE: 'MIT electron' },
   'node_modules/tslib': { 'LICENSE.txt': '0BSD tslib', 'CopyrightNotice.txt': 'not matched' },
   'node_modules/b/node_modules/tslib': { NOTICE: 'notice', 'LICENSE.txt': '0BSD old' }
@@ -52,11 +47,9 @@ describe('shippedPackages', () => {
   it('lists the production tree plus electron, deduplicated and sorted', () => {
     expect(shippedPackages(lock).map((pkg) => `${pkg.name}@${pkg.version} ${pkg.license}`)).toEqual(
       [
-        `@tldraw/editor@5.5.2 ${TLDRAW_LICENSE_ID}`,
         'electron@44.0.0 MIT',
         'react@19.0.0 MIT',
         'real-name@1.0.0 ISC',
-        `tldraw@5.5.2 ${TLDRAW_LICENSE_ID}`,
         'tslib@1.14.1 0BSD',
         'tslib@2.8.1 0BSD',
         'zod@4.0.0 MIT'
@@ -64,24 +57,10 @@ describe('shippedPackages', () => {
     )
   })
 
-  it('marks the tldraw-licensed packages and electron as special', () => {
+  it('marks electron as special', () => {
     const special = Object.fromEntries(shippedPackages(lock).map((pkg) => [pkg.name, pkg.special]))
 
-    expect(special).toMatchObject({
-      tldraw: 'tldraw',
-      '@tldraw/editor': 'tldraw',
-      electron: 'electron',
-      react: null
-    })
-  })
-
-  it('keeps a tldraw package whose declared license changed as declared', () => {
-    const changed: Lockfile = {
-      lockfileVersion: 3,
-      packages: { 'node_modules/tldraw': { version: '6.0.0', license: 'MIT' } }
-    }
-
-    expect(shippedPackages(changed)[0]).toMatchObject({ license: 'MIT', special: null })
+    expect(special).toMatchObject({ electron: 'electron', react: null })
   })
 
   it('rejects lockfile v1', () => {
@@ -90,10 +69,8 @@ describe('shippedPackages', () => {
 })
 
 describe('buildLicensesFile', () => {
-  it('collects license, copying and notice files, normalized, plus extra files', () => {
-    const built = buildLicensesFile(lock, packageFiles, {
-      extraFiles: { 'tldraw@5.5.2': [{ file: 'vendored.md', text: 'full text\n' }] }
-    })
+  it('collects license, copying and notice files, normalized', () => {
+    const built = buildLicensesFile(lock, packageFiles)
     const byId = Object.fromEntries(
       built.packages.map((pkg) => [`${pkg.name}@${pkg.version}`, pkg])
     )
@@ -102,10 +79,6 @@ describe('buildLicensesFile', () => {
     expect(byId['tslib@1.14.1']?.licenseFiles.map((f) => f.file)).toEqual(['LICENSE.txt', 'NOTICE'])
     expect(byId['tslib@2.8.1']?.licenseFiles.map((f) => f.file)).toEqual(['LICENSE.txt'])
     expect(byId['real-name@1.0.0']?.licenseFiles).toEqual([])
-    expect(byId['tldraw@5.5.2']?.licenseFiles).toEqual([
-      { file: 'LICENSE.md', text: 'This code is licensed under the tldraw license' },
-      { file: 'vendored.md', text: 'full text' }
-    ])
   })
 
   it('is deterministic', () => {

@@ -22,7 +22,7 @@ export const licensesFileSchema = z.object({
       version: text,
       license: text,
       licenseFiles: z.array(licenseFileSchema),
-      special: z.enum(['tldraw', 'electron']).nullable()
+      special: z.enum(['electron']).nullable()
     })
   )
 })

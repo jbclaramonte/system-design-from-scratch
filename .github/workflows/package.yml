@@ -48,37 +48,13 @@ jobs:
             libgbm1 libasound2t64 libxss1 libxtst6 libxkbcommon0 libxcomposite1 libxdamage1 \
             libxfixes3 libxrandr2 libpango-1.0-0 libcairo2
 
-      # Presence of the tldraw license key secret, never its value. Without it the build prints the
-      # no-key warning, and the smoke test skips its tldraw checks (an unlicensed Design Canvas is
-      # blank after 5 seconds).
-      - name: Check the tldraw license key secret
-        id: tldraw
-        env:
-          TLDRAW_KEY: ${{ secrets.VITE_TLDRAW_LICENSE_KEY }}
-        run: |
-          if [ -n "$TLDRAW_KEY" ]; then
-            echo "present=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "present=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::Repository secret VITE_TLDRAW_LICENSE_KEY is not set: this package has an unusable Design Canvas."
-            # A release without the key would ship a blank Design Canvas.
-            if [ "$GITHUB_REF_TYPE" = "tag" ]; then
-              echo "::error::A release needs the repository secret VITE_TLDRAW_LICENSE_KEY."
-              exit 1
-            fi
-          fi
-
       # install-electron (in the script) downloads the Electron binary; electron-builder packages
       # it, then the guard script (scripts/check-package.mjs --platform linux) runs.
       - name: Build the Linux package
         run: npm run package:linux
-        env:
-          VITE_TLDRAW_LICENSE_KEY: ${{ secrets.VITE_TLDRAW_LICENSE_KEY }}
 
       - name: Check the package
         run: node scripts/check-package.mjs --platform linux
-        env:
-          VITE_TLDRAW_LICENSE_KEY: ${{ secrets.VITE_TLDRAW_LICENSE_KEY }}
 
       # The sandbox helper must be owned by root with the setuid bit (electron-builder does not run
       # as root). Ubuntu 24.04 runners restrict unprivileged user namespaces (AppArmor), the other
@@ -92,8 +68,6 @@ jobs:
 
       - name: Smoke test the packaged app
         run: xvfb-run -a npm run smoke:packaged -- --shots smoke-shots
-        env:
-          SMOKE_ALLOW_MISSING_TLDRAW_KEY: ${{ steps.tldraw.outputs.present != 'true' && '1' || '' }}
 
       - name: Upload the Linux packages
         uses: actions/upload-artifact@v7
@@ -135,34 +109,13 @@ jobs:
             exit 1
           fi
 
-      # Same secret check as the Linux job: presence only, never the value.
-      - name: Check the tldraw license key secret
-        id: tldraw
-        env:
-          TLDRAW_KEY: ${{ secrets.VITE_TLDRAW_LICENSE_KEY }}
-        run: |
-          if [ -n "$TLDRAW_KEY" ]; then
-            echo "present=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "present=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::Repository secret VITE_TLDRAW_LICENSE_KEY is not set: this package has an unusable Design Canvas."
-            if [ "$GITHUB_REF_TYPE" = "tag" ]; then
-              echo "::error::A release needs the repository secret VITE_TLDRAW_LICENSE_KEY."
-              exit 1
-            fi
-          fi
-
       # install-electron (in the script) downloads the darwin-arm64 Electron binary; electron-builder
       # packages it into the .app and the .dmg, then the guard script runs.
       - name: Build the macOS package
         run: npm run package
-        env:
-          VITE_TLDRAW_LICENSE_KEY: ${{ secrets.VITE_TLDRAW_LICENSE_KEY }}
 
       - name: Smoke test the packaged app
         run: npm run smoke:packaged -- --shots smoke-shots
-        env:
-          SMOKE_ALLOW_MISSING_TLDRAW_KEY: ${{ steps.tldraw.outputs.present != 'true' && '1' || '' }}
 
       - name: Upload the macOS package
         uses: actions/upload-artifact@v7
@@ -182,8 +135,6 @@ jobs:
           retention-days: 14
 
   # Tags only. A DRAFT release: nothing is public until it is published from the Releases page.
-  # The packages embed the tldraw license key (docs/Packaging.md, "tldraw license"), so review the
-  # draft before publishing it.
   release:
     if: github.ref_type == 'tag'
     needs: [linux, macos]

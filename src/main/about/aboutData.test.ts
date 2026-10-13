@@ -18,11 +18,11 @@ const licenses: LicensesFile = {
   rule: 'rule',
   packages: [
     {
-      name: 'tldraw',
-      version: '5.5.2',
-      license: 'LicenseRef-tldraw',
-      licenseFiles: [{ file: 'LICENSE.md', text: 'pointer' }],
-      special: 'tldraw'
+      name: 'electron',
+      version: '44.7.0',
+      license: 'MIT',
+      licenseFiles: [{ file: 'LICENSE', text: 'MIT electron' }],
+      special: 'electron'
     }
   ]
 }
@@ -82,11 +82,9 @@ describe('assembleAbout', () => {
       readFileSync(join(root, 'resources/licenses.json'), 'utf8')
     )
     const about = assembleAbout({ appVersion: '0.1.0', metadata, licenses: committed })
-    const tldraw = about.licenses.packages.find((pkg) => pkg.name === 'tldraw')
 
-    expect(tldraw?.special).toBe('tldraw')
-    expect(tldraw?.licenseFiles.some((file) => file.text.startsWith('# tldraw license'))).toBe(true)
     expect(about.licenses.packages.find((pkg) => pkg.name === 'electron')?.special).toBe('electron')
+    expect(about.licenses.packages.some((pkg) => /tldraw/i.test(pkg.name))).toBe(false)
   })
 })
 
