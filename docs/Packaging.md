@@ -37,7 +37,7 @@ The config is `electron-builder.yml`. Notes on the choices:
 
 ## What is in the package
 
-`app.asar` holds `package.json`, `out/` (the electron-vite output: main, preload and the renderer with its inlined fonts and tldraw assets) and `resources/` (`corpus/primer.json`, `licenses.json`, `licenses/`). Nothing else: no `src/`, `docs/`, `spikes/`, `screenshots/`, `scripts/`, tests, `.env*`.
+`app.asar` holds `package.json`, `out/` (the electron-vite output: main, preload and the renderer with its inlined fonts) and `resources/` (`corpus/primer.json`, `licenses.json`, `licenses/`). Nothing else: no `src/`, `docs/`, `spikes/`, `screenshots/`, `scripts/`, tests, `.env*`.
 
 The app ships no `node_modules`. The renderer is bundled by Vite, and the main process bundle includes its only runtime package, `zod` (`electron.vite.config.ts`, `externalizeDeps.exclude`). A package added later to the main or preload side must be bundled too, or the guard script fails.
 
@@ -53,7 +53,7 @@ Outside the asar, in `Contents/Resources/`:
 - `LICENSES.chromium.html` or the Electron license is missing from the `.app` (`Contents/Resources`) or, on Linux, from `dist/linux-unpacked/resources/`;
 - `app.asar` lacks a runtime file (`out/main/index.js`, `out/preload/index.js`, `out/renderer/index.html`, `resources/corpus/primer.json`, `resources/licenses.json`) or contains an environment file (`.env`, `.env.local`...), a top-level `src`, `docs`, `spikes`, `screenshots`, `scripts`, `build`, `.github`, `.vitest` or `node_modules`, or a test file;
 - the main or preload bundle requires a package other than Electron and Node built-ins;
-- a tldraw license key is configured at build time but `app.asar` does not contain it (stale build), or the key shows up in the main or preload bundle (it belongs to the renderer only);
+- a tldraw license key is configured at build time and shows up in the main or preload bundle (it belongs to the renderer only; since #43 the renderer no longer reads it, so it is no longer expected inside `app.asar`);
 - there is no `.dmg` (macOS) or no `.AppImage` or `.deb` (Linux), or one is under 50 MB (not checked with `--app-only`, used by `package:dir` and `package:linux:dir`);
 - on Linux, the Electron executable or `chrome-sandbox` is missing from `dist/linux-unpacked`.
 
@@ -62,6 +62,9 @@ The key itself is compared with the package, never printed. A package built with
 `scripts/check-tldraw-key.mjs` runs at the start and at the end of `npm run package`, `package:dir`, `package:linux` and `package:linux:dir` (so the message is not lost in the electron-builder output). It never fails the build.
 
 ## tldraw license
+
+> [!info] Superseded by issue #43
+> The Design Canvas runs on React Flow, which needs no key: the renderer no longer reads `VITE_TLDRAW_LICENSE_KEY`, so the key is not baked into the bundle any more (the build messages below that say it is are stale), and the smoke test no longer checks tldraw. This whole section, the key scripts, the CI secret and the `tldraw` and `@tldraw/assets` packages go with issue #44.
 
 tldraw works in a production build only with a valid license key ([[tldraw|tldraw spike]], [[Design Canvas Integration#License key]], [[Attribution and Licenses#tldraw]]). A packaged app counts as production (`file://` origin, `NODE_ENV=production`).
 
@@ -102,7 +105,7 @@ The hobby key may be issued for specific hosts. The packaged renderer loads from
 
 In a production build tldraw sends one request when the canvas opens, to `https://cdn.tldraw.com/5.5.2/watermarks/watermark-track.svg` with the query `version`, `license_type`, `license_id`, `sku` and `url` (the page URL: the local path of the app, with the macOS user name) and `environment=production`. Read in `LicenseManager.maybeTrack` of `@tldraw/editor@5.5.2`: it is sent for `unlicensed-production` (no key), for evaluation keys and for keys that show a watermark, so a hobby key too, although the license page says a hobby key sends nothing. It is not sent in development.
 
-The renderer Content-Security-Policy (`connect-src 'self' data:`) blocks it on purpose: the app is offline by design. Seen in the packaged app: the editor keeps rendering, and Chromium logs two console errors per canvas open (a CSP violation and a failed `fetch`). The smoke test tolerates exactly those two, for `cdn.tldraw.com`, and fails on any other console error.
+The renderer Content-Security-Policy (`connect-src 'self' data:` at the time, `'self'` since #43) blocked it on purpose: the app is offline by design. Seen in the packaged app: the editor keeps rendering, and Chromium logs two console errors per canvas open (a CSP violation and a failed `fetch`). The smoke test tolerates exactly those two, for `cdn.tldraw.com`, and fails on any other console error.
 
 Whether blocking the request is acceptable under the license (it forbids interfering with license key enforcement) is not settled. The decision stays with the owner; the draft below is not sent.
 
@@ -196,8 +199,8 @@ Covered:
 | Fonts | Geist is loaded (`document.fonts`), the fonts inlined in the bundle work from `file://`. |
 | First lesson | Generated by the fake CLI through the packaged main process, displayed, the CLI got the request. |
 | Mermaid diagram | The lesson's flowchart is rendered as SVG (no fallback to the source). |
-| Exercise canvas | After the topics are mastered, the first exercise opens on its Design Canvas, tldraw stays rendered after its 5 second license gate, with no license message, with its 37 bundled icons and fonts, and a typed shape can be added. |
-| Console | No console error on the first launch. On the canvas screen, the only one tolerated is tldraw's blocked tracking request ([[#Watermark tracking request]]). |
+| Exercise canvas | After the topics are mastered, the first exercise opens on its Design Canvas (React Flow), a typed component can be added, and the fonts are loaded. |
+| Console | No console error, on the first launch and on the canvas screen (since #43 there is no tracking request to tolerate). |
 
 Not covered, to check by hand ([[#First launch checklist]]):
 
@@ -237,7 +240,7 @@ Run **Actions > Package > Run workflow** on GitHub (or `gh workflow run package.
 5. `xvfb-run -a npm run smoke:packaged -- --shots smoke-shots` ([[#Smoke test]]): the app launched from `dist/linux-unpacked` on a virtual display, with the minimal environment and the fake CLI.
 6. `actions/upload-artifact`: the artifact `linux-x64` holds `dist/*.AppImage` and `dist/*.deb`, kept 14 days. If the smoke test fails, the screenshots go up as the artifact `smoke-shots` and the packages are not uploaded.
 
-Without the secret the job still runs: it prints a warning annotation, the build prints the no-key warning ([[#tldraw license]]), and the smoke test skips its three tldraw checks (`SMOKE_ALLOW_MISSING_TLDRAW_KEY`, set by the workflow only in that case), because the Design Canvas of such a package is blank after 5 seconds. That package is not fit to use. With a key, nothing is skipped.
+Without the secret the job still runs: it prints a warning annotation, the build prints the no-key warning ([[#tldraw license]]), and (before #43) the smoke test skipped its three tldraw checks (`SMOKE_ALLOW_MISSING_TLDRAW_KEY`, set by the workflow only in that case). Since #43 the smoke test no longer reads that variable and skips nothing; the workflow step goes with #44.
 
 Download the files from the run page (**Artifacts**), or `gh run download <run id> -n linux-x64`. The key is inlined in the renderer bundle ([[#How the key flows]]), so artifacts of a private repository are fine to keep, but do not publish them.
 

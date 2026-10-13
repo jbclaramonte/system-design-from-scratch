@@ -31,7 +31,6 @@ describe('activeNavItem', () => {
       { name: 'dev-lessons' },
       { name: 'dev-quiz' },
       { name: 'dev-design-canvas' },
-      { name: 'dev-flow-canvas' },
       { name: 'dev-design-exercise' },
       { name: 'dev-diagrams' }
     ]
@@ -49,7 +48,6 @@ describe('screenLayout', () => {
   it('gives the canvas screens the full width', () => {
     expect(screenLayout({ name: 'exercise', designExerciseId: 1 })).toBe('canvas')
     expect(screenLayout({ name: 'dev-design-canvas' })).toBe('canvas')
-    expect(screenLayout({ name: 'dev-flow-canvas' })).toBe('canvas')
     expect(screenLayout({ name: 'dev-design-exercise' })).toBe('canvas')
   })
 

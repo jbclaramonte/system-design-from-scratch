@@ -12,7 +12,7 @@ import {
 } from './scene'
 
 /**
- * Editor model of the React Flow canvas (spike #42): the React Flow nodes and edges, and the pure
+ * Editor model of the React Flow canvas: the React Flow nodes and edges, and the pure
  * functions around them (scene conversion, group membership, copy and paste). No DOM and no React,
  * so every function runs in unit tests.
  */
@@ -58,7 +58,7 @@ export function createComponentNode(
 }
 
 export function createNoteNode(id: string, position: { x: number; y: number }): NoteFlowNode {
-  return { id, type: 'note', position, ...NOTE_SIZE, data: { text: 'Note' } }
+  return { id, type: 'note', position, ...NOTE_SIZE, data: { text: '' } }
 }
 
 export function createGroupNode(id: string, position: { x: number; y: number }): GroupFlowNode {
@@ -68,7 +68,7 @@ export function createGroupNode(id: string, position: { x: number; y: number }):
     position,
     ...GROUP_SIZE,
     dragHandle: GROUP_DRAG_HANDLE,
-    data: { label: 'Group' }
+    data: { label: '' }
   }
 }
 

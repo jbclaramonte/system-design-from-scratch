@@ -1,5 +1,5 @@
 /**
- * Undo and redo for the React Flow canvas (spike #42): React Flow has none, so the editor keeps
+ * Undo and redo for the React Flow canvas: React Flow has none, so the editor keeps
  * snapshots of its state. Generic and immutable: it stores references, never copies, which is safe
  * because React Flow replaces nodes and edges instead of mutating them.
  */

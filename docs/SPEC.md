@@ -28,7 +28,7 @@ Personal desktop app to learn system design from scratch, built around this loop
 
 - Electron + React + TypeScript.
 - Local SQLite (for example `better-sqlite3`). No cloud sync.
-- Diagram canvas: tldraw.
+- Diagram canvas: React Flow (`@xyflow/react`, MIT). It replaced tldraw in issue #43, see [[Design Canvas Integration]].
 - LLM calls: drive the Claude Code CLI as a subprocess from the Electron main process.
 
 ## 4. Content and generation
@@ -78,8 +78,8 @@ Lessons, remediation lessons, protocol step lessons and scenario questions inclu
 
 ### 6.1 Canvas
 
-- Embedded tldraw editor.
-- Library of typed shapes (load balancer, cache, DB, queue, etc.) so the graph can be analyzed reliably.
+- Embedded React Flow editor (nodes and edges, no license key).
+- Library of typed components (load balancer, cache, DB, queue, etc.) so the graph can be analyzed reliably.
 - For evaluation the LLM receives:
   - a structured JSON export (components, links, labels, annotations);
   - a PNG capture for visual context.
@@ -113,7 +113,7 @@ Local SQLite. Everything is recorded:
 
 - generated lessons, remediation lessons and quizzes ([[Content Cache]]);
 - every [[Attempt]]: date, question, notion, type, result;
-- tldraw scenes and design feedback;
+- design scenes (React Flow nodes and edges as JSON) and design feedback;
 - progress and settings (threshold, N rounds).
 
 Spaced repetition is out of the MVP, but the attempt model must allow it without a migration.
@@ -125,7 +125,7 @@ Spaced repetition is out of the MVP, but the attempt model must allow it without
 - Foundations Module.
 - Primer topics: scalability, performance vs scalability, latency vs throughput, CAP and consistency, load balancing, cache, databases (SQL/NoSQL, replication, sharding), queues / asynchronism.
 - Full mastery loop with the four question types.
-- At least two designs with the staged protocol and the tldraw canvas.
+- At least two designs with the staged protocol and the Design Canvas.
 - Basic dashboard.
 
 ### Out of MVP
@@ -137,7 +137,7 @@ Spaced repetition is out of the MVP, but the attempt model must allow it without
 
 ## 10. Assumptions and points to verify
 
-- **tldraw license**: not verified. Recent versions require a license key in production. Check before picking a version; personal use should be fine.
+- **tldraw license** (history): tldraw needs a license key in production; this pushed the Design Canvas to React Flow (MIT, issue #43, [[react-flow|spike]]).
 - **Claude Code CLI dependency**: acceptable for personal use. Distribution later requires a provider abstraction layer (API key).
 - **CLI latency**: several seconds per call. Measure early in a prototype; may force more pre-generation.
 - **Design catalogue**: only 8 primer-grounded solutions. Anything generated beyond that is ungrounded.

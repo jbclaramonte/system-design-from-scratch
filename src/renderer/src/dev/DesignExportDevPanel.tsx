@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import type { Editor } from 'tldraw'
 import type { DesignExport, DesignExportSummary } from '../../../shared/designGraph'
+import type { DesignCanvasHandle } from '../design/DesignCanvas'
 import { exportDesign } from '../design/export'
 
 /**
@@ -8,10 +8,10 @@ import { exportDesign } from '../design/export'
  * description, PNG), hands it to the main process over `design:exportScene` and shows the result.
  */
 export function DesignExportDevPanel({
-  editor,
+  canvas,
   designExerciseId
 }: {
-  editor: Editor | null
+  canvas: DesignCanvasHandle | null
   designExerciseId: number
 }) {
   const [result, setResult] = useState<DesignExport | null>(null)
@@ -20,11 +20,11 @@ export function DesignExportDevPanel({
   const [busy, setBusy] = useState(false)
 
   const run = async () => {
-    if (!editor) return
+    if (!canvas) return
     setBusy(true)
     setError(null)
     try {
-      const exported = await exportDesign(editor, designExerciseId)
+      const exported = await exportDesign(canvas.getScene(), designExerciseId)
       setResult(exported)
       setSummary(await window.api.exportDesignScene(exported))
     } catch (reason) {
@@ -50,7 +50,7 @@ export function DesignExportDevPanel({
       }}
     >
       <strong>Design Export</strong>
-      <button data-testid="design-export-run" disabled={!editor || busy} onClick={run}>
+      <button data-testid="design-export-run" disabled={!canvas || busy} onClick={run}>
         {busy ? 'Exporting...' : 'Export'}
       </button>
       {error && <p role="alert">{error}</p>}

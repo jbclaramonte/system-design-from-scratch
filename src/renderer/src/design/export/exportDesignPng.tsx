@@ -13,16 +13,16 @@ import {
   designPngSchema,
   type DesignPng
 } from '../../../../shared/designGraph'
-import { bytesToBase64, fitWithin } from '../export/exportDesignPng'
-import { FlowModeContext } from './flowContext'
-import { toFlow, type FlowEdge, type FlowNode } from './flowModel'
-import { edgeTypes } from './LinkEdge'
-import { nodeTypes } from './nodes'
+import { FlowModeContext } from '../flow/flowContext'
+import { toFlow, type FlowEdge, type FlowNode } from '../flow/flowModel'
+import { edgeTypes } from '../flow/LinkEdge'
+import { nodeTypes } from '../flow/nodes'
+import type { Scene } from '../flow/scene'
+import { bytesToBase64, fitWithin } from './pngEncoding'
 import { pngLayout, sceneBounds } from './pngLayout'
-import type { Scene } from './scene'
 
 /**
- * PNG capture of a Design Scene for the LLM evaluation (spike #42).
+ * PNG capture of a Design Scene for the LLM evaluation.
  *
  * - The scene is drawn by a second, off-screen React Flow in the `light` mode (dark strokes on
  *   white), not by the live canvas: the dark theme cannot leak into the image, and the live canvas
@@ -98,7 +98,7 @@ function ExportFrame({
 }
 
 /** PNG of the scene, or `null` when it has no node. */
-export async function exportScenePng(scene: Scene): Promise<DesignPng | null> {
+export async function exportDesignPng(scene: Scene): Promise<DesignPng | null> {
   const bounds = sceneBounds(scene.nodes)
   if (!bounds) return null
   const layout = pngLayout(bounds)

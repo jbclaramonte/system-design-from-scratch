@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { Editor } from 'tldraw'
 import {
   PROTOCOL_STEP_DEFINITIONS,
   protocolSteps,
@@ -9,7 +8,7 @@ import {
   type ProtocolSubmissionInput
 } from '../../../../shared/protocol'
 import { errorMessage } from '../../quiz/errorMessage'
-import { DesignCanvas } from '../DesignCanvas'
+import { DesignCanvas, type DesignCanvasHandle } from '../DesignCanvas'
 import { exportDesign } from '../export'
 import { CallStatus, FinalReviewPanel, SubmissionHistory } from './FeedbackViews'
 import { StepLesson } from './StepLesson'
@@ -66,12 +65,12 @@ function useDraft(designExerciseId: number, step: ProtocolStepView) {
 function StepPanel({
   view,
   step,
-  editor,
+  canvas,
   onExercise
 }: {
   view: ProtocolExerciseView
   step: ProtocolStepView
-  editor: Editor | null
+  canvas: DesignCanvasHandle | null
   onExercise: (view: ProtocolExerciseView) => void
 }) {
   const definition = PROTOCOL_STEP_DEFINITIONS[step.step]
@@ -86,7 +85,7 @@ function StepPanel({
   /** What the learner has now: the editor text, or the live canvas with the notes. */
   const current = async (): Promise<ProtocolSubmissionInput | null> => {
     if (definition.input === 'text') return { type: 'text', text: draft.text }
-    if (!editor) {
+    if (!canvas) {
       setExportError('The Design Canvas is not ready yet.')
       return null
     }
@@ -94,7 +93,7 @@ function StepPanel({
       setExportError(null)
       return {
         type: 'canvas',
-        designExport: await exportDesign(editor, view.id),
+        designExport: await exportDesign(canvas.getScene(), view.id),
         notes: draft.text
       }
     } catch (reason) {
@@ -275,7 +274,7 @@ export function ProtocolExerciseScreen({
   const [view, setView] = useState<ProtocolExerciseView | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [selected, setSelected] = useState<ProtocolStep | 'final_review' | null>(null)
-  const [editor, setEditor] = useState<Editor | null>(null)
+  const [canvasHandle, setCanvasHandle] = useState<DesignCanvasHandle | null>(null)
   const review = useProtocolCall(setView)
 
   useEffect(() => {
@@ -390,7 +389,11 @@ export function ProtocolExerciseScreen({
         <div className={canvas ? 'protocol-main protocol-main-canvas' : 'protocol-main'}>
           {canvas && (
             <div className="protocol-canvas" data-testid="protocol-canvas">
-              <DesignCanvas key={view.id} designExerciseId={view.id} onEditorChange={setEditor} />
+              <DesignCanvas
+                key={view.id}
+                designExerciseId={view.id}
+                onHandleChange={setCanvasHandle}
+              />
             </div>
           )}
           <div className="protocol-panel" key={selected}>
@@ -400,7 +403,7 @@ export function ProtocolExerciseScreen({
                   key={step.step}
                   view={view}
                   step={step}
-                  editor={editor}
+                  canvas={canvasHandle}
                   onExercise={setView}
                 />
               ) : (

@@ -4,7 +4,7 @@ tags: [spike, design-practice]
 issue: 42
 date: 2026-10-12
 status: done
-decision: go (React Flow replaces tldraw as the Design Canvas engine, migration in #43)
+decision: go (React Flow replaces tldraw as the Design Canvas engine; migration done in #43)
 react-flow-version: "@xyflow/react 12.12.0"
 ---
 
@@ -12,10 +12,18 @@ react-flow-version: "@xyflow/react 12.12.0"
 
 GitHub issue: #42. Context: [[Design Canvas Integration]], [[Design Export]], [[tldraw|tldraw spike]], [[Design System]], [[Attribution and Licenses]], [[Packaging]]. Terms: [[Design Canvas]], [[Design Scene]], [[Design Graph]], [[Design Export]].
 
-Code (additive, tldraw untouched): `src/renderer/src/design/flow/`, dev screen `src/renderer/src/dev/FlowCanvasDevScreen.tsx` (button "Flow canvas (dev)" in the Developer tools, next to "Design canvas (dev)"). `src/shared/designGraph.ts` is unchanged and imports nothing from React Flow.
+Code of the spike (additive, tldraw untouched at the time): `src/renderer/src/design/flow/`, dev screen `FlowCanvasDevScreen.tsx` (removed in #43, see below). `src/shared/designGraph.ts` is unchanged and imports nothing from React Flow.
 
 > [!success] Verdict: GO
 > React Flow does everything the Design Canvas needs, and removes what hurts with tldraw: **no license key, no watermark, no tracking request, no CDN**. The nodes and edges already are the [[Design Graph]] model, so the export is a mapping instead of a reconstruction from binding records. The cost is a set of small things React Flow does not do (undo, copy and paste, text editing, group membership, PNG), about 1,000 lines of code written and tested in this spike. What is lost against tldraw (freehand drawing, free-floating arrows, text shapes) is not used by the Design Exercises: the [[Design Graph]] ignores freehand strokes and reports free arrows as errors.
+
+> [!success] Outcome: migrated in issue #43
+> The spike code is the production canvas now (`flow/`), wrapped by `DesignCanvas.tsx`. What changed on the way, and the details: [[Design Canvas Integration]], [[Design Export]].
+> - The recommendation "drop the existing tldraw scenes" became a **conversion on load** (`legacy/tldrawScene.ts`, no `tldraw` import), written back only after the first edit.
+> - The graph and PNG export moved to `design/export/` (`exportDesignGraph(scene)`, `exportDesignPng(scene)`); the Design Graph version stays 1. The `shape:` id question: nothing outside the export reads the prefix.
+> - The spike dev screen (localStorage) was folded into "Design canvas (dev)" (scratch exercise, Design Export panel). Test ids are `design-*`, `add-<type>`.
+> - Fixes: the pending autosave is flushed when the canvas unmounts (the spike's handle was gone by then), panning no longer marks the scene as changed, new notes and groups start empty (an empty note stays out of the graph and the PNG).
+> - Renderer bundle, `npm run build`: `index-*.js` 9,444 kB (3.10 MB gzip) to **1,906 kB (381 kB gzip)**, `index-*.css` 440 kB (208 kB gzip) to **337 kB (187 kB gzip)**, `out/renderer` 20.1 MB to **12.6 MB**, with `@tldraw/assets` no longer inlined and `connect-src` back to `'self'`.
 
 ## Verified in the real app
 

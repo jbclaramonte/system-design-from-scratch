@@ -1,21 +1,18 @@
 import { describe, expect, it } from 'vitest'
-import { describeDesignGraph } from './describeDesignGraph'
-import { buildDesignGraph } from './exportDesignGraph'
+import type { Scene } from '../flow/scene'
 import {
-  arrow,
-  binding,
   branchingScene,
   chainScene,
   component,
-  frame,
-  link,
-  page,
-  PAGE_ID,
-  type FixtureRecord
-} from './fixtureScenes'
+  edge,
+  group,
+  note,
+  scene
+} from '../flow/sceneFixtures'
+import { describeDesignGraph } from './describeDesignGraph'
+import { exportDesignGraph } from './exportDesignGraph'
 
-const describeScene = (records: FixtureRecord[]) =>
-  describeDesignGraph(buildDesignGraph(records, PAGE_ID))
+const describeScene = (value: Scene) => describeDesignGraph(exportDesignGraph(value))
 
 describe('describeDesignGraph', () => {
   it('describes a chain, with type hints for custom labels and edge labels', () => {
@@ -42,21 +39,25 @@ describe('describeDesignGraph', () => {
   })
 
   it('numbers nodes that share a label but differ, and lists isolated and dangling ones', () => {
-    const records = [
-      page(),
-      component('lb', 'load-balancer', 0, 0),
-      component('a', 'service', 300, 0),
-      component('b', 'service', 300, 200),
-      component('db', 'database', 600, 0, ''),
-      component('cdn', 'cdn', 0, 400),
-      ...link('e1', 'lb', 'a'),
-      ...link('e2', 'a', 'db'),
-      ...link('e3', 'b', 'db'),
-      arrow('loose', { label: 'async' }),
-      binding('loose', 'start', 'b'),
-      frame('f', -50, -50, 'Edge'),
-      { ...component('in-frame', 'queue', 10, 10), parentId: 'shape:f' }
-    ]
+    const records = scene(
+      [
+        group('f', -50, -50, 'Edge'),
+        component('in-frame', 'queue', 10, 10, 'Queue', 'f'),
+        component('lb', 'load-balancer', 0, 0),
+        component('a', 'service', 300, 0),
+        component('b', 'service', 300, 200),
+        component('db', 'database', 600, 0, ''),
+        component('cdn', 'cdn', 0, 400),
+        // A connection to a note without text: the note says nothing, the arrow has no component.
+        note('empty-note', 700, 400, '  ')
+      ],
+      [
+        edge('e1', 'lb', 'a'),
+        edge('e2', 'a', 'db'),
+        edge('e3', 'b', 'db'),
+        edge('loose', 'b', 'empty-note', 'forward', 'async')
+      ]
+    )
 
     expect(describeScene(records)).toBe(
       [
@@ -74,6 +75,6 @@ describe('describeDesignGraph', () => {
   })
 
   it('describes an empty scene', () => {
-    expect(describeScene([page()])).toBe('Empty design: no components.')
+    expect(describeScene(scene([]))).toBe('Empty design: no components.')
   })
 })

@@ -5,7 +5,7 @@ tags: [concept, design-practice]
 
 # Design Graph
 
-The structured, versioned export of a [[Design Scene]]: nodes (component shapes of the [[Design Canvas]] catalogue), edges (arrows bound to a node at both ends), annotations (any other shape with text, with its nearest node), dangling arrows (not bound to a node at one end or both) and groups (frames and tldraw groups). It is what the LLM reads to give [[Design Feedback]], next to a text description and a PNG.
+The structured, versioned export of a [[Design Scene]]: nodes (typed components of the [[Design Canvas]] catalogue), edges (connections between two components), annotations (the notes with text, with their nearest component), dangling arrows (connections without a component at one end or both, in practice to a note) and groups (the frames of the canvas). It is what the LLM reads to give [[Design Feedback]], next to a text description and a PNG.
 
 ## Related
 
@@ -15,4 +15,4 @@ The structured, versioned export of a [[Design Scene]]: nodes (component shapes 
 
 ## In code
 
-Schema and types (zod, no tldraw import): `src/shared/designGraph.ts`. Built by `exportDesignGraph` / `buildDesignGraph` in `src/renderer/src/design/export/exportDesignGraph.ts`, described as text by `describeDesignGraph`. See [[Design Export]].
+Schema and types (zod, no renderer import): `src/shared/designGraph.ts`. Built by `exportDesignGraph(scene)` in `src/renderer/src/design/export/exportDesignGraph.ts`, described as text by `describeDesignGraph`. See [[Design Export]].

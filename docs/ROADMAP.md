@@ -8,7 +8,7 @@ status: live
 
 Gantt chart of the GitHub issues of `jbclaramonte/system-design-from-scratch`. Dependencies in the chart mirror the "Depends on" section of each issue. Dates and durations are estimates (solo, part-time pace not accounted for).
 
-Last updated: 2026-10-12.
+Last updated: 2026-10-13.
 
 ```mermaid
 gantt
@@ -82,8 +82,8 @@ gantt
 
     section Canvas migration
     #42 React Flow spike                      :done, m1, 2026-10-13, 2d
-    #43 Replace tldraw by React Flow          :active, m2, after m1, 4d
-    #44 Remove tldraw, first release          :m3, after m2, 1d
+    #43 Replace tldraw by React Flow          :done, m2, after m1, 4d
+    #44 Remove tldraw, first release          :active, m3, after m2, 1d
 ```
 
 ## Dependency table

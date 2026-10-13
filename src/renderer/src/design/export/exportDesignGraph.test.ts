@@ -1,305 +1,301 @@
-import type { Editor, TLEditorSnapshot } from 'tldraw'
 import { describe, expect, it } from 'vitest'
 import { designGraphSchema } from '../../../../shared/designGraph'
-import { buildDesignGraph, exportDesignGraph, richTextToPlain } from './exportDesignGraph'
+import { toScene } from '../flow/flowModel'
 import {
-  arrow,
-  binding,
+  architectureScene,
   branchingScene,
   chainScene,
   component,
-  frame,
-  geo,
+  edge,
+  group,
   note,
-  page,
-  PAGE_ID,
-  text,
-  type FixtureRecord
-} from './fixtureScenes'
+  scene
+} from '../flow/sceneFixtures'
+import { describeDesignGraph } from './describeDesignGraph'
+import { exportDesignGraph } from './exportDesignGraph'
 
-const build = (records: FixtureRecord[]) => buildDesignGraph(records, PAGE_ID)
-
-describe('buildDesignGraph', () => {
-  it('exports a simple chain: typed nodes and bound edges', () => {
-    const graph = build(chainScene())
-
-    expect(graph.nodes).toEqual([
-      {
-        id: 'shape:lb',
-        componentType: 'load-balancer',
-        label: 'Load balancer',
-        position: { x: 0, y: 0 },
-        size: { w: 160, h: 90 }
-      },
-      {
-        id: 'shape:svc',
-        componentType: 'service',
-        label: 'Service',
-        position: { x: 300, y: 0 },
-        size: { w: 160, h: 90 }
-      },
-      {
-        id: 'shape:db',
-        componentType: 'database',
-        label: 'Users',
-        position: { x: 600, y: 0 },
-        size: { w: 160, h: 110 }
-      }
+describe('exportDesignGraph', () => {
+  it('maps a scene to a valid Design Graph', () => {
+    const graph = exportDesignGraph(architectureScene())
+    expect(designGraphSchema.safeParse(graph).success).toBe(true)
+    expect(graph.nodes.map((n) => [n.id, n.componentType, n.label])).toEqual([
+      ['svc-a', 'service', 'Service A'],
+      ['client', 'client', 'Client'],
+      ['lb', 'load-balancer', 'Load balancer'],
+      ['db', 'database', 'Users'],
+      ['svc-b', 'service', 'Service B'],
+      ['cache', 'cache', 'Cache']
     ])
-    expect(graph.edges).toEqual([
-      { id: 'shape:a1', from: 'shape:lb', to: 'shape:svc', label: '', direction: 'forward' },
-      { id: 'shape:a2', from: 'shape:svc', to: 'shape:db', label: 'SQL', direction: 'forward' }
+    expect(graph.edges.map((e) => [e.id, e.from, e.to, e.direction, e.label])).toEqual([
+      ['e4', 'svc-a', 'db', 'both', 'SQL'],
+      ['e1', 'client', 'lb', 'forward', 'HTTPS'],
+      ['e2', 'lb', 'svc-a', 'forward', ''],
+      ['e3', 'lb', 'svc-b', 'forward', ''],
+      ['e5', 'svc-b', 'db', 'none', ''],
+      ['e6', 'cache', 'svc-a', 'backward', '']
     ])
-    expect(graph).toMatchObject({ version: 1, annotations: [], danglingArrows: [], groups: [] })
-    expect(designGraphSchema.parse(graph)).toEqual(graph)
+    expect(graph.danglingArrows).toEqual([])
   })
 
-  it('exports a branching scene in reading order', () => {
-    const graph = build(branchingScene())
+  it('sums the group offsets into page positions and sizes', () => {
+    const graph = exportDesignGraph(architectureScene())
+    expect(graph.nodes.find((n) => n.id === 'svc-a')).toMatchObject({
+      position: { x: 440, y: 40 },
+      size: { w: 160, h: 90 }
+    })
+    expect(graph.nodes.find((n) => n.id === 'svc-b')?.position).toEqual({ x: 440, y: 180 })
+  })
 
-    expect(graph.nodes.map((n) => n.id)).toEqual([
-      'shape:s1',
-      'shape:cache',
-      'shape:client',
-      'shape:lb',
-      'shape:s2',
-      'shape:db',
-      'shape:s3'
+  it('lists groups with every member at any depth, notes included', () => {
+    const graph = exportDesignGraph(
+      scene([
+        group('outer', 0, 0, ' Region '),
+        group('inner', 20, 20, 'Zone', 'outer'),
+        component('a', 'service', 10, 10, 'A', 'inner'),
+        note('n', 10, 150, 'sticky', 'outer'),
+        component('free', 'cache', 900, 900)
+      ])
+    )
+    expect(graph.groups).toEqual([
+      { id: 'outer', kind: 'frame', label: 'Region', memberIds: ['a', 'n'] },
+      { id: 'inner', kind: 'frame', label: 'Zone', memberIds: ['a'] }
     ])
-    expect(graph.edges).toHaveLength(10)
-    expect(graph.edges.slice(0, 2).map((e) => `${e.from}->${e.to}`)).toEqual([
-      'shape:s1->shape:cache',
-      'shape:s1->shape:db'
+  })
+
+  it('reports the nearest component of a note, within reach only', () => {
+    const near = exportDesignGraph(
+      scene([component('a', 'cache', 0, 0), note('n', 200, 0, 'Hot keys')])
+    )
+    expect(near.annotations).toEqual([
+      { id: 'n', kind: 'note', text: 'Hot keys', position: { x: 200, y: 0 }, nearestNodeId: 'a' }
+    ])
+    const far = exportDesignGraph(
+      scene([component('a', 'cache', 0, 0), note('n', 2000, 2000, 'Elsewhere')])
+    )
+    expect(far.annotations[0]?.nearestNodeId).toBeNull()
+  })
+
+  it('leaves out notes without text', () => {
+    const graph = exportDesignGraph(scene([note('n', 0, 0, '   ')]))
+    expect(graph.annotations).toEqual([])
+  })
+
+  it('turns an edge without a component at one end into a dangling arrow', () => {
+    const graph = exportDesignGraph(
+      scene(
+        [component('a', 'service', 0, 0), note('n', 300, 0, 'queue it')],
+        [edge('to-note', 'a', 'n', 'forward', 'async'), edge('from-note', 'n', 'a')]
+      )
+    )
+    expect(graph.edges).toEqual([])
+    expect(graph.danglingArrows).toEqual([
+      { id: 'to-note', from: 'a', to: null, label: 'async' },
+      { id: 'from-note', from: null, to: 'a', label: '' }
     ])
     expect(designGraphSchema.safeParse(graph).success).toBe(true)
   })
 
-  it('derives connections from bindings, not from stale arrow props', () => {
-    const records = [
-      page(),
-      component('lb', 'load-balancer', 0, 0),
-      component('db', 'database', 900, 500),
-      // Stored points still where the arrow was drawn before the database moved.
-      arrow('a', { start: { x: 5000, y: 5000 }, end: { x: -300, y: 42 } }),
-      binding('a', 'start', 'lb'),
-      binding('a', 'end', 'db')
-    ]
-
-    expect(build(records).edges).toEqual([
-      { id: 'shape:a', from: 'shape:lb', to: 'shape:db', label: '', direction: 'forward' }
-    ])
-  })
-
-  it('reports an arrow bound at one end only as dangling', () => {
-    const records = [
-      page(),
-      component('lb', 'load-balancer', 0, 0),
-      arrow('a', { label: 'to nowhere' }),
-      binding('a', 'start', 'lb')
-    ]
-    const graph = build(records)
-
-    expect(graph.edges).toEqual([])
-    expect(graph.danglingArrows).toEqual([
-      { id: 'shape:a', from: 'shape:lb', to: null, label: 'to nowhere' }
-    ])
-  })
-
-  it('treats arrows bound to annotations, other arrows or unknown shapes as dangling', () => {
-    const records = [
-      page(),
-      component('svc', 'service', 0, 0),
-      text('t', 0, 300, 'a note'),
-      arrow('to-text'),
-      binding('to-text', 'start', 'svc'),
-      binding('to-text', 'end', 't'),
-      arrow('to-arrow'),
-      binding('to-arrow', 'start', 'to-text'),
-      binding('to-arrow', 'end', 'svc'),
-      arrow('to-ghost'),
-      binding('to-ghost', 'start', 'svc'),
-      binding('to-ghost', 'end', 'deleted'),
-      arrow('free')
-    ]
-    const graph = build(records)
-
-    expect(graph.edges).toEqual([])
-    expect(graph.danglingArrows).toEqual([
-      { id: 'shape:to-ghost', from: 'shape:svc', to: null, label: '' },
-      { id: 'shape:to-text', from: 'shape:svc', to: null, label: '' },
-      { id: 'shape:to-arrow', from: null, to: 'shape:svc', label: '' },
-      { id: 'shape:free', from: null, to: null, label: '' }
-    ])
-  })
-
-  it('exports text, notes and labelled geo shapes as annotations with their nearest node', () => {
-    const graph = build([
-      ...branchingScene(),
-      geo('g', 0, 400, 'Mobile app'),
-      geo('empty', 0, 600, ''),
-      {
-        id: 'shape:scribble',
-        typeName: 'shape',
-        type: 'draw',
-        x: 10,
-        y: 10,
-        parentId: PAGE_ID,
-        props: { segments: [] }
-      }
-    ])
-
-    expect(graph.annotations).toEqual([
-      {
-        id: 'shape:n-reads',
-        kind: 'text',
-        text: 'Reads are ~100x writes',
-        position: { x: 800, y: 240 },
-        nearestNodeId: 'shape:cache'
-      },
-      {
-        id: 'shape:g',
-        kind: 'geo',
-        text: 'Mobile app',
-        position: { x: 0, y: 400 },
-        nearestNodeId: 'shape:client'
-      },
-      {
-        id: 'shape:n-far',
-        kind: 'note',
-        text: 'Single region for now',
-        position: { x: 2000, y: 2000 },
-        nearestNodeId: null
-      }
-    ])
-  })
-
-  it('anchors annotations on measured bounds when given, else on note size', () => {
-    const records = [
-      page(),
-      component('top', 'service', 0, 0),
-      component('bottom', 'database', 0, 400),
-      // Top-left corner close to "top", but the measured text spans down to "bottom".
-      text('t', 0, 120, 'replicated'),
-      note('n', 0, 180, 'sticky')
-    ]
-
-    const unmeasured = build(records).annotations
-    const measured = buildDesignGraph(records, PAGE_ID, {
-      pageBounds: (id) => (id === 'shape:t' ? { x: 0, y: 120, w: 160, h: 300 } : undefined)
-    }).annotations
-
-    expect(unmeasured.map((a) => a.nearestNodeId)).toEqual(['shape:top', 'shape:bottom'])
-    expect(measured.map((a) => a.nearestNodeId)).toEqual(['shape:bottom', 'shape:bottom'])
-  })
-
-  it('returns an empty graph for an empty scene', () => {
-    expect(build([page()])).toEqual({
-      version: 1,
-      nodes: [],
-      edges: [],
-      annotations: [],
-      danglingArrows: [],
-      groups: []
+  it('does not break on an edge to a node that is not in the scene (live state in transition)', () => {
+    const graph = exportDesignGraph({
+      nodes: [component('a', 'service', 0, 0)],
+      edges: [edge('ghost', 'a', 'gone'), edge('both-gone', 'x', 'y')]
     })
-    expect(buildDesignGraph([])).toEqual(build([page()]))
-  })
-
-  it('is deterministic: same JSON across exports and input orders', () => {
-    const records = branchingScene()
-    const first = JSON.stringify(build(records))
-
-    expect(JSON.stringify(build(records))).toBe(first)
-    expect(JSON.stringify(build([...records].reverse()))).toBe(first)
-    expect(JSON.stringify(build(structuredClone(records)))).toBe(first)
-  })
-
-  it('maps arrowheads to a direction', () => {
-    const records = [
-      page(),
-      component('a', 'service', 0, 0),
-      component('b', 'service', 300, 0),
-      arrow('back', { arrowheadStart: 'arrow', arrowheadEnd: 'none' }),
-      arrow('both', { arrowheadStart: 'triangle', arrowheadEnd: 'arrow' }),
-      arrow('line', { arrowheadEnd: 'none' }),
-      ...['back', 'both', 'line'].flatMap((id) => [
-        binding(id, 'start', 'a'),
-        binding(id, 'end', 'b')
-      ])
-    ]
-
-    expect(Object.fromEntries(build(records).edges.map((e) => [e.id, e.direction]))).toEqual({
-      'shape:back': 'backward',
-      'shape:both': 'both',
-      'shape:line': 'none'
-    })
-  })
-
-  it('exports frames as groups and adds parent offsets to positions', () => {
-    const graph = build([
-      page(),
-      frame('f', 100, 50, 'Write path'),
-      component('q', 'queue', 10, 20, 'Jobs', 'shape:f'),
-      geo('g', 200, 20, 'worker pool', 'shape:f'),
-      component('out', 'database', 900, 0)
-    ])
-
-    expect(graph.nodes.find((n) => n.id === 'shape:q')?.position).toEqual({ x: 110, y: 70 })
-    expect(graph.groups).toEqual([
-      { id: 'shape:f', kind: 'frame', label: 'Write path', memberIds: ['shape:q', 'shape:g'] }
+    expect(graph.danglingArrows).toEqual([
+      { id: 'ghost', from: 'a', to: null, label: '' },
+      { id: 'both-gone', from: null, to: null, label: '' }
     ])
   })
 
-  it('keeps only the shapes of the requested page', () => {
-    const graph = buildDesignGraph(
-      [
-        page(),
-        page('page:other', 'a2'),
-        component('db', 'database', 0, 0),
-        {
-          ...component('elsewhere', 'cache', 0, 0),
-          parentId: 'page:other'
-        }
-      ],
-      PAGE_ID
+  it('keeps a self loop and parallel edges', () => {
+    const graph = exportDesignGraph(
+      scene(
+        [component('a', 'service', 0, 0), component('b', 'queue', 300, 0)],
+        [
+          edge('loop', 'a', 'a'),
+          edge('x', 'a', 'b', 'forward', 'publish'),
+          edge('y', 'a', 'b', 'forward', 'retry')
+        ]
+      )
     )
-
-    expect(graph.nodes.map((n) => n.id)).toEqual(['shape:db'])
+    expect(graph.edges.map((e) => e.id)).toEqual(['loop', 'x', 'y'])
   })
 
-  it('flattens multi-paragraph rich text', () => {
-    const doc = {
-      type: 'doc',
-      content: [
-        { type: 'paragraph', content: [{ type: 'text', text: 'a' }, { type: 'hardBreak' }] },
-        { type: 'paragraph', content: [{ type: 'text', text: 'c' }] }
-      ]
+  it('is deterministic: array order, rounding and -0 do not change the graph', () => {
+    const base = architectureScene()
+    const shuffled = {
+      nodes: [...base.nodes].reverse(),
+      edges: [...base.edges].reverse()
     }
+    const expected = exportDesignGraph(base)
+    expect(exportDesignGraph(shuffled)).toEqual(expected)
+    expect(JSON.stringify(exportDesignGraph(shuffled))).toBe(JSON.stringify(expected))
 
-    expect(richTextToPlain(doc)).toBe('a\n\nc')
-    expect(richTextToPlain(undefined)).toBe('')
-  })
-})
-
-describe('exportDesignGraph', () => {
-  const asStore = (records: FixtureRecord[]) =>
-    Object.fromEntries(records.map((record) => [record.id, record]))
-
-  it('reads a stored Design Scene (editor snapshot) on its current page', () => {
-    const snapshot = {
-      document: { store: asStore(chainScene()), schema: {} },
-      session: { currentPageId: PAGE_ID }
-    } as unknown as TLEditorSnapshot
-
-    expect(exportDesignGraph(snapshot)).toEqual(build(chainScene()))
+    const jittered = scene([component('a', 'cache', -0.4, 0.4)])
+    expect(exportDesignGraph(jittered).nodes[0]?.position).toEqual({ x: 0, y: 0 })
+    expect(Object.is(exportDesignGraph(jittered).nodes[0]?.position?.x, -0)).toBe(false)
   })
 
-  it('reads a live editor', () => {
-    const editor = {
-      store: { allRecords: () => chainScene() },
-      getCurrentPageId: () => PAGE_ID,
-      getShapePageBounds: () => undefined
-    } as unknown as Editor
+  it('exports the same graph from the editor state and from the stored scene', () => {
+    const stored = architectureScene()
+    const state = toScene(
+      stored.nodes.map((n) => ({ ...n, selected: true })) as never,
+      stored.edges.map((e) => ({ ...e, type: 'link' })) as never,
+      stored.viewport
+    )
+    expect(exportDesignGraph(state)).toEqual(exportDesignGraph(stored))
+  })
 
-    expect(exportDesignGraph(editor)).toEqual(build(chainScene()))
+  it('exports an empty scene', () => {
+    const graph = exportDesignGraph(scene([]))
+    expect(graph).toMatchObject({ nodes: [], edges: [], annotations: [], groups: [] })
+    expect(describeDesignGraph(graph)).toBe('Empty design: no components.')
+  })
+
+  it('is described by the existing text renderer', () => {
+    expect(describeDesignGraph(exportDesignGraph(architectureScene()))).toBe(
+      [
+        'Components (6): Service A (service), Client, Load balancer, Users (database), Service B (service), Cache',
+        'Connections:',
+        '- Service A <-[SQL]-> Users',
+        '- Client -[HTTPS]-> Load balancer -> Service A, Service B',
+        '- Service B -- Users',
+        '- Cache <- Service A',
+        'Notes:',
+        '- "Reads are ~100x writes" (near Users)',
+        'Groups:',
+        '- frame "Backend": Service A, Service B'
+      ].join('\n')
+    )
+  })
+
+  // Ported from the tldraw fixture-scene tests (chain, branching, annotations, groups).
+  describe('fixture scenes', () => {
+    it('exports a simple chain: typed nodes and edges', () => {
+      const graph = exportDesignGraph(chainScene())
+      expect(graph.nodes).toEqual([
+        {
+          id: 'lb',
+          componentType: 'load-balancer',
+          label: 'Load balancer',
+          position: { x: 0, y: 0 },
+          size: { w: 160, h: 90 }
+        },
+        {
+          id: 'svc',
+          componentType: 'service',
+          label: 'Service',
+          position: { x: 300, y: 0 },
+          size: { w: 160, h: 90 }
+        },
+        {
+          id: 'db',
+          componentType: 'database',
+          label: 'Users',
+          position: { x: 600, y: 0 },
+          size: { w: 160, h: 90 }
+        }
+      ])
+      expect(graph.edges).toEqual([
+        { id: 'a1', from: 'lb', to: 'svc', label: '', direction: 'forward' },
+        { id: 'a2', from: 'svc', to: 'db', label: 'SQL', direction: 'forward' }
+      ])
+      expect(graph).toMatchObject({ version: 1, annotations: [], danglingArrows: [], groups: [] })
+      expect(designGraphSchema.parse(graph)).toEqual(graph)
+    })
+
+    it('exports a branching scene in reading order', () => {
+      const graph = exportDesignGraph(branchingScene())
+      expect(graph.nodes.map((n) => n.id)).toEqual([
+        's1',
+        'cache',
+        'client',
+        'lb',
+        's2',
+        'db',
+        's3'
+      ])
+      expect(graph.edges).toHaveLength(10)
+      expect(graph.edges.slice(0, 2).map((e) => `${e.from}->${e.to}`)).toEqual([
+        's1->cache',
+        's1->db'
+      ])
+      expect(designGraphSchema.safeParse(graph).success).toBe(true)
+    })
+
+    it('exports notes with their nearest component, and leaves empty ones out', () => {
+      const graph = exportDesignGraph(
+        scene([
+          ...branchingScene().nodes,
+          note('blank', 0, 600, ''),
+          note('mobile', 0, 400, 'Mobile app')
+        ])
+      )
+      expect(graph.annotations).toEqual([
+        {
+          id: 'n-reads',
+          kind: 'note',
+          text: 'Reads are ~100x writes',
+          position: { x: 800, y: -40 },
+          nearestNodeId: 'cache'
+        },
+        {
+          id: 'mobile',
+          kind: 'note',
+          text: 'Mobile app',
+          position: { x: 0, y: 400 },
+          nearestNodeId: 'client'
+        },
+        {
+          id: 'n-far',
+          kind: 'note',
+          text: 'Single region for now',
+          position: { x: 2000, y: 2000 },
+          nearestNodeId: null
+        }
+      ])
+    })
+
+    it('maps every direction of a connection', () => {
+      const directions = ['forward', 'backward', 'both', 'none'] as const
+      const graph = exportDesignGraph(
+        scene(
+          [component('a', 'service', 0, 0), component('b', 'service', 300, 0)],
+          directions.map((d) => edge(d, 'a', 'b', d))
+        )
+      )
+      expect(Object.fromEntries(graph.edges.map((e) => [e.id, e.direction]))).toEqual({
+        backward: 'backward',
+        both: 'both',
+        forward: 'forward',
+        none: 'none'
+      })
+    })
+
+    it('exports a group as a frame and adds its offset to the positions', () => {
+      const graph = exportDesignGraph(
+        scene([
+          group('f', 100, 50, 'Write path'),
+          component('q', 'queue', 10, 20, 'Jobs', 'f'),
+          note('w', 200, 20, 'worker pool', 'f'),
+          component('out', 'database', 900, 0)
+        ])
+      )
+      expect(graph.nodes.find((n) => n.id === 'q')?.position).toEqual({ x: 110, y: 70 })
+      expect(graph.groups).toEqual([
+        { id: 'f', kind: 'frame', label: 'Write path', memberIds: ['q', 'w'] }
+      ])
+    })
+
+    it('is deterministic across exports, input orders and clones', () => {
+      const base = branchingScene()
+      const first = JSON.stringify(exportDesignGraph(base))
+      expect(JSON.stringify(exportDesignGraph(base))).toBe(first)
+      expect(
+        JSON.stringify(
+          exportDesignGraph({ nodes: [...base.nodes].reverse(), edges: [...base.edges].reverse() })
+        )
+      ).toBe(first)
+      expect(JSON.stringify(exportDesignGraph(structuredClone(base)))).toBe(first)
+    })
   })
 })

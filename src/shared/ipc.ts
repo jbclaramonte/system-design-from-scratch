@@ -70,7 +70,7 @@ export interface DesignSceneLoadRequest {
 
 export interface DesignSceneSaveRequest {
   designExerciseId: number
-  /** tldraw editor snapshot, see `src/renderer/src/design/sceneSnapshot.ts`. */
+  /** Design Scene (JSON), see `src/renderer/src/design/flow/scene.ts`. */
   snapshot: Json
 }
 

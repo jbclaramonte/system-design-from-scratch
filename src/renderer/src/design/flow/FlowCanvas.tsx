@@ -20,12 +20,11 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type ReactNode,
   type Ref
 } from 'react'
-import { COMPONENT_TYPES, type DesignGraph, type DesignPng } from '../../../../shared/designGraph'
+import { COMPONENT_TYPES } from '../../../../shared/designGraph'
 import { COMPONENT_LOOKS, componentColors, type ComponentType } from '../componentTypes'
-import { buildDesignGraphFromScene } from './exportGraph'
-import { exportScenePng } from './exportPng'
 import { FlowActionsContext, FlowModeContext, type FlowActions } from './flowContext'
 import {
   copySelection,
@@ -49,14 +48,23 @@ import { edgeTypes } from './LinkEdge'
 import { nodeTypes } from './nodes'
 import type { Scene } from './scene'
 
-/** What the host of the canvas can ask of it (a ref, so the dev screen stays outside the canvas). */
+/**
+ * What the host of the canvas can ask of it (a ref, so the host stays outside the canvas). The
+ * handle is stable for the life of the canvas, and keeps answering after it unmounts (the last
+ * state), so a pending autosave can still capture the scene while the canvas goes away.
+ */
 export interface FlowCanvasHandle {
-  /** The scene as it would be stored (`serializeScene` it). */
+  /** The scene as it would be stored (`serializeScene` it), straight from the nodes and edges. */
   getScene(): Scene
-  /** Design Graph straight from the nodes and edges. */
-  exportGraph(): DesignGraph
-  /** Light-mode PNG, or `null` for an empty canvas. */
-  exportPng(): Promise<DesignPng | null>
+}
+
+interface FlowCanvasProps {
+  initialScene: Scene
+  /** Fires after every change worth saving (not for selection, measures or panning). */
+  onDirty?: () => void
+  handle?: Ref<FlowCanvasHandle>
+  /** Shown at the end of the palette bar (the save error, for instance). */
+  paletteNotice?: ReactNode
 }
 
 interface Snapshot {
@@ -68,15 +76,12 @@ const newId = (prefix: string) => `${prefix}-${crypto.randomUUID().slice(0, 8)}`
 const snap = (value: number) => Math.round(value / GRID) * GRID
 
 /**
- * Design Canvas on React Flow (spike #42). Mount it with the scene to open (`EMPTY_SCENE` for a
- * new one) and a `key` to switch scenes: the scene is read once. `onDirty` fires after every
- * change worth saving (not for selection or measures), for a debounced autosave.
+ * Design Canvas engine on React Flow: palette of typed components, notes and groups, connections
+ * with directions and labels, undo and redo, copy and paste. Mount it with the scene to open
+ * (`EMPTY_SCENE` for a new one) and a `key` to switch scenes: the scene is read once. Loading,
+ * autosave and the Design Export belong to the host (`DesignCanvas`).
  */
-export function FlowCanvas(props: {
-  initialScene: Scene
-  onDirty?: () => void
-  handle?: Ref<FlowCanvasHandle>
-}) {
+export function FlowCanvas(props: FlowCanvasProps) {
   return (
     <ReactFlowProvider>
       <FlowEditor {...props} />
@@ -84,15 +89,7 @@ export function FlowCanvas(props: {
   )
 }
 
-function FlowEditor({
-  initialScene,
-  onDirty,
-  handle
-}: {
-  initialScene: Scene
-  onDirty?: () => void
-  handle?: Ref<FlowCanvasHandle>
-}) {
+function FlowEditor({ initialScene, onDirty, handle, paletteNotice }: FlowCanvasProps) {
   const initial = useMemo(() => toFlow(initialScene, 'dark'), [initialScene])
   const [nodes, setNodes, onNodesChange] = useNodesState<FlowNode>(initial.nodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState<FlowEdge>(initial.edges)
@@ -176,15 +173,17 @@ function FlowEditor({
     [takeSnapshot, setNodes, setEdges, onDirty]
   )
 
-  const sceneNow = () => {
-    const { x, y, zoom } = rf.getViewport()
-    return toScene(latest.current.nodes, latest.current.edges, { x, y, zoom })
-  }
-  useImperativeHandle(handle, () => ({
-    getScene: sceneNow,
-    exportGraph: () => buildDesignGraphFromScene(sceneNow()),
-    exportPng: () => exportScenePng(sceneNow())
-  }))
+  // Stable, and valid after unmount: `latest` and the store of `rf` outlive the render tree.
+  useImperativeHandle(
+    handle,
+    () => ({
+      getScene: () => {
+        const { x, y, zoom } = rf.getViewport()
+        return toScene(latest.current.nodes, latest.current.edges, { x, y, zoom })
+      }
+    }),
+    [rf]
+  )
 
   // --- Adding nodes --------------------------------------------------------------------------
 
@@ -283,43 +282,43 @@ function FlowEditor({
   return (
     <FlowModeContext value="dark">
       <FlowActionsContext value={actions}>
-        <div className="flow-canvas" data-testid="flow-canvas">
-          <aside className="flow-palette" data-testid="flow-palette" aria-label="Components">
-            <p className="flow-palette-title label-caps">Components</p>
+        <div className="design-canvas" data-testid="design-canvas">
+          <aside className="design-palette" data-testid="design-palette" aria-label="Components">
+            <p className="design-palette-title label-caps">Components</p>
             {COMPONENT_TYPES.map((type) => (
               <button
                 key={type}
                 type="button"
-                className="flow-palette-button btn-sm"
-                data-testid={`flow-add-${type}`}
+                className="design-palette-button btn-sm"
+                data-testid={`add-${type}`}
                 style={{ '--swatch': componentColors(type, 'dark').stroke } as CSSProperties}
                 onClick={() => addComponent(type)}
               >
                 + {COMPONENT_LOOKS[type].label}
               </button>
             ))}
-            <span className="flow-palette-divider" aria-hidden />
+            <span className="design-palette-divider" aria-hidden />
             <button
               type="button"
-              className="flow-palette-button btn-sm"
-              data-testid="flow-add-note"
+              className="design-palette-button btn-sm"
+              data-testid="add-note"
               onClick={() => addNode(createNoteNode, [200, 120])}
             >
               + Note
             </button>
             <button
               type="button"
-              className="flow-palette-button btn-sm"
-              data-testid="flow-add-group"
+              className="design-palette-button btn-sm"
+              data-testid="add-group"
               onClick={() => addNode(createGroupNode, [480, 320])}
             >
               + Group
             </button>
-            <span className="flow-palette-divider" aria-hidden />
+            <span className="design-palette-divider" aria-hidden />
             <button
               type="button"
               className="btn-sm"
-              data-testid="flow-undo"
+              data-testid="design-undo"
               disabled={steps.undo === 0}
               onClick={doUndo}
             >
@@ -328,23 +327,24 @@ function FlowEditor({
             <button
               type="button"
               className="btn-sm"
-              data-testid="flow-redo"
+              data-testid="design-redo"
               disabled={steps.redo === 0}
               onClick={doRedo}
             >
               Redo
             </button>
-            <label className="flow-palette-toggle">
+            <label className="design-palette-toggle">
               <input
                 type="checkbox"
-                data-testid="flow-snap"
+                data-testid="design-snap"
                 checked={snapToGrid}
                 onChange={(event) => setSnapToGrid(event.target.checked)}
               />
               Snap to grid
             </label>
+            {paletteNotice}
           </aside>
-          <div ref={surface} className="flow-surface" data-testid="flow-surface">
+          <div ref={surface} className="design-surface" data-testid="design-surface">
             <ReactFlow<FlowNode, FlowEdge>
               nodes={nodes}
               edges={edges}
@@ -372,7 +372,6 @@ function FlowEditor({
                 takeSnapshot()
                 return true
               }}
-              onMoveEnd={() => onDirty?.()}
               snapToGrid={snapToGrid}
               snapGrid={[GRID, GRID]}
               deleteKeyCode={['Backspace', 'Delete']}

@@ -56,7 +56,7 @@ export function LinkEdge({
         <EdgeLabelRenderer>
           <div
             className="flow-edge-label nodrag nopan"
-            data-testid="flow-edge-label"
+            data-testid="design-edge-label"
             style={{
               transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
               background: palette.label.fill,
@@ -84,7 +84,7 @@ export function LinkEdge({
                       title={DIRECTION_BUTTONS[value].name}
                       aria-label={DIRECTION_BUTTONS[value].name}
                       aria-pressed={direction === value}
-                      data-testid={`flow-edge-direction-${value}`}
+                      data-testid={`design-edge-direction-${value}`}
                       onClick={() => {
                         takeSnapshot()
                         updateEdge(id, { direction: value })

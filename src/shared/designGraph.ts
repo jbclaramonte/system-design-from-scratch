@@ -1,13 +1,13 @@
 /**
  * Design Graph: the structured export of a Design Scene that the LLM reads to give Design
- * Feedback (issue #13). Built in the renderer from tldraw records
+ * Feedback (issue #13). Built in the renderer from the nodes and edges of the Design Canvas
  * (`src/renderer/src/design/export/`), validated here with zod on both sides of the IPC boundary.
- * No tldraw import: the main process uses this file too.
+ * No renderer import: the main process uses this file too.
  */
 
 import { z } from 'zod'
 
-/** Component types of the Design Canvas shape catalogue (one tldraw custom shape each). */
+/** Component types of the Design Canvas catalogue (one component node type each). */
 export const COMPONENT_TYPES = [
   'client',
   'cdn',
@@ -57,8 +57,9 @@ export const designGraphEdgeSchema = z.object({
 })
 
 /**
- * Any other shape carrying text (text, note, geo, frame-less label...). `kind` is the tldraw
- * shape type. `nearestNodeId` is the closest node within reach, or `null`.
+ * Any other node carrying text. `kind` is the node type (`note` on the React Flow canvas; a free
+ * string, so older exports keep validating). `nearestNodeId` is the closest node within reach, or
+ * `null`.
  */
 export const designGraphAnnotationSchema = z.object({
   id,
@@ -79,7 +80,7 @@ export const designGraphDanglingArrowSchema = z.object({
   label: text
 })
 
-/** A tldraw frame or group, with the nodes and annotations it contains (at any depth). */
+/** A group of the canvas (`frame`), with the nodes and annotations it contains (at any depth). */
 export const designGraphGroupSchema = z.object({
   id,
   kind: z.enum(['frame', 'group']),

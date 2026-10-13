@@ -76,7 +76,9 @@ src/
     settings/        Settings over IPC, Claude CLI path test
   preload/           Exposes the typed window.api bridge to the renderer
   renderer/          React app (index.html with the CSP, src/ for components, src/dev/ dev-only)
-                     src/design/: Design Canvas (tldraw, typed shapes, Design Scene autosave,
+                     src/design/: Design Canvas (React Flow, typed components, Design Scene
+                     autosave and conversion of legacy tldraw scenes; flow/: the editor, legacy/:
+                     the converter, see docs/Design Canvas Integration.md;
                      export/: Design Export, see docs/Design Export.md;
                      protocol/: Design Exercise screen with the Interview Protocol steps)
                      src/lesson/: Lesson view (topic list, streamed Markdown, source chips)
@@ -230,7 +232,8 @@ Copy `.env.example` to `.env.local` at the repo root and fill in the values. `.e
 ignored by git. Only variables prefixed with `VITE_` (or `RENDERER_VITE_`) are exposed to the
 renderer, as `import.meta.env.VITE_...`; they end up in the bundle, so treat them as public.
 
-- `VITE_TLDRAW_LICENSE_KEY`: tldraw license key for the Design Canvas. Optional in dev
+- `VITE_TLDRAW_LICENSE_KEY`: **no longer read by the app** since the Design Canvas runs on React
+  Flow (issue #43); the tldraw package and this key go away in issue #44. tldraw license key for the Design Canvas. Optional in dev
   (`npm run dev` shows a "Get a license for production" watermark), **required for production
   builds** (`npm run build` / `npm run preview` / `npm run package`, renderer loaded from
   `file://`): without a valid key tldraw stops rendering the canvas after 5 seconds. Read at build

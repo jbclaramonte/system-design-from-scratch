@@ -16,15 +16,14 @@
 // it found). `--no-sandbox` (or SMOKE_NO_SANDBOX=1) turns the sandbox off for a machine that has
 // neither, such as a container running as root. SMOKE_APP_ARGS adds Chromium switches (space
 // separated), for example --disable-dev-shm-usage in a container with a small /dev/shm.
-// SMOKE_ALLOW_MISSING_TLDRAW_KEY=1 skips the three tldraw checks of the second launch, for a package
-// built without a license key on purpose (the CI without the repository secret). Never set it
-// otherwise: a package without a key has an unusable Design Canvas.
+// SMOKE_ALLOW_MISSING_TLDRAW_KEY is no longer read: the Design Canvas runs on React Flow (#43) and
+// needs no license key, so no canvas check is skipped. #44 removes the variable from the CI.
 //
 // Two launches share one scratch user-data folder:
 //   1. fresh folder: window, Learning Path (21 topics), database, Settings (Test button finds the
 //      CLI), About (licenses, fonts), first lesson (fake CLI, Mermaid diagram);
-//   2. after every topic is marked mastered in the scratch database: an exercise canvas (tldraw)
-//      with its assets and without a license error.
+//   2. after every topic is marked mastered in the scratch database: an exercise canvas (React
+//      Flow) where a typed component can be added, and no console error.
 // It never touches the real userData folder or ~/.claude*, always passes --user-data-dir, kills the
 // whole process tree it started (also on failure or Ctrl+C), prints one PASS/FAIL line per check
 // and exits 1 when a check fails. Never prints the tldraw license key. What it does not cover is
@@ -426,18 +425,6 @@ function readOnlyDb() {
 
 const EXPECTED_TOPICS = 21
 
-/**
- * The only console error the packaged app is allowed to produce: tldraw's watermark tracking
- * request to cdn.tldraw.com, which the Content-Security-Policy (connect-src 'self' data:) blocks on
- * purpose. See docs/Packaging.md ("tldraw license"). Anything else fails the check.
- */
-function isKnownTldrawTrackingBlock(problem) {
-  return (
-    /cdn\.tldraw\.com/.test(problem) &&
-    /watermark-track|Content Security Policy|Refused to/i.test(problem)
-  )
-}
-
 async function phaseOne() {
   const port = await launchApp()
   let c
@@ -629,75 +616,29 @@ async function phaseTwo() {
     await c.click('step-high_level_design')
     await c.waitFor(`!!${c.testId('protocol-canvas')}`, 'the canvas panel')
     await c.waitFor(`!!${c.testId('design-palette')}`, 'the component palette')
-    await c.waitFor(`!!document.querySelector('.tl-container')`, 'the tldraw editor')
+    await c.waitFor(`!!document.querySelector('.react-flow__renderer')`, 'the React Flow canvas')
   })
   if (!canvasOpened) return
 
-  if (process.env.SMOKE_ALLOW_MISSING_TLDRAW_KEY) {
-    console.log(
-      'SKIP  tldraw license, assets and console checks (SMOKE_ALLOW_MISSING_TLDRAW_KEY: package built without a key)'
-    )
-    c.close()
-    await stopApp()
-    return
-  }
-
-  await check(
-    'tldraw stays rendered past its 5 s license gate, with no license error',
-    async () => {
-      // tldraw hides the editor 5 s after a missing, invalid or expired key (LICENSE_TIMEOUT).
-      await sleep(7000)
-      await c.shot('03-design-canvas')
-      const state = JSON.parse(
-        await c.evaluate(`JSON.stringify({
-        gate: !!${c.testId('tl-license-expired')},
-        container: !!document.querySelector('.tl-container'),
-        canvas: !!document.querySelector('.tl-canvas'),
-        text: document.body.innerText
-      })`)
-      )
-      assert(
-        !state.gate && state.container && state.canvas,
-        'tldraw stopped rendering the editor: license key missing, invalid or expired in this build (see docs/Packaging.md, "tldraw license")'
-      )
-      assert(
-        !/get a license|no tldraw license|invalid (tldraw )?license|license (key )?(has )?expired/i.test(
-          state.text
-        ),
-        'a license message is visible on the canvas'
-      )
-    }
-  )
-
-  await check('tldraw assets load (UI icons, fonts) and a typed shape can be added', async () => {
-    const icons = await c.evaluate(
-      `[...document.querySelectorAll('.tlui-icon')].filter((el) => getComputedStyle(el).maskImage.includes('data:image/svg')).length`
-    )
-    assert(icons > 3, `${icons} tldraw icons carry their bundled SVG`)
+  await check('a typed component can be added and the canvas keeps its fonts', async () => {
     await c.click('add-cache')
-    await c.waitFor(`document.querySelectorAll('.tl-shape').length >= 1`, 'a shape on the canvas')
+    await c.waitFor(
+      `document.querySelectorAll('.react-flow__node [data-component="cache"]').length === 1`,
+      'a Cache node on the canvas'
+    )
     await sleep(500)
-    await c.shot('04-design-canvas-shape')
+    await c.shot('03-design-canvas-component')
     const faces = await c.evaluate(
       `(async () => { await document.fonts.ready; return [...document.fonts].filter((f) => f.status === 'loaded').length })()`
     )
     assert(faces >= 2, `${faces} fonts loaded`)
-    return `${icons} icons`
   })
 
-  await check(
-    'no console errors (exercise canvas), besides the known tldraw tracking block',
-    async () => {
-      const unexpected = consoleProblems.filter((problem) => !isKnownTldrawTrackingBlock(problem))
-      const known = consoleProblems.length - unexpected.length
-      if (process.env.SMOKE_VERBOSE)
-        for (const problem of consoleProblems) console.log(`      console: ${problem}`)
-      assert(unexpected.length === 0, unexpected.join(' | '))
-      return known > 0
-        ? `known: tldraw watermark tracking request blocked by the CSP, x${known}`
-        : undefined
-    }
-  )
+  await check('no console errors (exercise canvas)', async () => {
+    if (process.env.SMOKE_VERBOSE)
+      for (const problem of consoleProblems) console.log(`      console: ${problem}`)
+    assert(consoleProblems.length === 0, consoleProblems.join(' | '))
+  })
 
   c.close()
   await stopApp()

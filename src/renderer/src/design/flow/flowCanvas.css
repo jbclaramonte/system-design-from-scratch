@@ -1,6 +1,6 @@
-/* Design Canvas on React Flow (spike #42). Tokens only; the light export colors live in flowTheme.ts. */
+/* Design Canvas on React Flow (docs/Design Canvas Integration.md). Tokens only; the light export colors live in flowTheme.ts. */
 
-.flow-canvas {
+.design-canvas {
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -8,7 +8,7 @@
   background: var(--color-canvas);
 }
 
-.flow-palette {
+.design-palette {
   flex: none;
   display: flex;
   flex-wrap: wrap;
@@ -19,23 +19,23 @@
   background: var(--color-surface-base);
 }
 
-.flow-palette-title {
+.design-palette-title {
   margin: 0 var(--space-xs) 0 0;
 }
 
 /* The accent bar on the left repeats the stroke color of the component on the canvas. */
-.flow-palette-button {
+.design-palette-button {
   border-left: 3px solid var(--swatch, var(--color-border-control));
 }
 
-.flow-palette-divider {
+.design-palette-divider {
   align-self: stretch;
   width: 1px;
   margin: 0 var(--space-xs);
   background: var(--color-border-hairline);
 }
 
-.flow-palette-toggle {
+.design-palette-toggle {
   display: inline-flex;
   align-items: center;
   gap: var(--space-xs);
@@ -43,7 +43,7 @@
   font-size: var(--type-body-sm-size);
 }
 
-.flow-surface {
+.design-surface {
   flex: 1;
   min-width: 0;
   min-height: 0;
@@ -51,7 +51,7 @@
 }
 
 /* React Flow variables (names from @xyflow/react/dist/style.css) mapped to the design tokens. */
-.flow-surface .react-flow {
+.design-surface .react-flow {
   --xy-background-color: var(--color-canvas);
   --xy-background-pattern-color: var(--color-border-active);
   --xy-edge-stroke: var(--color-text-secondary);
@@ -70,11 +70,11 @@
   font-family: var(--font-sans);
 }
 
-.flow-surface .react-flow__attribution a {
+.design-surface .react-flow__attribution a {
   color: var(--color-text-muted);
 }
 
-.flow-surface .react-flow__controls-button svg {
+.design-surface .react-flow__controls-button svg {
   fill: currentColor;
 }
 
@@ -267,4 +267,51 @@
 /* Edge labels above the nodes: a short edge puts its label over a node, and it must stay editable. */
 .react-flow__edgelabel-renderer {
   z-index: 5;
+}
+
+/* Host of the canvas (DesignCanvas.tsx): optional notice above, the canvas below. ------------ */
+
+.design-canvas-host {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--color-canvas);
+}
+
+.design-canvas-body {
+  flex: 1;
+  min-height: 0;
+}
+
+.design-canvas-notice {
+  flex: none;
+  margin: 0;
+  border-radius: 0;
+}
+
+.design-canvas-notice p,
+.design-canvas-notice ul {
+  margin: 0;
+}
+
+.design-canvas-notice ul {
+  padding-left: var(--space-lg);
+}
+
+.design-canvas-status {
+  padding: var(--space-md) var(--gutter);
+  color: var(--color-text-secondary);
+}
+
+.design-palette-error {
+  flex-basis: 100%;
+  margin: 0;
+  padding: var(--space-sm);
+  border: 1px solid var(--color-error-border);
+  border-radius: var(--radius-md);
+  background: var(--color-error-fill);
+  color: var(--color-error-text);
+  font-size: var(--type-body-sm-size);
+  line-height: var(--type-body-sm-line);
 }

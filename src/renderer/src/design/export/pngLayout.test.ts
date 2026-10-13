@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { DESIGN_PNG_MAX_SIDE } from '../../../../shared/designGraph'
-import { fitWithin } from '../export/exportDesignPng'
+import { fitWithin } from './pngEncoding'
 import { pngLayout, sceneBounds } from './pngLayout'
-import { architectureScene, component, group, scene } from './sceneFixtures'
+import { architectureScene, component, group, scene } from '../flow/sceneFixtures'
 
 describe('PNG layout', () => {
   it('has no bounds for an empty scene', () => {

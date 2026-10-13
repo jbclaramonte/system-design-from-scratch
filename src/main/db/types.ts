@@ -118,7 +118,7 @@ export interface DesignExercise extends Timestamps {
 export interface DesignScene extends Timestamps {
   id: number
   designExerciseId: number
-  /** tldraw store snapshot. */
+  /** Design Scene, versioned JSON (`src/renderer/src/design/flow/scene.ts`). */
   snapshot: Json
 }
 

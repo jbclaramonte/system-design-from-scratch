@@ -4,7 +4,7 @@ import { ComponentBody } from './ComponentBody'
 import { EditableText } from './EditableText'
 import { useFlowActions, useFlowMode } from './flowContext'
 import type { ComponentFlowNode, GroupFlowNode, NoteFlowNode } from './flowModel'
-import { FLOW_PALETTES } from './flowTheme'
+import { FLOW_PALETTES, type FlowMode } from './flowTheme'
 
 /** Custom nodes of the canvas: the typed components, the note and the group (frame). */
 
@@ -26,6 +26,12 @@ function Handles() {
   ))
 }
 
+/**
+ * New notes and groups start empty (an empty note is left out of the Design Graph). The hint that
+ * says what to type is for the live canvas only: the PNG must not show text the graph lacks.
+ */
+const livePlaceholder = (mode: FlowMode, hint: string) => (mode === 'dark' ? hint : undefined)
+
 export function ComponentNode({ id, data, selected, width, height }: NodeProps<ComponentFlowNode>) {
   const mode = useFlowMode()
   const { takeSnapshot, updateNodeData } = useFlowActions()
@@ -35,7 +41,7 @@ export function ComponentNode({ id, data, selected, width, height }: NodeProps<C
   return (
     <div
       className="flow-component"
-      data-testid={`flow-node-${data.componentType}`}
+      data-testid={`design-node-${data.componentType}`}
       data-component={data.componentType}
       style={{ width: w, height: h }}
     >
@@ -59,12 +65,13 @@ export function ComponentNode({ id, data, selected, width, height }: NodeProps<C
 }
 
 export function NoteNode({ id, data, selected }: NodeProps<NoteFlowNode>) {
-  const palette = FLOW_PALETTES[useFlowMode()].note
+  const mode = useFlowMode()
+  const palette = FLOW_PALETTES[mode].note
   const { takeSnapshot, updateNodeData } = useFlowActions()
   return (
     <div
       className="flow-note"
-      data-testid="flow-node-note"
+      data-testid="design-node-note"
       style={{ background: palette.fill, borderColor: palette.stroke, color: palette.text }}
     >
       <NodeResizer
@@ -77,7 +84,7 @@ export function NoteNode({ id, data, selected }: NodeProps<NoteFlowNode>) {
         multiline
         label="Note text"
         value={data.text}
-        placeholder="Note"
+        placeholder={livePlaceholder(mode, 'Note')}
         onStart={takeSnapshot}
         onCommit={(text) => updateNodeData(id, { text })}
       />
@@ -87,12 +94,13 @@ export function NoteNode({ id, data, selected }: NodeProps<NoteFlowNode>) {
 }
 
 export function GroupNode({ id, data, selected }: NodeProps<GroupFlowNode>) {
-  const palette = FLOW_PALETTES[useFlowMode()].group
+  const mode = useFlowMode()
+  const palette = FLOW_PALETTES[mode].group
   const { takeSnapshot, updateNodeData } = useFlowActions()
   return (
     <div
       className="flow-group"
-      data-testid="flow-node-group"
+      data-testid="design-node-group"
       style={{ background: palette.fill, borderColor: palette.stroke, color: palette.text }}
     >
       <NodeResizer
@@ -105,7 +113,7 @@ export function GroupNode({ id, data, selected }: NodeProps<GroupFlowNode>) {
         <EditableText
           label="Group label"
           value={data.label}
-          placeholder="Group"
+          placeholder={livePlaceholder(mode, 'Group')}
           onStart={takeSnapshot}
           onCommit={(label) => updateNodeData(id, { label })}
         />

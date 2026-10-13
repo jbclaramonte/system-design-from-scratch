@@ -79,7 +79,7 @@ interface DesignSceneRow extends Omit<DesignScene, 'snapshot'> {
 const DESIGN_SCENE_COLUMNS = `id, design_exercise_id AS designExerciseId, snapshot,
   ${TIMESTAMP_COLUMNS}`
 
-/** Creates or replaces the tldraw snapshot of a design exercise. */
+/** Creates or replaces the Design Scene (JSON) of a design exercise. */
 export function saveDesignScene(
   db: Database,
   designExerciseId: number,

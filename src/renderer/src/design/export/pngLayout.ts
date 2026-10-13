@@ -1,8 +1,8 @@
 import { DESIGN_PNG_MAX_SIDE } from '../../../../shared/designGraph'
-import { absolutePositionIn } from './geometry'
-import type { SceneNode } from './scene'
+import { absolutePositionIn } from '../flow/geometry'
+import type { SceneNode } from '../flow/scene'
 
-/** Pure layout of the PNG export (spike #42): what to frame and at which pixel ratio. */
+/** Pure layout of the PNG export: what to frame and at which pixel ratio. */
 
 export interface Rect {
   x: number

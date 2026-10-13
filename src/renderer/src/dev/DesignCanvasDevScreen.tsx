@@ -1,17 +1,16 @@
 import { useEffect, useState } from 'react'
-import type { Editor } from 'tldraw'
 import type { DesignExerciseRef } from '../../../shared/ipc'
-import { DesignCanvas } from '../design/DesignCanvas'
+import { DesignCanvas, type DesignCanvasHandle } from '../design/DesignCanvas'
 import { DesignExportDevPanel } from './DesignExportDevPanel'
 
 /**
  * Dev-only screen: opens the Design Canvas on a scratch Design Exercise so Design Scene
- * persistence can be checked end to end. Not a product screen (the exercise flow is #13-#15).
+ * persistence and the Design Export can be checked end to end. Not a product screen.
  */
 export function DesignCanvasDevScreen({ onClose }: { onClose: () => void }) {
   const [exercise, setExercise] = useState<DesignExerciseRef | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [editor, setEditor] = useState<Editor | null>(null)
+  const [canvas, setCanvas] = useState<DesignCanvasHandle | null>(null)
 
   useEffect(() => {
     window.api
@@ -51,10 +50,10 @@ export function DesignCanvasDevScreen({ onClose }: { onClose: () => void }) {
                 <DesignCanvas
                   key={exercise.id}
                   designExerciseId={exercise.id}
-                  onEditorChange={setEditor}
+                  onHandleChange={setCanvas}
                 />
               </div>
-              <DesignExportDevPanel editor={editor} designExerciseId={exercise.id} />
+              <DesignExportDevPanel canvas={canvas} designExerciseId={exercise.id} />
             </>
           )
         )}

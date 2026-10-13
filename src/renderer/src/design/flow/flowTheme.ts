@@ -1,7 +1,7 @@
 import { componentColors, LIGHT_LABEL_COLOR } from '../componentTypes'
 
 /**
- * Colors of the React Flow canvas (spike #42). `dark` is the live canvas and uses the design
+ * Colors of the React Flow canvas. `dark` is the live canvas and uses the design
  * tokens; `light` is the Design Export (PNG): dark strokes on opaque white, literal colors because
  * the capture must not depend on the dark theme. Component colors come from `componentColors`.
  */

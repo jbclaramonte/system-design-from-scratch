@@ -48,10 +48,10 @@ Single source of truth for domain terms. Use these exact terms in code, schema, 
 | [[Protocol Step Lesson]] | The short generated "why it matters" lesson shown the first time the learner meets a protocol step. | step intro, tutorial |
 | [[Hint]] | Graded, spoiler-free help on a protocol step. | tip, clue |
 | [[Reference Solution]] | The primer's solution for a design exercise, used for the final comparison. | model answer, answer key |
-| [[Design Scene]] | Saved state of a design canvas for one exercise (tldraw snapshot). | drawing, board |
+| [[Design Scene]] | Saved state of a design canvas for one exercise (versioned JSON of its nodes, edges and view). | drawing, board |
 | [[Design Feedback]] | LLM assessment of a design, per protocol step and as a final review. | review comment, critique |
-| [[Design Canvas]] | The tldraw whiteboard with typed shapes where the user draws the design. | whiteboard, diagram editor |
-| [[Design Graph]] | Structured export of a design scene: nodes (typed components), edges (bound arrows), annotations, dangling arrows, groups. What the LLM reads. | diagram JSON, scene graph |
+| [[Design Canvas]] | The React Flow canvas with typed components where the user draws the design. | whiteboard, diagram editor |
+| [[Design Graph]] | Structured export of a design scene: nodes (typed components), edges (connections), annotations, dangling arrows, groups. What the LLM reads. | diagram JSON, scene graph |
 | [[Design Export]] | What one design scene hands to the evaluation: its design graph, a text description of it and a PNG capture. | snapshot (that is the design scene), dump |
 
 ## Generation and data

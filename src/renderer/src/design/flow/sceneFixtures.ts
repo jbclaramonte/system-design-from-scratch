@@ -92,3 +92,39 @@ export function architectureScene(): Scene {
     ]
   )
 }
+
+/** Load balancer -> Service -> Database (ported from the tldraw fixture of the same name). */
+export function chainScene(): Scene {
+  return scene(
+    [
+      component('lb', 'load-balancer', 0, 0),
+      component('svc', 'service', 300, 0),
+      component('db', 'database', 600, 0, 'Users')
+    ],
+    [edge('a1', 'lb', 'svc'), edge('a2', 'svc', 'db', 'forward', 'SQL')]
+  )
+}
+
+/** Client -> Load balancer -> 3 services -> Cache and Database, with two notes. */
+export function branchingScene(): Scene {
+  const services = ['s1', 's2', 's3']
+  return scene(
+    [
+      component('client', 'client', 0, 200),
+      component('lb', 'load-balancer', 250, 200),
+      ...services.map((id, i) => component(id, 'service', 500, 50 + i * 150)),
+      component('cache', 'cache', 800, 100),
+      component('db', 'database', 800, 300),
+      note('n-reads', 800, -40, 'Reads are ~100x writes'),
+      note('n-far', 2000, 2000, 'Single region for now')
+    ],
+    [
+      edge('e-client', 'client', 'lb', 'forward', 'HTTPS'),
+      ...services.flatMap((id) => [
+        edge(`e-lb-${id}`, 'lb', id),
+        edge(`e-${id}-cache`, id, 'cache'),
+        edge(`e-${id}-db`, id, 'db')
+      ])
+    ]
+  )
+}

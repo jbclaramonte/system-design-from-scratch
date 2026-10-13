@@ -9,9 +9,9 @@
 //   - app.asar holds the runtime files and none of the files that must never ship (.env*, src,
 //     docs, spikes, screenshots, scripts, .github, tests, node_modules);
 //   - the main and preload bundles do not require a package that the app does not contain;
-//   - the tldraw license key, when one is configured at build time, is inside app.asar (renderer
-//     bundle, expected: it is a client-side key) and nowhere in the main and preload bundles. The
-//     key is compared, never printed.
+//   - the tldraw license key, when one is configured at build time, is nowhere in the main and
+//     preload bundles. The key is compared, never printed. (Since #43 the renderer no longer
+//     reads it, so it is not expected inside app.asar; #44 removes the key and this check.)
 //   - the disk image (.dmg) or the AppImage and the .deb exist next to the app.
 // `--app-only` skips that last check (npm run package:dir, npm run package:linux:dir). See
 // docs/Packaging.md.
@@ -159,15 +159,11 @@ for (const dir of ['out/main', 'out/preload']) {
   }
 }
 
-// 4. The tldraw license key: baked into the renderer when configured, absent from the main process.
-// Without a key the package is still valid (see scripts/check-tldraw-key.mjs for the warning).
+// 4. The tldraw license key stays out of the main process. Since #43 nothing in the renderer
+// reads it (the Design Canvas runs on React Flow), so it is no longer expected inside app.asar;
+// #44 removes the key and this step with it.
 const licenseKey = readTldrawLicenseKey()
 if (licenseKey) {
-  if (existsSync(asarPath) && !readFileSync(asarPath).includes(licenseKey)) {
-    fail(
-      'a tldraw license key is configured but app.asar does not contain it: rebuild with `npm run package`'
-    )
-  }
   for (const dir of ['out/main', 'out/preload']) {
     for (const file of readdirSync(join(root, dir)).filter((name) => name.endsWith('.js'))) {
       if (readFileSync(join(root, dir, file), 'utf8').includes(licenseKey)) {

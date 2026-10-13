@@ -1,137 +1,34 @@
-import type { Editor, TLEditorSnapshot, TLShapeId, TLStoreSnapshot } from 'tldraw'
 import {
   DESIGN_GRAPH_VERSION,
-  isComponentType,
+  designGraphSchema,
   type DesignGraph,
   type DesignGraphAnnotation,
   type DesignGraphDanglingArrow,
   type DesignGraphEdge,
   type DesignGraphGroup,
-  type DesignGraphNode,
-  type EdgeDirection
+  type DesignGraphNode
 } from '../../../../shared/designGraph'
+import type { Scene, SceneGroupNode, SceneNode } from '../flow/scene'
 
 /**
- * Design Scene to Design Graph. Reads plain tldraw records only (no editor method beyond
- * `store.allRecords()` and `getCurrentPageId()`, no DOM), so it runs in unit tests.
+ * Design Scene of the React Flow canvas to Design Graph. The scene already is a typed graph (the
+ * nodes and edges of the canvas), so this is a mapping, not a reconstruction. Pure (no React, no
+ * DOM, no React Flow import). The same scene gives the same graph in any array order, and
+ * `describeDesignGraph` reads it unchanged.
  *
- * Connections come from arrow **binding records**, never from the arrow's `props.start` /
- * `props.end`: those go stale once a bound shape moves (see docs/spikes/tldraw.md, gotcha 1).
+ * - component nodes -> `nodes`; notes with text -> `annotations` (kind `note`);
+ * - edges between two components -> `edges`; any other edge (an end on a note, or on a node that
+ *   is not in the scene) -> `danglingArrows`, the end without a component being `null`;
+ * - group nodes -> `groups` (kind `frame`) with every component and annotation inside, at any depth.
  */
 
-/** An annotation further than this (page units) from every node has no nearest node. */
+/** A note further than this (canvas units) from every component has no nearest component. */
 export const NEAREST_NODE_MAX_DISTANCE = 200
 
-/** Size of a tldraw note at scale 1; notes store no `w` / `h`. */
-const NOTE_SIZE = 200
-
-/** Any record of a tldraw store, as found in a snapshot. Only the fields read here are typed. */
-interface SceneRecord {
-  id: string
-  typeName: string
-  type?: unknown
-  [key: string]: unknown
-}
-
-interface SceneShape {
-  id: string
-  type: string
-  x: number
-  y: number
-  parentId: string | null
-  props: Record<string, unknown>
-}
-
-interface SceneBinding {
-  fromId: string
-  toId: string
-  terminal: 'start' | 'end'
-}
-
-const isObject = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null && !Array.isArray(value)
-
-const finite = (value: unknown): number | undefined =>
-  typeof value === 'number' && Number.isFinite(value) ? value : undefined
-
-/** Rounded, and never -0 (so two exports of the same scene compare equal). */
 const round = (value: number) => Math.round(value) || 0
-
 const compareStrings = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0)
 
-/** Flattens a tldraw rich text value (ProseMirror JSON) into plain text, one line per block. */
-export function richTextToPlain(richText: unknown): string {
-  if (!isObject(richText) || !Array.isArray(richText['content'])) return ''
-  const inline = (node: unknown): string => {
-    if (!isObject(node)) return ''
-    if (node['type'] === 'text') return typeof node['text'] === 'string' ? node['text'] : ''
-    if (node['type'] === 'hardBreak') return '\n'
-    return Array.isArray(node['content']) ? node['content'].map(inline).join('') : ''
-  }
-  return richText['content'].map(inline).join('\n').trim()
-}
-
-/** Text of a shape: plain `text` (component shapes), `richText` (built-in shapes), frame `name`. */
-function textOf(shape: SceneShape): string {
-  const { text, richText, name } = shape.props
-  if (typeof text === 'string') return text.trim()
-  if (richText !== undefined) return richTextToPlain(richText)
-  if (typeof name === 'string') return name.trim()
-  return ''
-}
-
-function toShape(record: SceneRecord): SceneShape | null {
-  if (typeof record.type !== 'string') return null
-  return {
-    id: record.id,
-    type: record.type,
-    x: finite(record['x']) ?? 0,
-    y: finite(record['y']) ?? 0,
-    parentId: typeof record['parentId'] === 'string' ? record['parentId'] : null,
-    props: isObject(record['props']) ? record['props'] : {}
-  }
-}
-
-function toBinding(record: SceneRecord): SceneBinding | null {
-  const { fromId, toId, props } = record
-  const terminal = isObject(props) ? props['terminal'] : undefined
-  if (record.type !== 'arrow' || typeof fromId !== 'string' || typeof toId !== 'string') return null
-  if (terminal !== 'start' && terminal !== 'end') return null
-  return { fromId, toId, terminal }
-}
-
-function directionOf(shape: SceneShape): EdgeDirection {
-  const { arrowheadStart, arrowheadEnd } = shape.props
-  // tldraw defaults: no head at the start, an arrow head at the end.
-  const start = (arrowheadStart ?? 'none') !== 'none'
-  const end = (arrowheadEnd ?? 'arrow') !== 'none'
-  if (start && end) return 'both'
-  if (end) return 'forward'
-  if (start) return 'backward'
-  return 'none'
-}
-
-export interface Rect {
-  x: number
-  y: number
-  w: number
-  h: number
-}
-
-export interface BuildDesignGraphOptions {
-  /**
-   * Page bounds of a shape, as the editor measures them (`editor.getShapePageBounds`). Used to
-   * find the node nearest to an annotation; without it, the size comes from the shape props
-   * (text shapes store no height, so their top-left corner is used).
-   */
-  pageBounds?: (shapeId: string) => Rect | undefined
-}
-
-function distanceToRect(px: number, py: number, rect: Rect): number {
-  const dx = Math.max(rect.x - px, 0, px - (rect.x + rect.w))
-  const dy = Math.max(rect.y - py, 0, py - (rect.y + rect.h))
-  return Math.hypot(dx, dy)
-}
+type Rect = { x: number; y: number; w: number; h: number }
 
 const byPosition = (
   a: { id: string; position?: { x: number; y: number } },
@@ -141,90 +38,63 @@ const byPosition = (
   (a.position?.x ?? 0) - (b.position?.x ?? 0) ||
   compareStrings(a.id, b.id)
 
+function distanceToRect(px: number, py: number, rect: Rect): number {
+  const dx = Math.max(rect.x - px, 0, px - (rect.x + rect.w))
+  const dy = Math.max(rect.y - py, 0, py - (rect.y + rect.h))
+  return Math.hypot(dx, dy)
+}
+
 /**
- * Builds the Design Graph of one page from tldraw store records (shapes, bindings, pages...).
- * `pageId` limits the graph to the shapes of that page; `null` keeps every shape.
- * The same records always give the same graph, in any input order.
+ * Design Graph of a scene: the stored scene, or the nodes and edges of the live canvas
+ * (`FlowCanvasHandle.getScene()`). Throws if the result breaks the shared schema.
  */
-export function buildDesignGraph(
-  records: readonly unknown[],
-  pageId: string | null = null,
-  { pageBounds }: BuildDesignGraphOptions = {}
-): DesignGraph {
-  const sceneRecords = records.filter(
-    (record): record is SceneRecord =>
-      isObject(record) && typeof record['id'] === 'string' && typeof record['typeName'] === 'string'
-  )
-  const allShapes = new Map<string, SceneShape>()
-  for (const record of sceneRecords) {
-    const shape = record.typeName === 'shape' ? toShape(record) : null
-    if (shape) allShapes.set(shape.id, shape)
-  }
+export function exportDesignGraph(scene: Pick<Scene, 'nodes' | 'edges'>): DesignGraph {
+  const byId = new Map<string, SceneNode>(scene.nodes.map((node) => [node.id, node]))
 
-  /** Shape ancestors, innermost first, plus the id the chain ends on (the page). */
-  const ancestry = (shape: SceneShape) => {
-    const ancestors: SceneShape[] = []
-    let parentId = shape.parentId
-    let parent = parentId ? allShapes.get(parentId) : undefined
-    while (parent && ancestors.length < allShapes.size) {
+  /** Ancestors, innermost first. Bounded, so a corrupt parent loop cannot hang the export. */
+  const ancestorsOf = (node: SceneNode): SceneNode[] => {
+    const ancestors: SceneNode[] = []
+    let parent = node.parentId ? byId.get(node.parentId) : undefined
+    while (parent && ancestors.length < byId.size) {
       ancestors.push(parent)
-      parentId = parent.parentId
-      parent = parentId ? allShapes.get(parentId) : undefined
+      parent = parent.parentId ? byId.get(parent.parentId) : undefined
     }
-    return { ancestors, rootId: parentId }
+    return ancestors
   }
-
-  const shapes = [...allShapes.values()]
-    .filter((shape) => pageId === null || ancestry(shape).rootId === pageId)
-    .sort((a, b) => compareStrings(a.id, b.id))
-
-  // Page coordinates: parent offsets summed up the chain (rotation ignored).
-  const positionOf = (shape: SceneShape) => {
-    let { x, y } = shape
-    for (const ancestor of ancestry(shape).ancestors) {
-      x += ancestor.x
-      y += ancestor.y
+  const absolute = (node: SceneNode) => {
+    let { x, y } = node.position
+    for (const ancestor of ancestorsOf(node)) {
+      x += ancestor.position.x
+      y += ancestor.position.y
     }
-    return { x: round(x), y: round(y) }
+    return { x, y }
   }
-  const sizeOf = (shape: SceneShape) => {
-    const w = finite(shape.props['w'])
-    const h = finite(shape.props['h'])
-    return w !== undefined && h !== undefined && w >= 0 && h >= 0
-      ? { w: round(w), h: round(h) }
-      : undefined
+  const rectOf = (node: SceneNode): Rect => {
+    const { x, y } = absolute(node)
+    return { x, y, w: node.width, h: node.height }
   }
 
   const nodes: DesignGraphNode[] = []
   const annotations: DesignGraphAnnotation[] = []
-  const arrows: SceneShape[] = []
-  const containers: SceneShape[] = []
-  for (const shape of shapes) {
-    if (isComponentType(shape.type)) {
+  const groupNodes: SceneGroupNode[] = []
+  const sorted = [...scene.nodes].sort((a, b) => compareStrings(a.id, b.id))
+  for (const node of sorted) {
+    const at = absolute(node)
+    const position = { x: round(at.x), y: round(at.y) }
+    if (node.type === 'component') {
       nodes.push({
-        id: shape.id,
-        componentType: shape.type,
-        label: textOf(shape),
-        position: positionOf(shape),
-        size: sizeOf(shape)
+        id: node.id,
+        componentType: node.data.componentType,
+        label: node.data.label.trim(),
+        position,
+        size: { w: round(node.width), h: round(node.height) }
       })
-    } else if (shape.type === 'arrow') {
-      arrows.push(shape)
-    } else if (shape.type === 'group' || shape.type === 'frame') {
-      containers.push(shape)
+    } else if (node.type === 'note') {
+      // A note without text carries nothing the LLM can read, like an empty note.
+      const text = node.data.text.trim()
+      if (text) annotations.push({ id: node.id, kind: 'note', text, position, nearestNodeId: null })
     } else {
-      // Text, notes, geo boxes, anything else with text: free annotations. Shapes without any
-      // text (freehand strokes, empty boxes) carry nothing the LLM can read and are left out.
-      const text = textOf(shape)
-      if (text) {
-        annotations.push({
-          id: shape.id,
-          kind: shape.type,
-          text,
-          position: positionOf(shape),
-          nearestNodeId: null
-        })
-      }
+      groupNodes.push(node)
     }
   }
   nodes.sort(byPosition)
@@ -232,26 +102,14 @@ export function buildDesignGraph(
 
   const nodeOrder = new Map(nodes.map((node, i) => [node.id, i]))
 
-  // Annotation anchor: its centre when its size is known, else its top-left corner.
-  const anchorOf = (annotation: DesignGraphAnnotation) => {
-    const measured = pageBounds?.(annotation.id)
-    if (measured) return { x: measured.x + measured.w / 2, y: measured.y + measured.h / 2 }
-    const shape = allShapes.get(annotation.id)!
-    const scale = finite(shape.props['scale']) ?? 1
-    const size =
-      sizeOf(shape) ??
-      (shape.type === 'note' ? { w: NOTE_SIZE * scale, h: NOTE_SIZE * scale } : undefined)
-    return {
-      x: annotation.position!.x + (size ? size.w / 2 : 0),
-      y: annotation.position!.y + (size ? size.h / 2 : 0)
-    }
-  }
+  // Nearest component to the center of each note, within reach.
   for (const annotation of annotations) {
-    const { x: px, y: py } = anchorOf(annotation)
+    const rect = rectOf(byId.get(annotation.id)!)
+    const cx = rect.x + rect.w / 2
+    const cy = rect.y + rect.h / 2
     let best: { id: string; distance: number } | null = null
     for (const node of nodes) {
-      const rect = { ...node.position!, ...(node.size ?? { w: 0, h: 0 }) }
-      const distance = distanceToRect(px, py, rect)
+      const distance = distanceToRect(cx, cy, rectOf(byId.get(node.id)!))
       if (distance <= NEAREST_NODE_MAX_DISTANCE && (!best || distance < best.distance)) {
         best = { id: node.id, distance }
       }
@@ -259,28 +117,16 @@ export function buildDesignGraph(
     annotation.nearestNodeId = best?.id ?? null
   }
 
-  // One binding per arrow terminal. If a store ever held two, the smallest target id wins.
-  const bindings = sceneRecords
-    .filter((record) => record.typeName === 'binding')
-    .map(toBinding)
-    .filter((binding): binding is SceneBinding => binding !== null)
-    .sort((a, b) => compareStrings(a.toId, b.toId))
-  const endpoint = (arrowId: string, terminal: 'start' | 'end'): string | null => {
-    const binding = bindings.find((b) => b.fromId === arrowId && b.terminal === terminal)
-    // Bound to an annotation, another arrow or an unknown shape: not a node, so no connection.
-    return binding && nodeOrder.has(binding.toId) ? binding.toId : null
-  }
-
   const edges: DesignGraphEdge[] = []
   const danglingArrows: DesignGraphDanglingArrow[] = []
-  for (const arrow of arrows) {
-    const from = endpoint(arrow.id, 'start')
-    const to = endpoint(arrow.id, 'end')
-    const label = textOf(arrow)
+  for (const edge of scene.edges) {
+    const from = nodeOrder.has(edge.source) ? edge.source : null
+    const to = nodeOrder.has(edge.target) ? edge.target : null
+    const label = edge.data.label.trim()
     if (from !== null && to !== null) {
-      edges.push({ id: arrow.id, from, to, label, direction: directionOf(arrow) })
+      edges.push({ id: edge.id, from, to, label, direction: edge.data.direction })
     } else {
-      danglingArrows.push({ id: arrow.id, from, to, label })
+      danglingArrows.push({ id: edge.id, from, to, label })
     }
   }
   const orderOf = (nodeId: string | null) =>
@@ -300,64 +146,32 @@ export function buildDesignGraph(
   )
 
   const members = [...nodes, ...annotations]
-  const groups: Array<DesignGraphGroup & { position: { x: number; y: number } }> = containers.map(
-    (container) => ({
-      id: container.id,
-      kind: container.type === 'frame' ? 'frame' : 'group',
-      label: textOf(container),
-      memberIds: members
-        .filter((member) =>
-          ancestry(allShapes.get(member.id)!).ancestors.some(({ id }) => id === container.id)
-        )
-        .map(({ id }) => id),
-      position: positionOf(container)
-    })
-  )
+  const groups = groupNodes.map((group) => ({
+    id: group.id,
+    kind: 'frame' as const,
+    label: group.data.label.trim(),
+    memberIds: members
+      .filter((member) =>
+        ancestorsOf(byId.get(member.id)!).some((ancestor) => ancestor.id === group.id)
+      )
+      .map(({ id }) => id),
+    position: absolute(group)
+  }))
   groups.sort(byPosition)
 
-  return {
+  const graph: DesignGraph = {
     version: DESIGN_GRAPH_VERSION,
     nodes,
     edges,
     annotations,
     danglingArrows,
-    groups: groups.map(({ id, kind, label, memberIds }) => ({ id, kind, label, memberIds }))
+    groups: groups.map(({ id, kind, label, memberIds }): DesignGraphGroup => ({
+      id,
+      kind,
+      label,
+      memberIds
+    }))
   }
-}
-
-/** The page a stored snapshot shows: its session's current page, else the first page. */
-function snapshotPageId(records: SceneRecord[], currentPageId: unknown): string | null {
-  const pages = records
-    .filter((record) => record.typeName === 'page')
-    .sort(
-      (a, b) =>
-        compareStrings(String(a['index'] ?? ''), String(b['index'] ?? '')) ||
-        compareStrings(a.id, b.id)
-    )
-  if (pages.some((page) => page.id === currentPageId)) return currentPageId as string
-  return pages[0]?.id ?? null
-}
-
-function isEditor(source: unknown): source is Editor {
-  return isObject(source) && typeof source['getCurrentPageId'] === 'function'
-}
-
-/**
- * Design Graph of the current page of a live editor, of a stored editor snapshot
- * (`getSnapshot(editor.store)`, the Design Scene format) or of a store snapshot.
- */
-export function exportDesignGraph(
-  source: Editor | TLEditorSnapshot | TLStoreSnapshot
-): DesignGraph {
-  if (isEditor(source)) {
-    const editor = source
-    return buildDesignGraph(editor.store.allRecords(), editor.getCurrentPageId(), {
-      pageBounds: (id) => editor.getShapePageBounds(id as TLShapeId)
-    })
-  }
-  const store: unknown = 'document' in source ? source.document.store : source.store
-  const session: unknown = 'session' in source ? source.session : undefined
-  const records = Object.values(isObject(store) ? store : {}) as SceneRecord[]
-  const currentPageId = isObject(session) ? session['currentPageId'] : undefined
-  return buildDesignGraph(records, snapshotPageId(records, currentPageId))
+  // The contract is the shared schema: fail here, not in the main process, if the mapping drifts.
+  return designGraphSchema.parse(graph)
 }

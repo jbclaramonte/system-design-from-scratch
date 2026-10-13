@@ -11,7 +11,7 @@ Local SQLite database of the app, owned by the Electron main process. Table name
 - Driver: built-in `node:sqlite` (ships with the Node embedded in Electron, no native module), wrapped by the `Database` interface in `src/main/db/driver.ts`.
 - Pragmas: `journal_mode = WAL`, `foreign_keys = ON`, `busy_timeout = 5000`.
 - All tables are `STRICT`. Booleans are `INTEGER` 0/1. Timestamps are ISO 8601 UTC strings with milliseconds (`2026-01-01T10:00:00.000Z`); every table has `created_at` and `updated_at`.
-- Structured content (question bodies, answers, feedback, tldraw snapshots, cached content, settings values) is JSON text, checked with `json_valid`.
+- Structured content (question bodies, answers, feedback, Design Scenes, cached content, settings values) is JSON text, checked with `json_valid`.
 
 ## Migrations
 
@@ -150,7 +150,7 @@ erDiagram
   design_scenes {
     int id PK
     int design_exercise_id FK
-    text snapshot "tldraw JSON"
+    text snapshot "Design Scene JSON"
   }
   design_feedback {
     int id PK
@@ -220,7 +220,7 @@ Generated rows carry `grounded` and `source_sections` ([[Grounding]]) and an opt
 ### Design practice
 
 - `design_exercises`: [[Design Exercise]] catalogue in path order. A grounded exercise must have a `reference_solution_section` ([[Reference Solution]]). Rows of the shipped exercises are inserted at startup, never updated (`seedDesignExercises`, see [[Design Exercises]]); dev fixtures (`dev-...` slugs) are separate rows.
-- `design_scenes`: the [[Design Canvas]] tldraw snapshot of an exercise, one per exercise, overwritten on save.
+- `design_scenes`: the [[Design Scene]] of an exercise (the React Flow nodes, edges and viewport as versioned JSON, see [[Design Canvas Integration#Design Scene format]]), one per exercise, overwritten on save. Rows written before issue #43 hold a tldraw snapshot instead; the renderer converts them on load and the autosave replaces them after the first edit ([[Design Canvas Integration#Legacy tldraw scenes]]). No migration: the column is only checked with `json_valid`, and the main process only checks that the value is a JSON object.
 - `design_exercises.problem_statement`: what the learner is asked to design; null falls back on the [[Reference Solution]] title.
 - `design_feedback`: LLM output on a design exercise. `kind` is `step_feedback` or `hint` (both with a [[Protocol Step]]: `functional_requirements`, `non_functional_requirements`, `estimations`, `api`, `data_model`, `high_level_design`, `deep_dive`) or `final_review` (no step). `content` is `{ submissionId, promptVersion, feedback }`, `{ level, promptVersion, hint }` (the Hint log: the next level is the count + 1, at most 3 per step and exercise) or `{ submissionIds, promptVersion, review }`. `grounded` is true when the exercise has a Reference Solution. See [[Hint]] and [[Interview Protocol Implementation]].
 - `protocol_step_submissions`: every submission of a Protocol Step. `number` counts per exercise and step (failed ones included). `status` is `pending` (Generation running), `reviewed` (with `design_feedback_id`, the step feedback) or `failed` (Generation failed or cancelled; pending rows left by an app quit become `failed` at startup). `content` is the text, or the [[Design Graph]] with its text description, the notes and `withPng` (the PNG itself is not stored).

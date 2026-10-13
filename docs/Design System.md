@@ -136,7 +136,7 @@ To add a screen: add it to the `Screen` union, give it a nav item and a layout i
 
 ## Design Canvas component colors
 
-The component shapes of the Design Canvas (`design/componentTypes.ts`, `COMPONENT_LOOKS` and the dark palette) keep their colors as data: they are the semantic hues of the Design Export (the LLM reads the type from the color too), not theme tokens. The live canvas uses the dark palette (stroke one step lighter than the light stroke, over a deep tint of the same hue); exports use the light one.
+The component nodes of the Design Canvas (`design/componentTypes.ts`, `COMPONENT_LOOKS` and the dark palette) keep their colors as data: they are the semantic hues of the Design Export (the LLM reads the type from the color too), not theme tokens. The live canvas uses the dark palette (stroke one step lighter than the light stroke, over a deep tint of the same hue); exports use the light one.
 
 | Type | Light fill | Light stroke | Dark fill | Dark stroke |
 |---|---|---|---|---|
@@ -153,5 +153,5 @@ Labels: `#1d1d1d` on a light fill, the `text-primary` token on the dark canvas. 
 ## Third-party content on a dark app
 
 - Mermaid ([[Mermaid Diagrams]]): themed for dark (`markdown/mermaidTheme.ts`, mermaid `base` theme with variables from the token values, checked against `design-tokens.css` by a unit test). Diagrams sit on a layer 1 card with the dotted grid.
-- tldraw ([[Design Canvas Integration]]): dark (`colorScheme="dark"`), typed shapes recolored through `componentColors(type, mode)`. The export (PNG and SVG) stays light and opaque on purpose so the LLM reads it reliably.
-- Design Export PNG stays light on white by design (`exportDesignPng.ts`), independent of the app theme.
+- React Flow ([[Design Canvas Integration]]): `colorMode="dark"` on the design tokens (`flowCanvas.css` maps React Flow's `--xy-*` variables to tokens, edges, notes and groups use `FLOW_PALETTES.dark` with `var(--token)` colors), typed components recolored through `componentColors(type, mode)`. Nothing a node draws takes its color from the stylesheet: the PNG draws the same nodes in the light mode.
+- Design Export PNG stays light on opaque white by design (`export/exportDesignPng.tsx`), independent of the app theme.

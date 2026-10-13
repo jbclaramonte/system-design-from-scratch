@@ -13,18 +13,18 @@ graph-version: 1
 2. a compact **text description** of that graph, put into the prompt next to the JSON;
 3. a **PNG capture** of the [[Design Canvas]] page.
 
-Background: [[Design Canvas Integration]], [[tldraw|tldraw spike]] (section 4, gotchas).
+Background: [[Design Canvas Integration]], [[react-flow|React Flow spike]]. Before issue #43 the export read tldraw records ([[tldraw|tldraw spike]]); the contract below did not change.
 
 ## Code
 
 | Path | Role |
 |---|---|
-| `src/shared/designGraph.ts` | Component type list (the shape catalogue), zod schemas and types: `designGraphSchema`, `designPngSchema`, `designExportSchema`, `DesignExportSummary`. No tldraw import (the main process uses it too). |
-| `src/renderer/src/design/export/exportDesignGraph.ts` | `exportDesignGraph(editor \| editorSnapshot \| storeSnapshot)`, and the pure `buildDesignGraph(records, pageId, options)` behind it. |
+| `src/shared/designGraph.ts` | Component type list (the catalogue), zod schemas and types: `designGraphSchema`, `designPngSchema`, `designExportSchema`, `DesignExportSummary`. No renderer import (the main process uses it too). |
+| `src/renderer/src/design/export/exportDesignGraph.ts` | `exportDesignGraph(scene)`: Design Graph straight from the nodes and edges of a Design Scene (the live canvas gives it through `FlowCanvasHandle.getScene()`, a stored scene works as well). Pure: no React, no DOM, no React Flow import. |
 | `src/renderer/src/design/export/describeDesignGraph.ts` | `describeDesignGraph(graph)`: the text description. |
-| `src/renderer/src/design/export/exportDesignPng.ts` | `exportDesignPng(editor, { maxSide })`: PNG as base64. |
-| `src/renderer/src/design/export/index.ts` | `exportDesign(editor, designExerciseId)`: all three, ready for IPC. |
-| `src/renderer/src/design/export/fixtureScenes.ts` | Hand-built tldraw records for the tests. |
+| `src/renderer/src/design/export/exportDesignPng.tsx` | `exportDesignPng(scene)`: PNG as base64, drawn by an off-screen light canvas and captured with `html-to-image`. |
+| `src/renderer/src/design/export/pngLayout.ts`, `pngEncoding.ts` | Pure framing and pixel ratio of the capture, size clamp and base64 helpers. |
+| `src/renderer/src/design/export/index.ts` | `exportDesign(scene, designExerciseId)`: all three, ready for IPC. |
 | `src/main/ipc/design.ts` | `exportScene`: handler of `design:exportScene`. |
 | `src/renderer/src/dev/DesignExportDevPanel.tsx` | Dev panel on the "Design canvas (dev)" screen: Export button, summary from the main process, description, PNG preview, JSON. |
 
@@ -34,51 +34,53 @@ Background: [[Design Canvas Integration]], [[tldraw|tldraw spike]] (section 4, g
 interface DesignGraph {
   version: 1
   nodes: Array<{
-    id: string                 // tldraw shape id, stable for a scene
+    id: string                 // node id of the Design Scene, stable for a scene
     componentType: 'client' | 'cdn' | 'load-balancer' | 'service' | 'cache' | 'database' | 'queue'
-    label: string              // the text inside the shape, trimmed ('' when empty)
-    position?: { x: number; y: number }  // page coordinates, top-left, rounded
+    label: string              // the text inside the node, trimmed ('' when empty)
+    position?: { x: number; y: number }  // canvas coordinates, top-left, rounded
     size?: { w: number; h: number }
   }>
-  edges: Array<{               // arrows bound to a node at both ends
+  edges: Array<{               // connections between two components
     id: string
-    from: string               // node id at the arrow tail (start binding)
-    to: string                 // node id at the arrow head (end binding)
+    from: string               // component id at the tail (`source` of the edge)
+    to: string                 // component id at the head (`target` of the edge)
     label: string
-    direction: 'forward' | 'backward' | 'both' | 'none'  // from the arrowheads
+    direction: 'forward' | 'backward' | 'both' | 'none'  // stored on the edge
   }>
-  annotations: Array<{         // any other shape with text: text, note, labelled geo box...
+  annotations: Array<{         // any other node with text: the notes of the canvas
     id: string
-    kind: string               // tldraw shape type ('text', 'note', 'geo'...)
+    kind: string               // node type: 'note' (a free string, older exports had 'text', 'geo'...)
     text: string
     position?: { x: number; y: number }
-    nearestNodeId: string | null  // closest node within 200 page units
+    nearestNodeId: string | null  // closest component within 200 canvas units
   }>
-  danglingArrows: Array<{      // arrows not bound to a node at one end or both
+  danglingArrows: Array<{      // connections without a component at one end or both
     id: string
     from: string | null
     to: string | null
     label: string
   }>
-  groups: Array<{              // tldraw frames and groups
+  groups: Array<{              // the groups of the canvas
     id: string
-    kind: 'frame' | 'group'
-    label: string              // frame name, '' for a group
-    memberIds: string[]        // nodes and annotations inside, at any depth
+    kind: 'frame' | 'group'   // always 'frame' on the React Flow canvas ('group' stays valid)
+    label: string              // group title
+    memberIds: string[]        // components and annotations inside, at any depth
   }>
 }
 ```
 
 The zod schema also checks that ids are unique, that every edge, dangling arrow end, `nearestNodeId` and group member points at an existing node (or annotation, for group members), and that a dangling arrow really lacks a node at one end.
 
+**Version stays 1.** Moving from tldraw to React Flow changed no field: the node ids are now the ids of the scene (`n-xxxxxxxx`, or `shape:xxxx` for a converted tldraw scene), annotations are `note`, groups are `frame`, and `kind` was already a free string. Tests and prompts elsewhere keep their `shape:` ids as plain strings. If a field ever changes, bump `DESIGN_GRAPH_VERSION` with the zod schema and this note.
+
 ## Rules
 
-- **Connections come from binding records only.** A bound arrow's `props.start` / `props.end` go stale once a shape moves (spike, gotcha 1), so they are never read. The `start` binding gives `from`, the `end` binding gives `to`.
-- **Only catalogue shapes are nodes.** An arrow bound to an annotation, to another arrow, to a deleted shape, or not bound at all is a dangling arrow, with `null` for the end that has no node. Dangling arrows are reported, never turned into edges, so the evaluation can flag them.
-- **Annotations**: every non-component, non-arrow, non-frame shape that carries text (`text`, rich text or a frame name). Shapes without text (freehand strokes, empty boxes) are left out: there is nothing to read. The nearest node is measured from the centre of the shape's page bounds as the editor measures them; from a stored snapshot (no editor), from its props (text shapes store no height, so their top-left corner is used; notes use tldraw's 200 x 200 size).
-- **Positions** are page coordinates: parent offsets of frames and groups are summed. Rotation is ignored.
-- **Page**: the current page of the editor, or the session's current page of a snapshot (else the first page).
-- **Deterministic**: the same scene always gives the same JSON. Nodes, annotations and groups are sorted top to bottom, left to right, then by id; edges by the order of their `from` node, then `to` node, label and id; dangling arrows likewise; positions are rounded (never `-0`). Ids are the tldraw shape ids, so a Design Feedback can point back at a shape.
+- **Connections are the edges of the scene.** `source` is `from`, `target` is `to`; there are no binding records to chase and no stale endpoints.
+- **Only component nodes are nodes.** A connection to a note (or to a node that is not in the scene) is a dangling arrow, with `null` for the end that has no component. Dangling arrows are reported, never turned into edges, so the evaluation can flag them. The React Flow canvas has no free-floating arrow, so this only happens with a note.
+- **Annotations**: the notes with text. A note without text carries nothing to read and is left out (new notes start empty). The nearest component is measured from the center of the note to the rectangle of each component, within 200 units (`NEAREST_NODE_MAX_DISTANCE`); sizes are always stored.
+- **Positions** are canvas coordinates: parent offsets of groups are summed (a node is stored relative to its group). Rounded, never `-0`.
+- **Deterministic**: the same scene always gives the same JSON, in any array order. Nodes, annotations and groups are sorted top to bottom, left to right, then by id; edges by the order of their `from` node, then `to` node, label and id; dangling arrows likewise. Ids are the node ids, so a Design Feedback can point back at a node.
+- The result is parsed with `designGraphSchema` before it leaves the renderer: if the mapping ever drifts, it fails there and not in the main process.
 
 ## Text description
 
@@ -91,10 +93,13 @@ The zod schema also checks that ids are unique, that every edge, dangling arrow 
 
 ## PNG
 
-- The shapes of the current page, through tldraw's `editor.toImage` (format `png`, light mode, no background, fixed 32 px padding), then flattened on an **opaque white** background on an `OffscreenCanvas`.
-- **Longest side at most 1568 px** (`DESIGN_PNG_MAX_SIDE`). Claude downscales images whose long edge is over 1568 px, so a larger image only costs bytes and tokens. Small scenes render at a 2x pixel ratio for sharp text; large ones at the ratio that lands near 1568 px, so no huge intermediate canvas is built; the final draw clamps to the limit in any case (arrowheads or labels can overflow the shape bounds).
-- Encoded as plain base64 (no `data:` prefix) with its width and height. `null` for an empty page (tldraw cannot rasterize nothing).
-- The tldraw dev watermark is not part of exports (spike, section 1).
+- Drawn by a **second, off-screen React Flow in the `light` mode** (dark strokes on white), not by the live canvas: the dark theme cannot leak into the image, the live canvas does not flash, and it works from a scene without the editor being mounted. Captured with `html-to-image` (`toCanvas`), then flattened on an **opaque white** background.
+- Fixed 32 px padding, so the same scene gives the same framing. React Flow's own panels (attribution, controls) are left out of the capture.
+- **Longest side at most 1568 px** (`DESIGN_PNG_MAX_SIDE`). Claude downscales images whose long edge is over 1568 px, so a larger image only costs bytes and tokens. Small scenes render at a 2x pixel ratio for sharp text; large ones at the ratio that lands near 1568 px; the final draw clamps to the limit in any case (`fitWithin`). A very wide scene shrinks to small text, as it did with tldraw.
+- Nothing a node draws may take its color from the stylesheet ([[Design Canvas Integration#Visual design]]): the capture would resolve it in the dark theme.
+- Encoded as plain base64 (no `data:` prefix) with its width and height. `null` for an empty scene.
+- The export waits for the off-screen canvas to be measured and painted. A hidden window never paints, so it fails after 10 s with "PNG export timed out: is the window visible?".
+- Needs no network: the page fonts are embedded as `data:` URLs and the SVG image is a `data:` URL, covered by `font-src` and `img-src` (CSP `connect-src 'self'`).
 
 ## IPC: `design:exportScene`
 
@@ -102,47 +107,50 @@ The zod schema also checks that ids are unique, that every edge, dangling arrow 
 
 ## Example
 
-The design drawn during the in-app check below, ids shortened:
+A trimmed Design Graph of the architecture drawn for the in-app check below (ids shortened, four of the seven components):
 
 ```json
 {
   "version": 1,
   "nodes": [
-    { "id": "shape:client", "componentType": "client", "label": "Client",
-      "position": { "x": 45, "y": 97 }, "size": { "w": 160, "h": 100 } },
-    { "id": "shape:lb", "componentType": "load-balancer", "label": "Load balancer",
-      "position": { "x": 375, "y": 102 }, "size": { "w": 160, "h": 90 } },
-    { "id": "shape:svc", "componentType": "service", "label": "Service",
-      "position": { "x": 375, "y": 322 }, "size": { "w": 160, "h": 90 } },
-    { "id": "shape:db", "componentType": "database", "label": "Users DB",
-      "position": { "x": 375, "y": 532 }, "size": { "w": 160, "h": 110 } }
+    { "id": "client", "componentType": "client", "label": "Client",
+      "position": { "x": 0, "y": 100 }, "size": { "w": 160, "h": 90 } },
+    { "id": "lb", "componentType": "load-balancer", "label": "Load balancer",
+      "position": { "x": 200, "y": 100 }, "size": { "w": 160, "h": 90 } },
+    { "id": "a", "componentType": "service", "label": "Auth service",
+      "position": { "x": 420, "y": 60 }, "size": { "w": 160, "h": 90 } },
+    { "id": "db", "componentType": "database", "label": "Users DB",
+      "position": { "x": 860, "y": 120 }, "size": { "w": 160, "h": 110 } },
+    { "id": "cache", "componentType": "cache", "label": "Cache",
+      "position": { "x": 860, "y": 300 }, "size": { "w": 160, "h": 90 } }
   ],
   "edges": [
-    { "id": "shape:a1", "from": "shape:client", "to": "shape:lb", "label": "", "direction": "forward" },
-    { "id": "shape:a2", "from": "shape:lb", "to": "shape:svc", "label": "", "direction": "forward" },
-    { "id": "shape:a3", "from": "shape:svc", "to": "shape:db", "label": "", "direction": "forward" }
+    { "id": "e1", "from": "client", "to": "lb", "label": "HTTPS", "direction": "forward" },
+    { "id": "e2", "from": "lb", "to": "a", "label": "", "direction": "forward" },
+    { "id": "e4", "from": "a", "to": "db", "label": "SQL", "direction": "both" }
   ],
   "annotations": [
-    { "id": "shape:t1", "kind": "text", "text": "Primary only, no replica yet",
-      "position": { "x": 185, "y": 581 }, "nearestNodeId": "shape:db" }
+    { "id": "n", "kind": "note", "text": "Reads are ~100x writes",
+      "position": { "x": 700, "y": 420 }, "nearestNodeId": "cache" }
   ],
-  "danglingArrows": [
-    { "id": "shape:a4", "from": "shape:svc", "to": null, "label": "" }
-  ],
-  "groups": []
+  "danglingArrows": [],
+  "groups": [{ "id": "g", "kind": "frame", "label": "Backend", "memberIds": ["a"] }]
 }
 ```
 
-Its text description:
+The text description of the full seven-component architecture of that check:
 
 ```text
-Components (4): Client, Load balancer, Service, Users DB (database)
+Components (7): Auth service (service), Client, Load balancer, Users DB (database), Order service (service), Cache, Jobs (queue)
 Connections:
-- Client -> Load balancer -> Service -> Users DB
-Arrows not connected at both ends:
-- Service -> (nothing)
+- Auth service <-[SQL]-> Users DB
+- Client -[HTTPS]-> Load balancer -> Auth service, Order service
+- Order service <- Cache
+- Order service -[enqueue]- Jobs
 Notes:
-- "Primary only, no replica yet" (near Users DB)
+- "Reads are ~100x writes" (near Cache)
+Groups:
+- frame "Backend": Auth service, Order service
 ```
 
 A branching scene (from the tests) reads:
@@ -156,11 +164,11 @@ Notes:
 - "Single region for now"
 ```
 
-## Verification (2026-10-09)
+## Verification
 
-- Unit tests (Vitest, fixture scenes in `fixtureScenes.ts`): chain, branching, stale arrow props, arrow bound at one end, arrows bound to an annotation, to another arrow or to a deleted shape, annotations (text, note, labelled geo; unlabelled shapes left out), frames, page filter, arrowhead directions, empty scene, determinism (two exports, reversed and cloned input give the same JSON), snapshot and editor inputs, schema rejections, PNG size and base64 helpers, main-side handler.
-- In the app (dev server, Chrome DevTools protocol, scratch `--user-data-dir`): 4 palette shapes, 3 arrows drawn with the arrow tool, 1 arrow with a free end, a renamed label and a text note, all with real mouse and keyboard input. The export JSON matched the drawing; the main process answered 4 nodes, 3 edges, 1 annotation, 1 dangling arrow, PNG about 90 kB; the PNG preview showed the scene on white (1108 x 1218). After dragging the Service shape, the bound arrows followed and the export still had the same 3 edges; two exports in a row gave identical JSON, description and PNG.
-- Not checked in the app: frames and groups, an empty page (PNG `null`), a scene large enough to hit the 1568 px clamp (covered by the `fitWithin` unit test only), a packaged build.
+- Unit tests (Vitest): `export/exportDesignGraph.test.ts` (chain, branching, annotations with nearest component, empty notes left out, groups and offsets, dangling edges to a note or to an unknown node, self loop and parallel edges, directions, empty scene, determinism across array order, rounding and `-0`), `describeDesignGraph.test.ts`, `pngLayout.test.ts`, `pngEncoding.test.ts`, the schema tests in `src/shared/designGraph.test.ts` and the main-side handler. The fixtures of the old tldraw tests were ported to scene fixtures (`flow/sceneFixtures.ts`), and also feed the converter tests (`legacy/tldrawFixtures.ts`).
+- In the app (issue #43, dev server and packaged app, scratch `--user-data-dir`, real mouse and keyboard): the dev panel exported the seven-component architecture (main process answered 7 nodes, 6 edges, 1 annotation, 0 dangling arrows, 1 group, PNG about 80 kB, 1568 x 844, readable text, arrowheads on the right ends, group border dashed, opaque white). A step submitted from exercise 1 reached the model call with the graph, description and notes; the PNG read from the CLI input was light and opaque, in the dev build and in the packaged `file://` app.
+- Not checked: an empty canvas through the UI (the `null` PNG is covered by the unit tests and by the main-side schema), a scene wide enough to hit the 1568 px clamp in the browser (covered by `fitWithin` and the layout tests), the hidden-window timeout.
 
 ## Related
 

@@ -2,9 +2,8 @@ import { componentColors, loadBalancerPoints, type ComponentType } from '../comp
 import type { FlowMode } from './flowTheme'
 
 /**
- * SVG body of a component node, one drawing per type. Same drawings as the tldraw shapes
- * (`componentShapes.tsx`, which cannot be imported without tldraw): the spike copies them, the
- * migration (#43) deletes the tldraw copy.
+ * SVG body of a component node, one drawing per type, in the colors of the mode (`dark` live,
+ * `light` for the Design Export).
  */
 export function ComponentBody({
   type,

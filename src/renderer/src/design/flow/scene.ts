@@ -1,5 +1,5 @@
 /**
- * Design Scene format of the React Flow canvas (spike #42): what goes into
+ * Design Scene format of the React Flow canvas: what goes into
  * `design_scenes.snapshot`. Plain JSON, validated with zod on every read, no React Flow import:
  * the editor state (selection, measured sizes, drag flags, arrow markers) is derived, never stored.
  *

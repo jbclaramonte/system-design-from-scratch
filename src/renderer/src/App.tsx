@@ -6,7 +6,6 @@ import { DashboardScreen } from './dashboard/DashboardScreen'
 import { ProtocolDevScreen } from './design/protocol/ProtocolDevScreen'
 import { ProtocolExerciseScreen } from './design/protocol/ProtocolExerciseScreen'
 import { DesignCanvasDevScreen } from './dev/DesignCanvasDevScreen'
-import { FlowCanvasDevScreen } from './dev/FlowCanvasDevScreen'
 import { DiagramDevScreen } from './dev/DiagramDevScreen'
 import { GenerationDevPanel } from './dev/GenerationDevPanel'
 import { LessonView } from './lesson/LessonView'
@@ -50,12 +49,6 @@ function DevSection({
             onClick={() => open({ name: 'dev-design-canvas' })}
           >
             Design canvas (dev)
-          </button>
-          <button
-            data-testid="open-flow-canvas-dev"
-            onClick={() => open({ name: 'dev-flow-canvas' })}
-          >
-            Flow canvas (dev)
           </button>
           <button
             data-testid="open-design-exercise-dev"
@@ -189,9 +182,6 @@ function AppScreen({
       break
     case 'dev-design-canvas':
       if (import.meta.env.DEV) return <DesignCanvasDevScreen onClose={home} />
-      break
-    case 'dev-flow-canvas':
-      if (import.meta.env.DEV) return <FlowCanvasDevScreen onClose={home} />
       break
     case 'dev-design-exercise':
       if (import.meta.env.DEV) return <ProtocolDevScreen onClose={home} />

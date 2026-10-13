@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 
 /**
  * Plain-text label that turns into a field on double-click. Enter commits (Cmd/Ctrl+Enter in a
- * multi-line field), Escape cancels, leaving the field commits. React Flow has no text editing:
- * this is the part tldraw gives for free (`PlainTextLabel`).
+ * multi-line field), Escape cancels, leaving the field commits. React Flow has no text editing,
+ * so the canvas brings its own.
  */
 export function EditableText({
   value,

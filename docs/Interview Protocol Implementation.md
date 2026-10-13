@@ -141,7 +141,7 @@ So `runCli` switches to `--input-format stream-json` when a request has `images`
 
 `src/renderer/src/design/protocol/`:
 
-- `ProtocolExerciseScreen.tsx`: problem statement, step list in canonical order (locked steps disabled with "Locked: unlocks at exercise N"), the selected step's panel, the Design Canvas next to the panel for graph steps (one Design Scene for both graph steps), the final review panel with the Reference Solution link (primer permalink, CC BY 4.0).
+- `ProtocolExerciseScreen.tsx`: problem statement, step list in canonical order (locked steps disabled with "Locked: unlocks at exercise N"), the selected step's panel, the Design Canvas next to the panel for graph steps (one Design Scene for both graph steps; a step submission exports the live scene with `exportDesign(canvas.getScene(), id)`: Design Graph, description and PNG, see [[Design Export]]), the final review panel with the Reference Solution link (primer permalink, CC BY 4.0).
 - Step panel: the streamed Protocol Step Lesson on first encounter ("Got it, start the step" records it; "Why it matters" reopens it from the cache), the editor (textarea, draft autosave), "Submit for feedback" and "Hint n/3" with pending, Cancel and typed errors (`useProtocolCall`), the Hints given, the feedback history (latest open).
 - `ProtocolDevScreen.tsx`: entry "Design exercise (dev)" in the developer tools of the home screen, opens the fixture (the primer's Pastebin (or Bit.ly) solution, a deliberately short problem statement) playing exercise 1 to 5. The real [[Design Exercises]] open from the [[Learning Path]] (#15), with the same screen.
 
