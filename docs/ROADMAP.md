@@ -84,7 +84,19 @@ gantt
     #42 React Flow spike                      :done, m1, 2026-10-13, 2d
     #43 Replace tldraw by React Flow          :done, m2, after m1, 4d
     #44 Remove tldraw, first release          :done, m3, after m2, 1d
-    #45 macOS signature, install script       :active, m4, after m3, 1d
+    #45 macOS signature, install script       :done, m4, after m3, 1d
+
+    section Design exercises 3 to 8
+    #46 Exercise 3, query cache               :e3, 2026-10-15, 2d
+    #47 Exercise 4, web crawler               :e4, after e3, 2d
+    #48 Exercise 5, social graph              :e5, after e4, 2d
+    #49 Exercise 6, sales rank                :e6, after e5, 2d
+    #50 Exercise 7, Mint                      :e7, after e6, 2d
+    #51 Exercise 8, scaling on AWS            :e8, after e7, 2d
+
+    section Learning aids
+    #52 Ask about a selected Lesson passage   :a1, 2026-10-15, 3d
+    #53 Reformulate a Quiz question           :a2, after a1, 2d
 ```
 
 ## Dependency table
@@ -136,6 +148,14 @@ gantt
 | #43 | #42 |
 | #44 | #41, #43 |
 | #45 | #41 |
+| #46 | #15 |
+| #47 | #46 |
+| #48 | #47 |
+| #49 | #48 |
+| #50 | #49 |
+| #51 | #50 |
+| #52 | #6, #7, #8, #32, #35 |
+| #53 | #7, #9, #33 |
 
 ## Conventions
 
