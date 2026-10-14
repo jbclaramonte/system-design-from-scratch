@@ -9,9 +9,12 @@
 //   - app.asar holds the runtime files and none of the files that must never ship (.env*, src,
 //     docs, spikes, screenshots, scripts, .github, tests, node_modules);
 //   - the main and preload bundles do not require a package that the app does not contain;
+//   - on macOS, the bundle signature is valid (`codesign --verify --deep --strict`): an invalid seal
+//     makes a downloaded copy open as "damaged" (docs/Packaging.md);
 //   - the disk image (.dmg) or the AppImage and the .deb exist next to the app.
 // `--app-only` skips that last check (npm run package:dir, npm run package:linux:dir). See
 // docs/Packaging.md.
+import { execFileSync } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { builtinModules } from 'node:module'
 import { join, resolve } from 'node:path'
@@ -27,6 +30,19 @@ if (platform !== 'mac' && platform !== 'linux') {
 }
 const failures = []
 const fail = (message) => failures.push(message)
+
+/** The ad-hoc signature must cover the whole bundle, resources included. */
+function checkMacSignature(appPath) {
+  try {
+    execFileSync('codesign', ['--verify', '--deep', '--strict', appPath], { stdio: 'pipe' })
+  } catch (error) {
+    const detail = String(error.stderr ?? error.message)
+      .trim()
+      .split('\n')
+      .pop()
+    fail(`the app signature is not valid (${detail}); a downloaded copy would open as "damaged"`)
+  }
+}
 
 /** Reads the file tree of an asar archive (header only, no extraction): a list of "/a/b" paths. */
 function listAsar(asarPath) {
@@ -76,6 +92,7 @@ if (!app) {
 }
 console.log(`check-package: ${platform}: ${app.path}`)
 const resources = app.resources
+if (platform === 'mac') checkMacSignature(app.path)
 
 if (platform === 'linux') {
   // The Electron executable (the only executable over 50 MB at the top level) and its sandbox helper.

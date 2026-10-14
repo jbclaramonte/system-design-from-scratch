@@ -8,13 +8,24 @@ for the product spec, roadmap and glossary.
 
 ## Download
 
-Packaged apps are attached to each [GitHub Release](https://github.com/jbclaramonte/system-design-from-scratch/releases/latest). Personal use: unsigned, not notarized, no auto-update. Each release also has a `SHA256SUMS` file.
+Packaged apps are attached to each [GitHub Release](https://github.com/jbclaramonte/system-design-from-scratch/releases/latest). Personal use: not notarized (macOS signature is ad hoc, no Developer ID), no auto-update. Each release also has a `SHA256SUMS` file.
 
-| Platform                    | File                                                   | Install                                                                                                                                                                                          |
-| --------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| macOS (Apple Silicon)       | `system-design-from-scratch-<version>-arm64.dmg`       | Open the dmg and drag the app onto Applications. The download is quarantined: right-click the app, **Open**, or `xattr -dr com.apple.quarantine "/Applications/System Design from Scratch.app"`. |
-| Linux x64, Debian or Ubuntu | `system-design-from-scratch-<version>-amd64.deb`       | `sudo apt install ./system-design-from-scratch-<version>-amd64.deb`                                                                                                                              |
-| Linux x64, any distribution | `system-design-from-scratch-<version>-x86_64.AppImage` | `chmod +x` the file and run it. Needs FUSE 2 (see [Linux](#linux-x64)).                                                                                                                          |
+**macOS (Apple Silicon)**, one command, no Gatekeeper dialog:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/jbclaramonte/system-design-from-scratch/main/install.sh | bash
+```
+
+It downloads the latest `.dmg` with `curl`, checks its checksum, and copies the app to
+`/Applications` (run it again to update; `VERSION=v0.1.1` picks a release, `INSTALL_DIR=$HOME/Applications`
+another folder). `curl` leaves no quarantine attribute on the file, which is why macOS opens the app
+without asking. Read [install.sh](install.sh) before piping it to a shell.
+
+| Platform                    | File                                                   | Manual install                                                                                                                                                                                                                                                                     |
+| --------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| macOS (Apple Silicon)       | `system-design-from-scratch-<version>-arm64.dmg`       | Open the dmg, drag the app onto Applications. A browser download is quarantined and macOS blocks it once: open **System Settings > Privacy & Security**, **Open Anyway**. Or `/usr/bin/xattr -dr com.apple.quarantine "/Applications/System Design from Scratch.app"` (full path). |
+| Linux x64, Debian or Ubuntu | `system-design-from-scratch-<version>-amd64.deb`       | `sudo apt install ./system-design-from-scratch-<version>-amd64.deb`                                                                                                                                                                                                                |
+| Linux x64, any distribution | `system-design-from-scratch-<version>-x86_64.AppImage` | `chmod +x` the file and run it. Needs FUSE 2 (see [Linux](#linux-x64)).                                                                                                                                                                                                            |
 
 The [Claude Code CLI](#claude-code-cli) must be installed and logged in: the app drives it for every
 generation. There is no Windows build. Releases are cut by pushing a `v*` tag, see
@@ -182,9 +193,10 @@ similar ended up in the app. The first `.dmg` build downloads electron-builder's
   `dist/system-design-from-scratch-<version>-arm64.dmg` (about 130 MB). `npm run package:dir` skips
   the `.dmg`.
 - Install: open the `.dmg` and drag the app onto Applications, or copy the `.app` to
-  `/Applications`. A build made on this machine opens normally. A copy downloaded or sent to
-  another Mac is quarantined: right-click, **Open**, or
-  `xattr -dr com.apple.quarantine "/Applications/System Design from Scratch.app"`.
+  `/Applications`. A build made on this machine opens normally. A copy downloaded in a browser or
+  sent to another Mac is quarantined: see [Download](#download) (install script, **Open Anyway**,
+  or `/usr/bin/xattr -dr ...`). The app is signed ad hoc (`identity: "-"`) and the guard script
+  verifies the signature.
 - Data: the packaged app uses the same folder as `npm run dev`,
   `~/Library/Application Support/system-design-from-scratch/` (database, caches), so existing data
   is reused. The Claude Code CLI is still required (see [Claude Code CLI](#claude-code-cli)).

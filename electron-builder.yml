@@ -27,10 +27,14 @@ mac:
       arch: arm64
   category: public.app-category.education
   icon: build/icon.icns
-  # Unsigned, not notarized, personal use. Chromium LICENSES.chromium.html and Electron LICENSE
-  # live next to the Electron.app in node_modules/electron/dist and are not part of the .app:
-  # they are copied into Contents/Resources (the guard script requires them).
-  identity: null
+  # Signed ad hoc ("-", no certificate), not notarized: personal use. The whole bundle is sealed
+  # after electron-builder has added app.asar and edited Info.plist; Electron's own ad-hoc seal
+  # no longer matches the edited bundle, and a copy with the quarantine attribute (browser
+  # download) then opens as "damaged" (scripts/check-package.mjs verifies the signature).
+  # Chromium LICENSES.chromium.html and Electron LICENSE live next to the Electron.app in
+  # node_modules/electron/dist and are not part of the .app: they are copied into
+  # Contents/Resources (the guard script requires them).
+  identity: '-'
   hardenedRuntime: false
   extraResources:
     - from: node_modules/electron/dist/LICENSE
