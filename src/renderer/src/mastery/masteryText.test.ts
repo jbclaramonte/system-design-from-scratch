@@ -4,6 +4,7 @@ import {
   attemptsStat,
   firstRemediationIndex,
   masteryChip,
+  declareConfirmation,
   roundPreparation,
   roundProgress
 } from './masteryText'
@@ -19,10 +20,19 @@ const state = (changes: Partial<MasteryState>): MasteryState => ({
   masteryThreshold: 100,
   roundLimit: 3,
   lastRound: null,
+  declared: false,
+  canDeclare: true,
+  canUndoDeclaration: false,
   ...changes
 })
 
 describe('roundProgress', () => {
+  it('says a declared topic was declared, without a score', () => {
+    expect(roundProgress(state({ status: 'mastered', declared: true }))).toBe(
+      'Declared as already known, no score recorded · Mastery Threshold 100%'
+    )
+  })
+
   it('shows the round number and the attempt before the Round Limit', () => {
     expect(roundProgress(state({}))).toBe(
       'Round 1 · attempt 1 of 3 before the Round Limit · Mastery Threshold 100%'
@@ -112,5 +122,16 @@ describe('masteryChip', () => {
     for (const mastery of topicMasteries) expect(masteryChip[mastery]).toMatch(/^chip/)
     expect(masteryChip.mastered).toContain('chip-mastered')
     expect(masteryChip.limit_reached).toContain('chip-error')
+  })
+})
+
+describe('declareConfirmation', () => {
+  it('says what the declaration does', () => {
+    const text = declareConfirmation('Cache')
+    expect(text).toContain('Mark Cache as already known?')
+    expect(text).toContain('counts as mastered')
+    expect(text).toContain('next topic unlocks')
+    expect(text).toContain('no score is recorded')
+    expect(text).toContain('undo')
   })
 })

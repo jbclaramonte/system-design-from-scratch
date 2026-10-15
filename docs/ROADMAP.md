@@ -97,8 +97,8 @@ gantt
     section Learning aids
     #52 Ask about a selected Lesson passage   :done, a1, 2026-10-14, 1d
     #53 Reformulate a Quiz question           :done, a2, after a1, 1d
-    #54 Forced Unlock of Learning Path steps  :a3, 2026-10-15, 2d
-    #55 Declared Mastery, mark a topic known  :a4, after a3, 2d
+    #54 Forced Unlock of Learning Path steps  :done, a3, 2026-10-15, 2d
+    #55 Declared Mastery, mark a topic known  :done, a4, after a3, 2d
 ```
 
 ## Dependency table

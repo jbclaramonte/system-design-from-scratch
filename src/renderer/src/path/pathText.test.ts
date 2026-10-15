@@ -7,15 +7,21 @@ import type {
 } from '../../../shared/learningPath'
 import {
   actionLabel,
+  canDeclareTopic,
+  canForceUnlock,
+  canLockAgain,
   canOpenExercise,
   continueLabel,
   filteredSections,
+  forcedUnlockConfirmation,
+  forcedUnlockNote,
   lockMessage,
   noNextStepText,
   prerequisiteText,
   priorityDetails,
   progressText,
   sectionCounter,
+  showsForcedUnlock,
   statusLabel,
   statusNote,
   topicCounters
@@ -23,7 +29,8 @@ import {
 
 const topicStep = (
   status: LearningPathStepStatus,
-  lockedBy: TopicStep['lockedBy'] = null
+  lockedBy: TopicStep['lockedBy'] = null,
+  changes: Partial<TopicStep> = {}
 ): TopicStep => ({
   kind: 'topic',
   key: 'topic:cache',
@@ -36,10 +43,14 @@ const topicStep = (
     inFoundationsModule: false,
     grounded: true,
     notionCount: 0,
-    mastery: 'not_started'
+    mastery: 'not_started',
+    declared: false,
+    canUndoDeclaration: false
   },
   status,
-  lockedBy
+  lockedBy,
+  forcedUnlock: false,
+  ...changes
 })
 
 const exerciseStep = (
@@ -56,6 +67,7 @@ const exerciseStep = (
   prerequisites: missing,
   missingPrerequisites: missing,
   lockedByExercise: null,
+  forcedUnlock: false,
   rationale: 'Why.',
   ...changes
 })
@@ -225,5 +237,65 @@ describe('status texts', () => {
     withNotions.topic.notionCount = 5
     expect(priorityDetails(withNotions)).toEqual(['Primer topic', '5 notions'])
     expect(priorityDetails(exerciseStep([], { rationale: 'A cache.' }))).toEqual(['A cache.'])
+  })
+})
+
+describe('Forced Unlock', () => {
+  const cache = ref('Cache', 'in_progress')
+  const forcedTopic = (status: LearningPathStepStatus) =>
+    topicStep(status, cache, { forcedUnlock: true })
+
+  it('offers "Unlock anyway" on a locked step only', () => {
+    expect(canForceUnlock(topicStep('locked', cache))).toBe(true)
+    expect(canForceUnlock(exerciseStep([ref('DNS')], { status: 'locked' }))).toBe(true)
+    expect(canForceUnlock(topicStep('available'))).toBe(false)
+    expect(canForceUnlock(exerciseStep([ref('DNS')]))).toBe(false)
+  })
+
+  it('offers "Lock again" while the forced step has no progress', () => {
+    expect(canLockAgain(forcedTopic('available'))).toBe(true)
+    expect(canLockAgain(forcedTopic('in_progress'))).toBe(false)
+    expect(canLockAgain(topicStep('available'))).toBe(false)
+  })
+
+  it('marks an opened step, not a finished one', () => {
+    expect(showsForcedUnlock(forcedTopic('available'))).toBe(true)
+    expect(showsForcedUnlock(forcedTopic('in_progress'))).toBe(true)
+    expect(showsForcedUnlock(forcedTopic('mastered'))).toBe(false)
+    expect(showsForcedUnlock(topicStep('available'))).toBe(false)
+  })
+
+  it('says in the confirmation that the step opens without credit', () => {
+    expect(forcedUnlockConfirmation(topicStep('locked', cache))).toBe(
+      'Open Cache without credit? Cache will stay not mastered. Your progress does not change and the steps after it stay locked. You can lock it again until you start it.'
+    )
+    expect(
+      forcedUnlockConfirmation(
+        exerciseStep([ref('DNS'), ref('CDN')], {
+          status: 'locked',
+          lockedByExercise: { slug: 'pastebin', title: 'Pastebin' }
+        })
+      )
+    ).toContain('DNS, CDN and Pastebin will stay not mastered.')
+  })
+
+  it('names what an opened step skipped', () => {
+    expect(forcedUnlockNote(forcedTopic('available'))).toBe(
+      'Opened without credit: Cache not mastered.'
+    )
+    expect(forcedUnlockNote(exerciseStep([], { forcedUnlock: true }))).toBe(
+      'Opened without credit.'
+    )
+  })
+})
+
+describe('canDeclareTopic', () => {
+  it('offers "I already know this" on an open topic that is not mastered', () => {
+    for (const status of ['available', 'in_progress', 'skipped', 'limit_reached'] as const) {
+      expect(canDeclareTopic(topicStep(status))).toBe(true)
+    }
+    for (const status of ['locked', 'mastered'] as const) {
+      expect(canDeclareTopic(topicStep(status))).toBe(false)
+    }
   })
 })

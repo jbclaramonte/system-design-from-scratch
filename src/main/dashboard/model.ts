@@ -101,7 +101,8 @@ function notionCell(topic: TopicSnapshot, notion: NotionRef, threshold: number):
     attemptCount: attempts.length,
     lastPracticedAt: maxDate(attempts.map((attempt) => attempt.attemptedAt)),
     trend: notionTrend(scores),
-    mastered: latest !== null && meetsThreshold(latest, threshold)
+    mastered: latest !== null && meetsThreshold(latest, threshold),
+    declared: latest === null && topic.step.topic.declared
   }
 }
 
@@ -111,6 +112,7 @@ export function notionMapTopic(topic: TopicSnapshot, threshold: number): NotionM
     topicId: topic.step.topic.id,
     slug: topic.step.topic.slug,
     title: topic.step.topic.title,
+    declared: topic.step.topic.declared,
     notions: topic.notions.map((notion) => notionCell(topic, notion, threshold))
   }
 }
@@ -263,6 +265,7 @@ export function buildDashboard(
     roundLimit,
     overview: {
       masteredTopics,
+      declaredTopics: snapshot.topics.filter((topic) => topic.step.topic.declared).length,
       totalTopics,
       percent,
       roundsCompleted: rounds.filter((round) => round.completedAt !== null).length,

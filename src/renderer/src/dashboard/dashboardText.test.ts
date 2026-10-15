@@ -3,9 +3,11 @@ import type { DashboardTopic, NotionMapCell } from '../../../shared/dashboard'
 import type { TopicStep } from '../../../shared/learningPath'
 import {
   cellDescription,
+  cellScoreText,
   heatLegend,
   heatLevel,
   isEmptyDashboard,
+  masteredDetail,
   notionProgress,
   percentOrDash,
   practiceState,
@@ -28,6 +30,7 @@ const cell = (overrides: Partial<NotionMapCell> = {}): NotionMapCell => ({
   lastPracticedAt: null,
   trend: null,
   mastered: false,
+  declared: false,
   ...overrides
 })
 
@@ -70,6 +73,21 @@ describe('heatLevel', () => {
     expect(heatLevel(cell({ latestScorePercent: 49.9 }))).toBe('low')
     expect(heatLevel(cell({ latestScorePercent: 50 }))).toBe('partial')
     expect(heatLevel(cell({ latestScorePercent: 80, mastered: true }))).toBe('mastered')
+  })
+
+  it('shows a notion of a declared topic as declared, with no score', () => {
+    const declared = cell({ declared: true })
+    expect(heatLevel(declared)).toBe('declared')
+    expect(cellScoreText(declared)).toBe('declared')
+    expect(cellDescription(declared)).toBe('Cache-aside: declared as already known, no score.')
+    // A notion tested since has its real score.
+    expect(cellScoreText(cell({ latestScorePercent: 40 }))).toBe('40%')
+    expect(cellScoreText(cell())).toBe('–')
+  })
+
+  it('lists the declared level in the legend only when a cell has it', () => {
+    expect(heatLegend(100).map((item) => item.level)).not.toContain('declared')
+    expect(heatLegend(100, { showDeclared: true }).map((item) => item.level)).toContain('declared')
   })
 
   it('drops the partial level from the legend at a 50% threshold', () => {
@@ -168,9 +186,26 @@ describe('practiceState', () => {
 
 describe('isEmptyDashboard', () => {
   it('is empty until a round or attempt exists', () => {
-    const overview = { roundsCompleted: 0, roundsInProgress: 0, attemptCount: 0 }
+    const overview = {
+      roundsCompleted: 0,
+      roundsInProgress: 0,
+      attemptCount: 0,
+      declaredTopics: 0
+    }
     expect(isEmptyDashboard({ overview })).toBe(true)
     expect(isEmptyDashboard({ overview: { ...overview, roundsInProgress: 1 } })).toBe(false)
+  })
+
+  it('is not empty once a topic is declared', () => {
+    const overview = { roundsCompleted: 0, roundsInProgress: 0, attemptCount: 0 }
+    expect(isEmptyDashboard({ overview: { ...overview, declaredTopics: 1 } })).toBe(false)
+  })
+
+  it('says how many mastered topics are declared', () => {
+    expect(masteredDetail({ percent: 23, declaredTopics: 0 })).toBe('topics mastered (23%)')
+    expect(masteredDetail({ percent: 23, declaredTopics: 2 })).toBe(
+      'topics mastered (23%), 2 declared'
+    )
   })
 })
 

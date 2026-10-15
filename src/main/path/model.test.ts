@@ -22,6 +22,8 @@ const topic = (
   grounded: true,
   notionCount: 0,
   mastery,
+  declared: false,
+  canUndoDeclaration: false,
   everMastered: mastery === 'mastered',
   ...changes
 })
@@ -333,5 +335,154 @@ describe('buildLearningPath: progress', () => {
       unlockedExercises: 1,
       totalExercises: 2
     })
+  })
+})
+
+describe('buildLearningPath: Forced Unlock', () => {
+  const locked = [topic('dns', 'in_progress'), topic('cache'), topic('database')]
+
+  it('opens a locked topic as available with the flag, and keeps what was skipped', () => {
+    const steps = topicSteps(locked, { forcedUnlocks: ['topic:database'] })
+    expect(steps.map((step) => `${step.topic.slug}:${step.status}:${step.forcedUnlock}`)).toEqual([
+      'dns:in_progress:false',
+      'cache:locked:false',
+      'database:available:true'
+    ])
+    // The reason stays available to explain what was skipped.
+    expect(steps[2]!.lockedBy).toEqual({ slug: 'cache', title: 'CACHE', status: 'locked' })
+  })
+
+  it('opens that one step only: the next topic stays locked', () => {
+    expect(statuses(locked, { forcedUnlocks: ['topic:cache'] })).toEqual([
+      'dns:in_progress',
+      'cache:available',
+      'database:locked'
+    ])
+  })
+
+  it('has no effect on an unlocked step, a missing step or a mastered previous topic', () => {
+    const open = [topic('dns', 'mastered'), topic('cache')]
+    const [dns, cache] = topicSteps(open, {
+      forcedUnlocks: ['topic:dns', 'topic:cache', 'topic:x']
+    })
+    expect(dns).toMatchObject({ status: 'mastered', forcedUnlock: false })
+    expect(cache).toMatchObject({ status: 'available', forcedUnlock: false, lockedBy: null })
+  })
+
+  it('keeps the own status of a forced topic that was started, and never locks it again', () => {
+    const steps = topicSteps([topic('dns'), topic('cache', 'in_progress'), topic('database')], {
+      forcedUnlocks: ['topic:cache']
+    })
+    expect(steps[1]).toMatchObject({ status: 'in_progress', forcedUnlock: true })
+    expect(steps[2]!.status).toBe('locked')
+  })
+
+  it('unlocks an implemented exercise and keeps its missing prerequisites', () => {
+    const [step] = exerciseSteps({
+      topics: [topic('dns', 'mastered'), topic('cache')],
+      exercises: [exercise('a', ['dns', 'cache'], true)],
+      forcedUnlocks: ['design_exercise:a']
+    })
+    expect(step).toMatchObject({ status: 'available', forcedUnlock: true })
+    expect(step!.missingPrerequisites.map((ref) => ref.slug)).toEqual(['cache'])
+  })
+
+  it('unlocks an exercise whose previous exercise is not completed', () => {
+    const slot = (slug: string, previousExercise: string | null): DesignExerciseSlot => ({
+      ...exercise(slug, ['dns'], true),
+      previousExercise,
+      designExerciseId: slug.length
+    })
+    const steps = exerciseSteps({
+      topics: [topic('dns', 'mastered')],
+      exercises: [slot('one', null), slot('two', 'one'), slot('three', 'two')],
+      forcedUnlocks: ['design_exercise:three']
+    })
+    expect(steps.map((step) => `${step.status}:${step.forcedUnlock}`)).toEqual([
+      'available:false',
+      'locked:false',
+      'available:true'
+    ])
+    expect(steps[2]!.lockedByExercise).toEqual({ slug: 'two', title: 'two' })
+  })
+
+  it('keeps the status of a started exercise, and ignores a coming soon one', () => {
+    const steps = exerciseSteps({
+      topics: [topic('dns')],
+      exercises: [
+        { ...exercise('a', ['dns'], true), progress: 'in_progress', designExerciseId: 1 },
+        exercise('b', ['dns'], false)
+      ],
+      forcedUnlocks: ['design_exercise:a', 'design_exercise:b']
+    })
+    expect(steps.map((step) => `${step.status}:${step.forcedUnlock}`)).toEqual([
+      'in_progress:true',
+      'coming_soon:false'
+    ])
+  })
+
+  it('does not count as mastery and does not change the recommended step', () => {
+    const topics = [topic('dns', 'in_progress'), topic('cache'), topic('database')]
+    const exercises = [exercise('a', ['dns', 'cache', 'database'], true)]
+    const without = build(topics, { exercises })
+    const forced = build(topics, {
+      exercises,
+      forcedUnlocks: ['topic:cache', 'topic:database', 'design_exercise:a']
+    })
+    expect(forced.progress).toEqual(without.progress)
+    expect(forced.nextStepKey).toBe(without.nextStepKey)
+    expect(forced.nextStepKey).toBe('topic:dns')
+    expect(forced.progress.masteredTopics).toBe(0)
+    expect(forced.progress.unlockedExercises).toBe(0)
+  })
+
+  it('does not recommend a forced exercise when it is the only step left to open', () => {
+    const topics = [topic('dns', 'mastered')]
+    const exercises = [exercise('a', ['dns', 'unknown'], true)]
+    expect(build(topics, { exercises }).nextStepKey).toBeNull()
+    expect(
+      build(topics, { exercises, forcedUnlocks: ['design_exercise:a'] }).nextStepKey
+    ).toBeNull()
+  })
+})
+
+describe('buildLearningPath: Declared Mastery', () => {
+  /** A topic mastered by declaration: mastered, no Round passed. */
+  const declared = (slug: string) =>
+    topic(slug, 'mastered', { declared: true, canUndoDeclaration: true, everMastered: false })
+
+  it('counts a declared topic as mastered: the next topic unlocks', () => {
+    const steps = topicSteps([declared('dns'), topic('cache'), topic('database')])
+    expect(steps.map((step) => `${step.topic.slug}:${step.status}`)).toEqual([
+      'dns:mastered',
+      'cache:available',
+      'database:locked'
+    ])
+    // The flag travels with the topic, so the screens can mark it.
+    expect(steps[0]!.topic).toMatchObject({ declared: true, canUndoDeclaration: true })
+    expect(steps[1]!.topic.declared).toBe(false)
+  })
+
+  it('counts it in the progress and in the exercise prerequisites', () => {
+    const path = build([declared('dns'), declared('cache'), topic('database', 'mastered')], {
+      exercises: [exercise('a', ['dns', 'cache', 'database'], true)]
+    })
+    expect(path.progress).toMatchObject({
+      masteredTopics: 3,
+      totalTopics: 3,
+      percent: 100,
+      unlockedExercises: 1
+    })
+    const [step] = path.steps.filter((s): s is DesignExerciseStep => s.kind === 'design_exercise')
+    expect(step).toMatchObject({
+      status: 'available',
+      missingPrerequisites: [],
+      forcedUnlock: false
+    })
+    expect(path.nextStepKey).toBe('design_exercise:a')
+  })
+
+  it('recommends the topic after a declared one', () => {
+    expect(build([declared('dns'), topic('cache')]).nextStepKey).toBe('topic:cache')
   })
 })

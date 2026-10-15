@@ -13,6 +13,7 @@ A system design subject taught as one unit, for example Caching or Load Balancin
 - Taught by a [[Lesson]]
 - Assessed by a [[Quiz]]
 - Sequenced by the [[Learning Path]]
+- Can be mastered without a Round by [[Declared Mastery]]
 
 ## In code
 

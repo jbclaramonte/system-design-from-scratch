@@ -257,6 +257,22 @@
   box-shadow: var(--glow-mastered);
 }
 
+/* Declared Mastery: "I already know this" under the progress line, with its confirmation. */
+
+.declare-mastery {
+  margin: var(--space-sm) 0 var(--space-md);
+}
+
+.declare-mastery-confirm p {
+  margin: 0 0 var(--space-sm);
+}
+
+.declare-mastery-error {
+  margin: var(--space-xs) 0 0;
+  color: var(--color-error-text);
+  font-size: var(--type-body-md-size);
+}
+
 .mastery-choices {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));

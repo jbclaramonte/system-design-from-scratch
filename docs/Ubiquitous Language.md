@@ -23,6 +23,7 @@ Single source of truth for domain terms. Use these exact terms in code, schema, 
 | [[Foundations Module]] | Prerequisite topics the primer assumes but does not teach (how the web works, networking basics, data storage basics...), generated ungrounded unless grounded on primer sections that are not a topic (orders of magnitude on the appendix). | module 0, basics |
 | [[Diagram]] | A Mermaid schema in generated content (a ```` ```mermaid ```` block), drawn in the app, or shown as its source when it cannot be drawn. | schema, chart, figure, graph (graph is the Design Graph) |
 | [[Learning Path]] | The linear, unlockable sequence: foundations, topics, design exercises. | curriculum, roadmap (roadmap is the Gantt) |
+| [[Forced Unlock]] | The learner opens one locked step of the Learning Path (a topic or a Design Exercise) without mastering what comes before it. Opens that step only, with no mastery credit and no effect on the progress; stored, and undone ("Lock again") while the step has no progress. | skip ahead, bypass, override, unlock cheat |
 
 ## Assessment
 
@@ -36,6 +37,7 @@ Single source of truth for domain terms. Use these exact terms in code, schema, 
 | [[Mastery Loop]] | Lesson, quiz, remediation, new quiz... until the threshold is met. | learning loop, feedback loop |
 | [[Mastery Threshold]] | Minimum quiz score (percent, default 100) to validate a topic. | pass mark, target score |
 | [[Round Limit]] | Max rounds before the app offers another angle or a skip. | retry cap, guard rail |
+| [[Declared Mastery]] | A topic the learner declared as already known ("I already know this"): it counts as mastered (it unlocks the next topic, counts for Design Exercise prerequisites and in the progress) with no Round, Attempt or score, and is marked "declared". Undone while no Round was played after it ("Undo"); tested at any time ("Test me"). | skip, self-assessment, bypass, exemption |
 | [[Notion Map]] | View of mastery per notion. | skill tree |
 | [[Dashboard]] | Screen with mastery, attempts and weak points. | stats page |
 | [[Weak Point]] | A notion tested in a completed round whose latest score is below the current Mastery Threshold; listed on the Dashboard with why. | weakness, gap, struggle |

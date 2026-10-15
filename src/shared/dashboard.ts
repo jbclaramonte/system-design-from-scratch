@@ -62,6 +62,11 @@ export interface NotionMapCell extends NotionRef {
   trend: NotionTrend | null
   /** Latest score meets the current Mastery Threshold. */
   mastered: boolean
+  /**
+   * The notion has no score and its topic is a Declared Mastery: the learner declared it as
+   * already known. No score is invented; the Notion Map shows "declared" instead.
+   */
+  declared: boolean
 }
 
 /** The Notion Map of a topic that has a Notion Outline. */
@@ -69,6 +74,8 @@ export interface NotionMapTopic {
   topicId: number
   slug: string
   title: string
+  /** The topic is a Declared Mastery (no Round met the Mastery Threshold). */
+  declared: boolean
   /** In Notion Outline order. */
   notions: NotionMapCell[]
 }
@@ -112,6 +119,8 @@ export interface HistoryRound extends DashboardRound {
 export interface DashboardOverview {
   /** From the Learning Path progress. */
   masteredTopics: number
+  /** Of the mastered topics, those mastered by Declared Mastery only (no Round passed). */
+  declaredTopics: number
   totalTopics: number
   percent: number
   roundsCompleted: number

@@ -45,6 +45,25 @@ Rules:
 - **At the Round Limit**: "another angle" records `another_angle` on the latest round (remediation with a new angle, then a new round); "skip" records `skip`. A failure after another angle offers the choice again: there is no endless loop. Coming back to a skipped topic records `another_angle` on the same round.
 - `cannotStartRound(step)` and `cannotChoose(step, choice)` are the guards; the service refuses an action they reject.
 
+### Declared Mastery
+
+The learner can declare a topic as already known ([[Declared Mastery]], #55): "I already know this" after a confirmation, on the topic screen and on the [[Learning Path]]. No lesson or quiz is needed and no score is recorded. The declaration is one more input of the pure state machine (`MasterySnapshot.declaredAt`, from table `declared_masteries`); nothing is stored as a round, an attempt or a score.
+
+`deriveMastery` returns, on top of the loop's state:
+
+| Field | Value |
+|---|---|
+| `status` | `mastered` whenever a declaration exists, whatever the rounds say (a Round Limit, a skip, a later failed round): like a topic mastered once, it stays mastered |
+| `declared` | A declaration exists and **no round passed**. False for a mastery earned by a round, even if the topic was declared first |
+| `canDeclare` | No declaration and no passed round (a topic that regressed after a pass cannot be declared either: it counts as mastered on the path) |
+| `canUndoDeclaration` | A declaration exists and no round was started at or after it (`cannotUndoDeclaration`) |
+| `step` | The loop's own step (`lesson`, `round`, `remediation`, `limit_reached`, `skipped`) is kept: a declaration replaces the status, not the way into a quiz |
+
+- **Test me**: on a declared topic the topic screen shows "Declared mastery" with "Test me" and "Undo". "Test me" reuses the normal start: a round straight away when the Lesson exists, else the loop's own step (the Lesson first, then "Take the quiz"). The quiz works as usual: its scores appear in the [[Notion Map]] and the [[Weak Point]]s like any round, and a failed round neither revokes the declaration nor hides it (the status stays `mastered`, the loop shows the remediation).
+- **Undo**: refused (`cannotUndoDeclaration`) once a round was started on the topic at or after the declaration; rounds played before it do not count. Undo without a declaration is a no-op, as declaring a topic already declared or mastered.
+- **Locked topics**: `mastery:declare` runs the topic lock guard (`assertTopicUnlocked`): a locked topic cannot be declared in a packaged app, so topics are declared in path order and the order of the unlock rules is kept. A [[Forced Unlock]]ed topic can be declared.
+- Consumers: `listTopicMasteries` adds `declared` and `canUndoDeclaration` to each topic; the path model needs nothing more (`mastery: 'mastered'` unlocks the next topic, counts in the prerequisites and in the progress); the [[Dashboard]] counts declared topics apart and shows declared notions ([[Dashboard Implementation#Declared Mastery]]).
+
 ## Service and IPC
 
 `createMasteryService` (`src/main/mastery/service.ts`):
@@ -54,6 +73,7 @@ Rules:
 - `prepareRemediation` / `recordRemediation`: the Remediation Lesson request of a target (angle, `usedAngles`, the prompts of the questions missed on that notion), and the `remediation_lessons` row (with the round), once per round and notion.
 - `pregenerateRemediationStep`: when the first Remediation Lesson of a step is opened, the other ones and the next quiz are pre-generated in the background.
 - `choose(topicId, choice)`: the Round Limit choice.
+- `declare(topicId)` and `undoDeclaration(topicId)`: the [[#Declared Mastery]]; both return the new `MasteryState`.
 
 `createMasteryIpc` (`masteryIpc.ts`), channels in `src/shared/ipc.ts`, types in `src/shared/mastery.ts`:
 
@@ -66,6 +86,8 @@ Rules:
 | `cancelMastery({ requestId })` | `mastery:cancel` | A closed window cancels its requests too |
 | `getLessonReview({ topicId })` | `mastery:getLessonReview` | Read-only (#35): `LessonReview` = the latest recorded Lesson and every recorded Remediation Lesson of the topic, newest round first. Refused for a locked topic (`assertTopicUnlocked`) like a Round. Never generates, never records. |
 | `chooseAtRoundLimit({ topicId, choice })` | `mastery:choose` | `another_angle` or `skip` |
+| `declareMastery({ topicId })` | `mastery:declare` | Declared Mastery; refused for a locked topic; a no-op on a mastered one. Pushes `path:changed`. |
+| `undoDeclaredMastery({ topicId })` | `mastery:undoDeclaration` | Refused once a round was played after the declaration. Pushes `path:changed`. |
 | `onMasteryEvent(listener)` | `mastery:event` | `{ requestId, event }` |
 
 Errors end a stream with a typed `{ code, message }` ([[Generation Service#Errors]]).
@@ -79,7 +101,7 @@ Read models for the [[Notion Map]] (#17) and the [[Dashboard]] (#18), in `querie
 `src/renderer/src/mastery/`: a topic opened from the [[Learning Path Implementation|Learning Path]] home screen shows `TopicScreen` (the dev-only "All topics (dev)" entry keeps `MasteryView`, the topic list with mastery badges):
 
 - Heading hierarchy (#21): the topic title once, as the screen heading (`PathTopicView`'s `h1`, next to the back button), then the progress line, then the step content. `TopicScreen` takes `showTitle` (default `true`, so the dev "All topics" screen keeps its `h2`; `PathTopicView` passes `false`) and renders `LessonScreen` with `embedded`, which drops its own title and Outside the primer badge. The round results inside the topic screen do not repeat the badge either.
-- Progress line (`TopicHeader`): status badge, the Outside the primer badge (the only one on the screen), round number, "attempt k of N before the Round Limit", Mastery Threshold.
+- Progress line (`TopicHeader`): status badge (with a "Declared" chip for a [[Declared Mastery]]), the Outside the primer badge (the only one on the screen), round number, "attempt k of N before the Round Limit", Mastery Threshold.
 - `lesson`: the [[Lesson View]] screen (`LessonScreen`, streamed or from cache), then "Take the quiz".
 - Round: the quiz player of the [[Quiz Engine]] (`QuizPlayer`, unchanged), then `QuizResults` with the per-notion breakdown and "Continue".
 - `remediation`: one tab per missed notion with its score, the streamed Remediation Lesson (`RemediationLesson`, with its angle and "Generated" / "From cache"), "Next notion", then "Start round N" once all are recorded.
@@ -116,7 +138,7 @@ Applied without restart: the threshold and limit are read on every action; a CLI
 
 ## Data
 
-Migration 3 `mastery-loop` ([[Data Model]]): table `round_limit_choices (round_id PK, choice)` (repository `src/main/db/repositories/mastery.ts`), settings `questions_per_quiz` and `claude_cli_path`. Remediation Lesson prompt version `remediation-lesson-2` (two new angles, `usedAngles`).
+Migration 3 `mastery-loop` ([[Data Model]]): table `round_limit_choices (round_id PK, choice)` (repository `src/main/db/repositories/mastery.ts`), settings `questions_per_quiz` and `claude_cli_path`. Migration 7 `declared-masteries`: table `declared_masteries (topic_id PK, created_at)`, same repository. Remediation Lesson prompt version `remediation-lesson-2` (two new angles, `usedAngles`).
 
 ## Verification (2026-10-09)
 
@@ -131,6 +153,12 @@ Migration 3 `mastery-loop` ([[Data Model]]): table `round_limit_choices (round_i
 - Automated: `src/main/mastery/review.test.ts` (in-memory database: the latest Lesson and its sources, Remediation Lessons newest round first with round number, notion and angle, topics not mixed, unknown topic; IPC: validation, locked topic refused outside dev builds and served in dev builds, a topic with progress served, **the CLI runner never called and no table changed**), `src/renderer/src/mastery/lessonReview.test.ts` (the Lesson button in every step and overlay, the tabs and their order, the panel rendered with `react-dom/server`: tabs, selected reading, empty, loading and error states).
 - Built app driven over the Chrome DevTools protocol (scratch `--user-data-dir`, fake CLI that logs every call): open round with the free answer typed mid-question, a choice selected and not submitted, the results screen, the remediation step (4 Remediation Lessons from 2 rounds, a Diagram in the Lesson and in a Remediation Lesson), `limit_reached` without a Lesson (empty state), 800px width. Typed text, selected choice and question number were identical after Escape and after Close; focus returned to the Lesson button; the quiz player and results screen were mounted inside a `hidden` container while the panel was open; row counts (attempts, rounds, lessons, Remediation Lessons, quizzes, Content Cache) and the fake CLI call log were unchanged by opening and closing the panel. The button was absent while the first Lesson streamed and on the lesson screen, and present once "Take the quiz" was clicked.
 - Not checked in the app: a locked topic in a packaged app (covered by the IPC test; dev builds allow every topic), a real CLI.
+
+## Verification of Declared Mastery (2026-10-15, #55)
+
+- Tests: `state.test.ts` (declaring, undoing, declared then a passed round: flag false, a failed round: still mastered and declared, Round Limit and skipped replaced, `cannotUndoDeclaration`), `service.test.ts` (no round, attempt or score invented, no-op cases, "Test me" scores and a failed then a passed round, undo and its refusal, IPC validation and the lock), `pathIpc.test.ts` and `model.test.ts` (next topic unlocks, exercise prerequisites, progress), `dashboard/model.test.ts`, `masteryText.test.ts`, `dashboardText.test.ts`.
+- Packaged build (locks enforced), scratch `--user-data-dir` copied from the #54 run (so migration 7 ran on a database already at version 6), a scratch fake CLI that answers the outline, lesson, quiz and free-answer grading prompts: "I already know this" on the first topic (confirmation, then "Declared" and "Mastered", progress 1 of 21, the next topic open and recommended); the same on each topic in path order up to 18 of 21: Design Pastebin went from "Locked" to "Ready to start" with "4 of 4 prerequisites mastered", and the Dashboard said "topics mastered (85%), 18 declared". After a restart everything was kept. On the declared `Cache`: "Test me" opened the Lesson (generated), "Take the quiz", a round answered wrongly on three notions: status stayed "Mastered" with the "Declared" chip, the remediation step showed, "Undo" was gone, and the Dashboard showed the real scores (0% and 100%) for the tested notions with the weak points. On a declared topic with no round (`Load balancer`, Lesson opened by "Test me"): its notions showed "declared" in the Notion Map with the legend entry, the Topics table said "Declared, no score", and "Undo" put it back to "In progress" (progress 17 of 21).
+- Not checked in the app: "Undo" refused by the main process (unit tests only: the button is not offered once a round was played), a Foundations Module topic other than by the declaration chain above (they were declared in that chain), a real CLI.
 
 ## Related
 

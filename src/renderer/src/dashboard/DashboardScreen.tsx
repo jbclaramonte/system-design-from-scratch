@@ -7,6 +7,7 @@ import { errorMessage } from '../quiz/errorMessage'
 import './dashboard.css'
 import {
   isEmptyDashboard,
+  masteredDetail,
   notionProgress,
   percentOrDash,
   practiceState,
@@ -102,7 +103,9 @@ function Overview({ dashboard }: { dashboard: Dashboard }) {
             {overview.masteredTopics}{' '}
             <span className="dash-hero-of">of {overview.totalTopics}</span>
           </dd>
-          <dd className="stat-detail">topics mastered ({overview.percent}%)</dd>
+          <dd className="stat-detail" data-testid="dashboard-mastered-detail">
+            {masteredDetail(overview)}
+          </dd>
           <dd>
             <div
               className={`progress${overview.percent >= 100 ? ' progress-complete' : ''}`}
@@ -193,9 +196,19 @@ function TopicRow({ topic, onOpenTopic }: { topic: DashboardTopic; onOpenTopic: 
       <th scope="row">{step.topic.title}</th>
       <td>
         <span className={stepStatusChip(step.status)}>{stepStatusLabels[step.status]}</span>
+        {step.topic.declared && (
+          <>
+            {' '}
+            <span className="chip" title="Mastered without a Round" data-testid="topic-declared">
+              Declared
+            </span>
+          </>
+        )}
       </td>
       <td>
-        {topic.notionCount === 0 ? (
+        {step.topic.declared && topic.notionsMastered === 0 && topic.rounds.length === 0 ? (
+          <span className="dash-note">Declared, no score</span>
+        ) : topic.notionCount === 0 ? (
           <span className="dash-note">No Notion Outline yet</span>
         ) : (
           <div className="dash-progress-cell">
@@ -486,7 +499,12 @@ export function DashboardScreen({
               Latest score of each notion, from the most recent completed round that tested it.
               Select a notion for its details.
             </p>
-            <HeatLegend threshold={dashboard.masteryThreshold} />
+            <HeatLegend
+              threshold={dashboard.masteryThreshold}
+              showDeclared={dashboard.notionMap.some((map) =>
+                map.notions.some((cell) => cell.declared)
+              )}
+            />
             {dashboard.notionMap.map((map) => (
               <NotionMapGrid key={map.topicId} map={map} />
             ))}

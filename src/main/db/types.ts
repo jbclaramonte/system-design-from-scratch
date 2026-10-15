@@ -180,6 +180,13 @@ export interface ContentCacheEntry extends Timestamps, Grounded {
 /** Values of the `settings` table (see `src/shared/settings.ts`). */
 export type Settings = AppSettings
 
+/** A topic the learner declared as already known (Declared Mastery). */
+export interface DeclaredMasteryRow {
+  topicId: number
+  /** ISO 8601 time of the declaration. */
+  createdAt: string
+}
+
 /** The learner's choice on a failed round that reached the Round Limit. */
 export interface RoundLimitChoiceRow extends Timestamps {
   roundId: number

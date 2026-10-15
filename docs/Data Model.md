@@ -23,6 +23,8 @@ Local SQLite database of the app, owned by the Electron main process. Table name
 | 2 | `notion-sources-and-question-flags` | `notions.source_sections`; `questions.flagged_at`, `flag_reason`, `replaced_by_question_id` (#7). |
 | 3 | `mastery-loop` | Table `round_limit_choices`; settings `questions_per_quiz`, `claude_cli_path` (#11). |
 | 5 | `question-clarifications` | `content_cache` rebuilt (same save and restore of the lesson, remediation lesson and quiz keys as migration 4) to accept the `question_clarification` kind (#53). |
+| 6 | `forced-unlocks` | Table `forced_unlocks` (#54). |
+| 7 | `declared-masteries` | Table `declared_masteries` (#55). |
 | 4 | `interview-protocol` | `content_cache` rebuilt to accept the `protocol_step_lesson` kind (the `content_cache_key` of lessons, quizzes and remediation lessons are saved and restored around the rebuild); `design_exercises.problem_statement`; tables `protocol_step_submissions`, `protocol_step_drafts`, `protocol_step_encounters` (#14). |
 
 ## Diagram
@@ -41,6 +43,7 @@ erDiagram
   notions ||--o{ remediation_lessons : "targeted by"
   rounds |o--o{ remediation_lessons : "followed by"
   rounds ||--o| round_limit_choices : "choice at the Round Limit"
+  topics ||--o| declared_masteries : "declared as known"
   questions ||--o{ attempts : "answered by"
   rounds |o--o{ attempts : ""
   attempts ||--o{ attempt_notions : ""
@@ -135,6 +138,14 @@ erDiagram
     int round_id PK
     text choice "another_angle or skip"
   }
+  declared_masteries {
+    int topic_id PK
+    text created_at "time of the declaration"
+  }
+  forced_unlocks {
+    text step_key PK "topic:slug or design_exercise:slug"
+    text created_at
+  }
   attempt_notions {
     int attempt_id PK
     int notion_id PK
@@ -213,6 +224,7 @@ Generated rows carry `grounded` and `source_sections` ([[Grounding]]) and an opt
 - `rounds`: one [[Round]] of the [[Mastery Loop]] on a topic, playing one quiz. `number` is unique per topic and never restarts, so the history stays ordered; the [[Round Limit]] counts rounds since the last passed round of that topic. `completed_at`, `score_percent` (0 to 100) and `passed` are all null until the round is graded, then all set; `passed` is stored because the [[Mastery Threshold]] can change later.
 - `attempts`: one [[Attempt]] per answer: `attempted_at` (date), `question_id`, `question_type`, `answer` (JSON), `result` (`correct`, `partially_correct`, `incorrect`), `score` (0 to 1), optional `feedback` (free answers: the grading record as JSON, with the grading in force, the contest and the replaced gradings; see [[Quiz Engine#Free answers (#10)]]) and `round_id`. Attempts are history: a question or round with attempts cannot be deleted.
 - `round_limit_choices`: the learner's choice on a failed [[Round]] that reached the [[Round Limit]]: `another_angle` or `skip` (one per round, changed when the learner comes back to a skipped topic). See [[Mastery Loop Implementation]].
+- `declared_masteries`: the [[Declared Mastery]] of a topic: one row per topic the learner declared as already known (`topic_id`, and `created_at`, the time of the declaration; no `updated_at`, a row is inserted or deleted, never changed). It is not a round or an attempt: the mastery of the topic is still derived, the row is one more input of the state machine. Deleted with its topic. A declaration can be undone (row deleted) only while no round of the topic was started at or after `created_at`. See [[Mastery Loop Implementation#Declared Mastery]].
 - `attempt_notions`: notions of the question at the time of the attempt, copied on insert, so per-notion history survives retagging. Indexed by notion for the [[Notion Map]] and [[Dashboard]].
 
 > [!note] Spaced repetition
@@ -227,6 +239,10 @@ Generated rows carry `grounded` and `source_sections` ([[Grounding]]) and an opt
 - `protocol_step_submissions`: every submission of a Protocol Step. `number` counts per exercise and step (failed ones included). `status` is `pending` (Generation running), `reviewed` (with `design_feedback_id`, the step feedback) or `failed` (Generation failed or cancelled; pending rows left by an app quit become `failed` at startup). `content` is the text, or the [[Design Graph]] with its text description, the notes and `withPng` (the PNG itself is not stored).
 - `protocol_step_drafts`: the editor text of a text step, or the notes of a canvas step, one per exercise and step, overwritten on save.
 - `protocol_step_encounters`: one row per step whose [[Protocol Step Lesson]] the learner has read (once, across exercises), with the exercise where it was read.
+
+### Learning Path
+
+- `forced_unlocks`: one row per [[Forced Unlock]]: the key of the [[Learning Path]] step opened without mastering what comes before it (`topic:<slug>` or `design_exercise:<slug>`, the `key` of `LearningPathStep`) and `created_at` (no `updated_at`: inserted or deleted, never changed). The key is not a foreign key: the path is computed, not stored, so a key that matches no step is ignored. Read by `getLearningPath`; written by `path:forceUnlock` and removed by `path:lockAgain`. See [[Learning Path Implementation#Forced Unlock]].
 
 ### Generation and data
 

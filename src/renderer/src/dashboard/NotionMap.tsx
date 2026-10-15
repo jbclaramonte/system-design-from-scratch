@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { NotionMapCell, NotionMapTopic } from '../../../shared/dashboard'
 import {
   cellDescription,
+  cellScoreText,
   heatLegend,
   heatLevel,
   heatSymbols,
@@ -11,10 +12,16 @@ import {
 } from './dashboardText'
 
 /** Colour, symbol and score: a level never relies on colour alone. */
-export function HeatLegend({ threshold }: { threshold: number }) {
+export function HeatLegend({
+  threshold,
+  showDeclared = false
+}: {
+  threshold: number
+  showDeclared?: boolean
+}) {
   return (
     <ul className="dash-legend" aria-label="Notion Map legend">
-      {heatLegend(threshold).map(({ level, label }) => (
+      {heatLegend(threshold, { showDeclared }).map(({ level, label }) => (
         <li key={level}>
           <span className={`dash-swatch label-mono heat-${level}`} aria-hidden="true">
             {heatSymbols[level]}
@@ -34,7 +41,9 @@ function CellDetails({ cell }: { cell: NotionMapCell }) {
         <li>
           Latest score: {percentOrDash(cell.latestScorePercent)} (
           {cell.latestScorePercent === null
-            ? 'not tested yet'
+            ? cell.declared
+              ? 'declared as already known, no score'
+              : 'not tested yet'
             : cell.mastered
               ? 'mastered'
               : 'not mastered'}
@@ -83,7 +92,7 @@ export function NotionMapGrid({ map }: { map: NotionMapTopic }) {
                   {cell.title}
                 </span>
                 <span className={`dash-cell-score label-mono heat-${level}`} aria-hidden="true">
-                  {heatSymbols[level]} {percentOrDash(cell.latestScorePercent)}
+                  {heatSymbols[level]} {cellScoreText(cell)}
                 </span>
               </button>
             </li>

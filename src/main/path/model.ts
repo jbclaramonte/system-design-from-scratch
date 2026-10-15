@@ -42,6 +42,12 @@ export interface LearningPathInput {
   /** Teachable primer topic slugs, in primer order. Topics neither here nor in the Foundations Module are left out. */
   primerTopicSlugs: readonly string[]
   exercises: readonly DesignExerciseSlot[]
+  /**
+   * Step keys (`topic:<slug>`, `design_exercise:<slug>`) the learner opened without mastering
+   * what comes before (Forced Unlock). A key that matches no step, or a step that is unlocked
+   * anyway, has no effect. None by default.
+   */
+  forcedUnlocks?: readonly string[]
 }
 
 const ownStatus: Record<Exclude<TopicMastery, 'mastered'>, LearningPathStepStatus> = {
@@ -63,10 +69,12 @@ const refOf = (step: TopicStep): LearningPathTopicRef => ({
  * - unlocked when it is the first step, the previous topic is mastered, or it already has
  *   progress (a started topic is never locked again, for example when Foundations Module topics
  *   are inserted before it);
- * - otherwise `locked` by the previous topic. A skipped or limit_reached topic does not unlock
- *   the next one.
+ * - otherwise `locked` by the previous topic, unless the learner forced the unlock: the topic then
+ *   has the status it would have unlocked (`available`) and `forcedUnlock`, and `lockedBy` still
+ *   names the topic that was skipped. A skipped or limit_reached topic does not unlock the next
+ *   one.
  */
-function topicSteps(input: LearningPathInput): TopicStep[] {
+function topicSteps(input: LearningPathInput, forced: ReadonlySet<string>): TopicStep[] {
   const bySlug = new Map(input.topics.map((topic) => [topic.slug, topic]))
   const foundations = input.topics.filter((topic) => topic.inFoundationsModule)
   const primer = input.primerTopicSlugs.flatMap((slug) => {
@@ -81,8 +89,11 @@ function topicSteps(input: LearningPathInput): TopicStep[] {
   for (const { topic, section } of ordered) {
     const { everMastered, ...summary } = topic
     const previous = steps.at(-1)
+    const key = `topic:${topic.slug}`
     const mastered = everMastered || topic.mastery === 'mastered'
-    const unlocked = !previous || previous.status === 'mastered' || topic.mastery !== 'not_started'
+    const open = !previous || previous.status === 'mastered'
+    const forcedUnlock = !open && forced.has(key)
+    const unlocked = open || forcedUnlock || topic.mastery !== 'not_started'
     const status: LearningPathStepStatus = mastered
       ? 'mastered'
       : unlocked
@@ -90,11 +101,12 @@ function topicSteps(input: LearningPathInput): TopicStep[] {
         : 'locked'
     steps.push({
       kind: 'topic',
-      key: `topic:${topic.slug}`,
+      key,
       section,
       topic: summary,
       status,
-      lockedBy: status === 'locked' && previous ? refOf(previous) : null
+      lockedBy: (status === 'locked' || forcedUnlock) && previous ? refOf(previous) : null,
+      forcedUnlock
     })
   }
   return steps
@@ -104,11 +116,14 @@ function topicSteps(input: LearningPathInput): TopicStep[] {
  * Design Exercise steps: `coming_soon` while not implemented; then `completed` or `in_progress`
  * from the learner's progress (a started exercise is never locked again); else unlocked when
  * every prerequisite topic is mastered and the previous exercise is completed (a prerequisite or
- * an exercise missing from the path never counts).
+ * an exercise missing from the path never counts). A Forced Unlock opens an implemented exercise
+ * that is otherwise locked (`available`, `forcedUnlock`); the missing prerequisites and the
+ * previous exercise still say what was skipped.
  */
 function exerciseSteps(
   input: LearningPathInput,
-  topics: readonly TopicStep[]
+  topics: readonly TopicStep[],
+  forced: ReadonlySet<string>
 ): DesignExerciseStep[] {
   const bySlug = new Map(topics.map((step) => [step.topic.slug, step]))
   const slots = new Map(input.exercises.map((exercise) => [exercise.slug, exercise]))
@@ -124,9 +139,12 @@ function exerciseSteps(
         ? { slug: exercise.previousExercise, title: previous?.title ?? exercise.previousExercise }
         : null
     const progress = exercise.progress ?? 'not_started'
+    const key = `design_exercise:${exercise.slug}`
+    const open = missingPrerequisites.length === 0 && !lockedByExercise
+    const forcedUnlock = exercise.implemented && !open && forced.has(key)
     return {
       kind: 'design_exercise',
-      key: `design_exercise:${exercise.slug}`,
+      key,
       section: 'design_exercises',
       slug: exercise.slug,
       title: exercise.title,
@@ -134,21 +152,29 @@ function exerciseSteps(
         ? 'coming_soon'
         : progress !== 'not_started'
           ? progress
-          : missingPrerequisites.length > 0 || lockedByExercise
-            ? 'locked'
-            : 'available',
+          : open || forcedUnlock
+            ? 'available'
+            : 'locked',
       designExerciseId: exercise.implemented ? (exercise.designExerciseId ?? null) : null,
       prerequisites,
       missingPrerequisites,
       lockedByExercise,
+      forcedUnlock,
       rationale: exercise.rationale
     }
   })
 }
 
-/** Statuses of a step the learner can open now. */
-const actionable = (status: LearningPathStepStatus): boolean =>
-  status !== 'locked' && status !== 'mastered' && status !== 'completed' && status !== 'coming_soon'
+/**
+ * A step the path can recommend: one the learner can open now. A step opened by a Forced Unlock
+ * and not started stays out, so a Forced Unlock never changes the recommended step.
+ */
+const recommendable = (step: LearningPathStep): boolean =>
+  step.status !== 'locked' &&
+  step.status !== 'mastered' &&
+  step.status !== 'completed' &&
+  step.status !== 'coming_soon' &&
+  !(step.forcedUnlock && step.status === 'available')
 
 /**
  * The recommended step: the first topic not mastered that can be opened (a skipped or
@@ -157,16 +183,21 @@ const actionable = (status: LearningPathStepStatus): boolean =>
  */
 export function nextStep(steps: readonly LearningPathStep[]): LearningPathStep | null {
   return (
-    steps.find((step) => step.kind === 'topic' && actionable(step.status)) ??
-    steps.find((step) => step.kind === 'design_exercise' && actionable(step.status)) ??
+    steps.find((step) => step.kind === 'topic' && recommendable(step)) ??
+    steps.find((step) => step.kind === 'design_exercise' && recommendable(step)) ??
     null
   )
 }
 
-/** The Learning Path: steps with their status, the recommended step and the progress. */
+/**
+ * The Learning Path: steps with their status, the recommended step and the progress. Forced
+ * Unlocks open steps but never count as mastery: the progress and the recommended step are the
+ * ones of the path without them.
+ */
 export function buildLearningPath(input: LearningPathInput): LearningPath {
-  const topics = topicSteps(input)
-  const exercises = exerciseSteps(input, topics)
+  const forced = new Set(input.forcedUnlocks ?? [])
+  const topics = topicSteps(input, forced)
+  const exercises = exerciseSteps(input, topics, forced)
   const steps: LearningPathStep[] = [...topics, ...exercises]
   const masteredTopics = topics.filter((step) => step.status === 'mastered').length
   return {

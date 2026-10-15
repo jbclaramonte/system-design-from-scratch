@@ -43,13 +43,14 @@ export const percentOrDash = (value: number | null): string =>
   value === null ? '–' : formatPercent(Math.round(value * 10) / 10)
 
 /**
- * Heat level of a Notion Map cell, against the current Mastery Threshold: `untested`, `low`
- * (below 50%), `partial` (50% or more, below the threshold) or `mastered` (threshold met).
+ * Heat level of a Notion Map cell, against the current Mastery Threshold: `untested`, `declared`
+ * (no score, the topic is a Declared Mastery), `low` (below 50%), `partial` (50% or more, below
+ * the threshold) or `mastered` (threshold met).
  */
-export type HeatLevel = 'untested' | 'low' | 'partial' | 'mastered'
+export type HeatLevel = 'untested' | 'declared' | 'low' | 'partial' | 'mastered'
 
 export function heatLevel(cell: NotionMapCell): HeatLevel {
-  if (cell.latestScorePercent === null) return 'untested'
+  if (cell.latestScorePercent === null) return cell.declared ? 'declared' : 'untested'
   if (cell.mastered) return 'mastered'
   return cell.latestScorePercent < 50 ? 'low' : 'partial'
 }
@@ -57,21 +58,37 @@ export function heatLevel(cell: NotionMapCell): HeatLevel {
 /** Symbol shown in a cell next to its score, so the level never relies on colour alone. */
 export const heatSymbols: Record<HeatLevel, string> = {
   untested: '○',
+  declared: '◇',
   low: '✗',
   partial: '◐',
   mastered: '✓'
 }
 
-/** Legend of the Notion Map; no `partial` level when the threshold is 50%. */
-export function heatLegend(threshold: number): { level: HeatLevel; label: string }[] {
+/**
+ * Legend of the Notion Map; no `partial` level when the threshold is 50%, and the `declared`
+ * level only when a cell has it.
+ */
+export function heatLegend(
+  threshold: number,
+  { showDeclared = false }: { showDeclared?: boolean } = {}
+): { level: HeatLevel; label: string }[] {
   const legend: { level: HeatLevel; label: string }[] = [
     { level: 'mastered', label: `Mastered (${threshold}% or more)` },
     { level: 'partial', label: `50% to below ${threshold}%` },
     { level: 'low', label: 'Below 50%' },
+    { level: 'declared', label: 'Declared as already known (no score)' },
     { level: 'untested', label: 'Not tested yet' }
   ]
-  return legend.filter(({ level }) => level !== 'partial' || threshold > 50)
+  return legend.filter(
+    ({ level }) => (level !== 'partial' || threshold > 50) && (level !== 'declared' || showDeclared)
+  )
 }
+
+/** The score written in a cell: the percentage, "declared" for a declared notion, else a dash. */
+export const cellScoreText = (cell: NotionMapCell): string =>
+  cell.latestScorePercent === null && cell.declared
+    ? 'declared'
+    : percentOrDash(cell.latestScorePercent)
 
 const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`
 
@@ -91,6 +108,9 @@ export function timeSince(iso: string | null, now: Date = new Date()): string {
 
 /** Full description of a cell, its accessible name. */
 export function cellDescription(cell: NotionMapCell, now?: Date): string {
+  if (cell.latestScorePercent === null && cell.declared) {
+    return `${cell.title}: declared as already known, no score.`
+  }
   if (cell.latestScorePercent === null) {
     return `${cell.title}: not tested yet${cell.attemptCount > 0 ? `, ${plural(cell.attemptCount, 'attempt')} in an open round` : ''}.`
   }
@@ -125,13 +145,21 @@ export function practiceState(
   return { enabled: false, reason: lockMessage(step) ?? 'Locked on the Learning Path.' }
 }
 
-/** A Dashboard is empty until the first round is started. */
+/** A Dashboard is empty until the first round is started or a topic is declared. */
 export const isEmptyDashboard = ({
   overview
 }: {
-  overview: { roundsCompleted: number; roundsInProgress: number; attemptCount: number }
+  overview: {
+    roundsCompleted: number
+    roundsInProgress: number
+    attemptCount: number
+    declaredTopics: number
+  }
 }): boolean =>
-  overview.roundsCompleted === 0 && overview.roundsInProgress === 0 && overview.attemptCount === 0
+  overview.roundsCompleted === 0 &&
+  overview.roundsInProgress === 0 &&
+  overview.attemptCount === 0 &&
+  overview.declaredTopics === 0
 
 /**
  * Shared chip classes (`chip-*` of the Design System) for a status. The label text always stays
@@ -183,3 +211,13 @@ export const weakScoreChip = (latestScorePercent: number | null): string =>
   latestScorePercent !== null && latestScorePercent >= 50
     ? 'chip chip-attention chip-dot'
     : 'chip chip-error chip-dot'
+
+/** "5 of 21 topics mastered (23%), 2 declared": the hero card's detail line. */
+export const masteredDetail = ({
+  percent,
+  declaredTopics
+}: {
+  percent: number
+  declaredTopics: number
+}): string =>
+  `topics mastered (${percent}%)${declaredTopics > 0 ? `, ${declaredTopics} declared` : ''}`

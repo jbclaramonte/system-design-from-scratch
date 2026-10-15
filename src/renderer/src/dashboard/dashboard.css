@@ -148,6 +148,14 @@
   color: var(--color-heat-untested-text);
 }
 
+/* Declared notion: no score, so neutral and solid (not the striped "untested"), with its symbol. */
+.heat-declared {
+  --heat: var(--color-border-active);
+  background: var(--color-surface-subtle);
+  box-shadow: inset 0 0 0 1px var(--color-border-active);
+  color: var(--color-text-secondary);
+}
+
 .dash-legend {
   display: flex;
   flex-wrap: wrap;
@@ -216,6 +224,10 @@
 
 .dash-cell[data-level='low'] {
   --heat: var(--color-heat-low);
+}
+
+.dash-cell[data-level='declared'] {
+  --heat: var(--color-border-active);
 }
 
 .dash-cell[data-level='untested'] {

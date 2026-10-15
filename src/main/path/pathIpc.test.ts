@@ -13,7 +13,7 @@ import {
 } from '../db/repositories/designPractice'
 import { createDashboardIpc } from '../dashboard/dashboardIpc'
 import { createLesson, createTopic, getTopicBySlug } from '../db/repositories/learningContent'
-import { setRoundLimitChoice } from '../db/repositories/mastery'
+import { declareMastery, setRoundLimitChoice } from '../db/repositories/mastery'
 import { updateSettings } from '../db/repositories/settings'
 import { getTopicMastery } from '../mastery/queries'
 import { DESIGN_EXERCISES, seedDesignExercises } from '../protocol/designExercises'
@@ -129,6 +129,57 @@ describe('getLearningPath', () => {
     const step = path.steps.find((s) => s.key === 'design_exercise:pastebin')!
     expect(step.status).toBe('available')
     expect(step.kind === 'design_exercise' && step.title).toBe('Design Pastebin.com (or Bit.ly)')
+  })
+})
+
+describe('Declared Mastery on the path', () => {
+  const declare = (slug: string) => declareMastery(db, getTopicBySlug(db, slug)!.id)
+
+  it('marks the topic mastered, unlocks the next one and counts in the progress', () => {
+    declare('client-server')
+    const path = getLearningPath({ db, corpus })
+    expect(statusOf(path, 'client-server')).toBe('mastered')
+    expect(statusOf(path, 'http')).toBe('available')
+    expect(path.nextStepKey).toBe('topic:http')
+    expect(path.progress.masteredTopics).toBe(1)
+    const step = path.steps.find((s): s is TopicStep => s.key === 'topic:client-server')!
+    expect(step.topic).toMatchObject({ mastery: 'mastered', declared: true })
+  })
+
+  it('stops being flagged once a Round is passed, and is not revoked by a failed one', () => {
+    declare('client-server')
+    playRound('client-server', false, 1)
+    const failed = getLearningPath({ db, corpus }).steps.find(
+      (s): s is TopicStep => s.key === 'topic:client-server'
+    )!
+    expect(failed).toMatchObject({ status: 'mastered', topic: { declared: true } })
+    playRound('client-server', true, 2)
+    const passed = getLearningPath({ db, corpus }).steps.find(
+      (s): s is TopicStep => s.key === 'topic:client-server'
+    )!
+    expect(passed).toMatchObject({ status: 'mastered', topic: { declared: false } })
+  })
+
+  it('unlocks a Design Exercise once its prerequisites are declared or mastered', () => {
+    const { prerequisites } = DESIGN_EXERCISE_PREREQUISITES.find(
+      (e) => e.referenceSolutionId === 'pastebin'
+    )!
+    // Topics unlock one after the other: declare each in path order, up to the last prerequisite.
+    const order = teachable.filter((slug) => prerequisites.includes(slug))
+    const last = order.at(-1)!
+    for (const slug of ['client-server', 'http', ...teachable]) {
+      declare(slug)
+      if (slug === last) break
+    }
+    const path = getLearningPath({ db, corpus, implementedExercises: ['pastebin'] })
+    const pastebin = path.steps.find((s) => s.key === 'design_exercise:pastebin')!
+    expect(pastebin.status).toBe('available')
+    // Declared topics are in the Dashboard counters apart from the earned ones.
+    const dashboard = createDashboardIpc({ db, corpus }).get({})
+    expect(dashboard.overview.declaredTopics).toBeGreaterThan(0)
+    expect(dashboard.overview.declaredTopics).toBe(dashboard.overview.masteredTopics)
+    expect(dashboard.weakPoints).toEqual([])
+    expect(dashboard.overview).toMatchObject({ roundsCompleted: 0, attemptCount: 0 })
   })
 })
 

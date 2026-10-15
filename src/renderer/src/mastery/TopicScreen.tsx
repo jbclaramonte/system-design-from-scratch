@@ -11,6 +11,7 @@ import { formatPercent } from '../quiz/progress'
 import { QuizPlayer } from '../quiz/QuizPlayer'
 import { QuizResults } from '../quiz/QuizResults'
 import './mastery.css'
+import { DeclareMastery, UndoDeclaration } from './DeclaredMastery'
 import { LessonReviewPanel } from './LessonReviewPanel'
 import { canReviewLesson } from './lessonReview'
 import {
@@ -51,6 +52,9 @@ export function TopicScreen({
   const [overlay, setOverlay] = useState<Overlay | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [lessonDone, setLessonDone] = useState(false)
+  // A declared topic shows its Declared Mastery until the learner chooses to be tested ("Test
+  // me") or a round is started: from then on the normal loop steps show.
+  const [testing, setTesting] = useState(false)
   // Bumped by Retry: remounts the lesson or a Remediation Lesson.
   const [attempt, setAttempt] = useState(0)
   const requestRef = useRef<{ id: string; ended: boolean } | null>(null)
@@ -84,6 +88,7 @@ export function TopicScreen({
     const requestId = crypto.randomUUID()
     const request = { id: requestId, ended: false }
     requestRef.current = request
+    setTesting(true)
     setError(null)
     setOverlay({ name: 'preparing', requestId, preparation: { status: 'starting' } })
     const unsubscribe = window.api.onMasteryEvent(({ requestId: id, event }) => {
@@ -150,6 +155,13 @@ export function TopicScreen({
 
   const backToLoop = () => void showLoop()
 
+  // "Test me" reuses the normal quiz start: straight to a round once the Lesson exists, else the
+  // loop's own step (the Lesson first, or the remediation).
+  const testMe = () => {
+    setTesting(true)
+    if (state?.step.name === 'lesson' && state.step.lessonReady) startRound()
+  }
+
   const canReview = state !== null && canReviewLesson(state, overlay?.name ?? null)
   const reviewOpen = reviewRequested && canReview
   const closeReview = useCallback(() => setReviewRequested(false), [])
@@ -169,6 +181,10 @@ export function TopicScreen({
     )
   }
 
+  const declaredIdle = state.declared && !testing && overlay === null && state.step.name !== 'round'
+  // The loop's steps, hidden while the Declared Mastery is shown.
+  const loop = overlay === null && !declaredIdle
+
   return (
     <section className="mastery-topic" data-testid="mastery-topic">
       <TopicHeader
@@ -186,6 +202,9 @@ export function TopicScreen({
           )
         }
       />
+      {state.canDeclare && overlay === null && state.step.name !== 'round' && (
+        <DeclareMastery topicId={topic.id} topicTitle={state.topicTitle} onChanged={setState} />
+      )}
       {reviewOpen && <LessonReviewPanel topicId={topic.id} onClose={closeReview} />}
 
       <div className="mastery-step" hidden={reviewOpen} data-testid="mastery-step">
@@ -225,7 +244,36 @@ export function TopicScreen({
           </div>
         )}
 
-        {overlay === null && state.step.name === 'lesson' && (
+        {declaredIdle && (
+          <section
+            className="mastery-outcome mastery-outcome-mastered mastery-outcome-declared"
+            data-testid="mastery-declared"
+          >
+            <h3>Declared mastery</h3>
+            <p>
+              You declared this topic as already known: it counts as mastered and the next topic is
+              unlocked. No score is recorded. Test yourself with a quiz whenever you want
+              {state.step.name === 'lesson' && !state.step.lessonReady
+                ? ' (you read the Lesson first)'
+                : ''}
+              .
+            </p>
+            <div className="chip-row">
+              <button
+                type="button"
+                className="btn-primary"
+                data-testid="mastery-test-me"
+                onClick={testMe}
+              >
+                Test me
+              </button>
+              {state.canUndoDeclaration && (
+                <UndoDeclaration topicId={topic.id} onChanged={setState} />
+              )}
+            </div>
+          </section>
+        )}
+        {loop && state.step.name === 'lesson' && (
           <>
             <LessonScreen
               key={attempt}
@@ -247,12 +295,12 @@ export function TopicScreen({
             </footer>
           </>
         )}
-        {overlay === null && state.step.name === 'round' && (
+        {loop && state.step.name === 'round' && (
           <p className="muted" role="status">
             Resuming round {state.roundNumber}...
           </p>
         )}
-        {overlay === null && state.step.name === 'remediation' && (
+        {loop && state.step.name === 'remediation' && (
           <RemediationStep
             key={`${state.step.roundId}:${attempt}`}
             state={state}
@@ -263,7 +311,7 @@ export function TopicScreen({
             onStartRound={startRound}
           />
         )}
-        {overlay === null && state.step.name === 'limit_reached' && (
+        {loop && state.step.name === 'limit_reached' && (
           <section
             className="mastery-outcome mastery-outcome-limit"
             data-testid="mastery-limit-reached"
@@ -295,7 +343,7 @@ export function TopicScreen({
             </div>
           </section>
         )}
-        {overlay === null && state.step.name === 'skipped' && (
+        {loop && state.step.name === 'skipped' && (
           <section
             className="mastery-outcome mastery-outcome-skipped"
             data-testid="mastery-skipped"
@@ -312,7 +360,7 @@ export function TopicScreen({
             </button>
           </section>
         )}
-        {overlay === null && state.step.name === 'mastered' && (
+        {loop && state.step.name === 'mastered' && (
           <section
             className="mastery-outcome mastery-outcome-mastered"
             data-testid="mastery-mastered"
@@ -385,6 +433,15 @@ export function TopicHeader({
             <span className={masteryChip[state.status]} data-testid="mastery-status">
               {masteryLabels[state.status]}
             </span>
+            {state.declared && (
+              <span
+                className="chip"
+                title="Mastered without a Round: the learner declared the topic as already known"
+                data-testid="mastery-declared-marker"
+              >
+                Declared
+              </span>
+            )}
             {!grounded && <OutsidePrimerBadge testId="mastery-ungrounded" />}
           </div>
           <p className="mastery-summary">{roundProgress(state)}</p>

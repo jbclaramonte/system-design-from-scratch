@@ -29,7 +29,7 @@ Data sources:
 
 ### Overview
 
-- Path progress: the Learning Path progress (topics mastered over topics).
+- Path progress: the Learning Path progress (topics mastered over topics, declared topics included), with how many of the mastered topics are [[Declared Mastery|declared]] (`declaredTopics`, shown "topics mastered (23%), 2 declared").
 - Rounds: completed, and in progress (open).
 - Attempts: every recorded attempt, open rounds included.
 - Accuracy: sum of attempt scores over attempts (scores are all-or-nothing, so the share of correct answers). Null without attempts.
@@ -51,6 +51,14 @@ One cell per notion of every topic with a Notion Outline (a topic with an outlin
 - **Attempts** and **last practiced**: attempts tagged with the notion, open rounds included.
 - **Mastered**: latest score meets the **current** Mastery Threshold. So a threshold change moves notions between mastered and not mastered at once, while rounds keep their stored outcome.
 - **Trend**: over the last 3 scores, the latest one compared with the mean of the previous ones in that window: more than 5 points above is `improving`, more than 5 points below is `regressing`, otherwise `flat`. Null with fewer than 2 scores. Examples: 0, 0, 100 is improving; 0, 100, 0 is regressing; 0, 100, 100, 100 is flat (only the last 3 count).
+
+### Declared Mastery
+
+A topic the learner declared as already known has no round, attempt or score, and the Dashboard invents none.
+
+- The Topics table marks it with a "Declared" chip next to "Mastered"; with no round and no notion score its notions column reads "Declared, no score".
+- In the Notion Map a notion with no score in a declared topic is shown **declared** (`NotionMapCell.declared`, symbol ◇, neutral colour, "declared" instead of a percentage, a legend entry "Declared as already known (no score)" shown only when a cell has it). A notion tested since (a "Test me" round) shows its real score like any other.
+- Weak points, the statistics of rounds and attempts, accuracy and the history are unchanged: they only read rounds and attempts. A Dashboard with a declared topic but no round is not empty.
 
 ### Weak points
 

@@ -27,6 +27,10 @@ export const masteryChip: Record<TopicMastery, string> = {
   skipped: 'chip chip-attention chip-dot'
 }
 
+/** The question of the "I already know this" confirmation: what it does, what it does not. */
+export const declareConfirmation = (title: string): string =>
+  `Mark ${title} as already known? It counts as mastered and the next topic unlocks. No Lesson or quiz is needed and no score is recorded. You can undo it until you play a quiz on it.`
+
 export const angleLabels: Record<RemediationAngle, string> = {
   concrete_example: 'Concrete example',
   analogy: 'Analogy',
@@ -43,9 +47,11 @@ export function roundProgress({
   failedRounds,
   roundLimit,
   masteryThreshold,
-  status
+  status,
+  declared
 }: MasteryState): string {
   const threshold = `Mastery Threshold ${masteryThreshold}%`
+  if (declared) return `Declared as already known, no score recorded · ${threshold}`
   if (status === 'mastered') return `Mastered · ${threshold}`
   if (status === 'not_started')
     return `Read the lesson, then take round ${roundNumber} · ${threshold}`

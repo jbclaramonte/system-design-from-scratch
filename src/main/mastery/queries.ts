@@ -12,7 +12,7 @@ import {
   listNotionsByTopic,
   listRemediationLessonsByTopic
 } from '../db/repositories/learningContent'
-import { listRoundLimitChoicesByTopic } from '../db/repositories/mastery'
+import { getDeclaredMastery, listRoundLimitChoicesByTopic } from '../db/repositories/mastery'
 import { getSettings } from '../db/repositories/settings'
 import type { Round } from '../db/types'
 import { notionScores } from '../quiz/grading'
@@ -47,6 +47,7 @@ export function loadMasterySnapshot(db: Database, topicId: number): MasterySnaps
       id: round.id,
       quizId: round.quizId,
       number: round.number,
+      startedAt: round.startedAt,
       completed: round.completedAt !== null,
       passed: round.passed,
       notionScores: round.completedAt !== null ? roundNotionScores(db, round, notions) : []
@@ -58,26 +59,32 @@ export function loadMasterySnapshot(db: Database, topicId: number): MasterySnaps
       roundId,
       choice
     })),
+    declaredAt: getDeclaredMastery(db, topicId)?.createdAt ?? null,
     masteryThreshold,
     roundLimit
   }
 }
 
 /**
- * Mastery of a topic: not_started, in_progress, mastered, limit_reached or skipped. The one
- * derivation (`deriveMastery`) behind the topic header, the Learning Path, the Dashboard and the
+ * Mastery of a topic: not_started, in_progress, mastered (earned or declared), limit_reached or
+ * skipped. The one derivation (`deriveMastery`) behind the topic header, the Learning Path, the Dashboard and the
  * recommended step: a topic is `in_progress` once a Lesson is recorded or a Round was opened.
  */
 export function getTopicMastery(db: Database, topicId: number): TopicMastery {
   return deriveMastery(loadMasterySnapshot(db, topicId)).status
 }
 
-/** Topics in Learning Path order, with their mastery. */
+/** Topics in Learning Path order, with their mastery and whether it is a Declared Mastery. */
 export function listTopicMasteries(db: Database): TopicMasterySummary[] {
-  return listTopicSummaries(db).map((topic) => ({
-    ...topic,
-    mastery: getTopicMastery(db, topic.id)
-  }))
+  return listTopicSummaries(db).map((topic) => {
+    const derived = deriveMastery(loadMasterySnapshot(db, topic.id))
+    return {
+      ...topic,
+      mastery: derived.status,
+      declared: derived.declared,
+      canUndoDeclaration: derived.canUndoDeclaration
+    }
+  })
 }
 
 /**

@@ -44,7 +44,7 @@ import type {
   SubmissionView
 } from './protocol'
 import type { AboutInfo } from './about'
-import type { LearningPath } from './learningPath'
+import type { LearningPath, LearningPathStepRequest } from './learningPath'
 import type { Dashboard, DashboardRequest } from './dashboard'
 import type {
   FreeAnswerGradingOutcome,
@@ -139,8 +139,23 @@ export interface IpcChannels {
   'mastery:cancel': { request: MasteryCancelRequest; response: void }
   /** Choice at the Round Limit: another angle, or skip and come back later. */
   'mastery:choose': { request: MasteryChooseRequest; response: MasteryState }
+  /**
+   * Declared Mastery: the learner declares the topic as already known. It counts as mastered with
+   * no Round, attempt or score. Refused for a locked topic; a no-op on a mastered one. Pushes
+   * `path:changed`.
+   */
+  'mastery:declare': { request: MasteryTopicRequest; response: MasteryState }
+  /** Undoes a Declared Mastery; refused once a Round was played after it. Pushes `path:changed`. */
+  'mastery:undoDeclaration': { request: MasteryTopicRequest; response: MasteryState }
   /** The Learning Path computed from the database: steps, recommended step, progress. */
   'path:get': { request: void; response: LearningPath }
+  /**
+   * Forced Unlock: opens one locked step of the Learning Path without mastering what comes
+   * before. No mastery credit, no effect on the progress. Pushes `path:changed`.
+   */
+  'path:forceUnlock': { request: LearningPathStepRequest; response: LearningPath }
+  /** Undoes a Forced Unlock while the step has no progress; refused otherwise. Pushes `path:changed`. */
+  'path:lockAgain': { request: LearningPathStepRequest; response: LearningPath }
   /** Mastery per topic, Notion Map, weak points and attempt history (filtered by topic). */
   'dashboard:get': { request: DashboardRequest; response: Dashboard }
   'settings:get': { request: void; response: AppSettings }
@@ -242,7 +257,7 @@ export interface IpcEvents {
   'lessonQuestion:event': LessonStreamEvent
   'mastery:event': MasteryStreamEvent
   'protocol:event': LessonStreamEvent
-  /** The recomputed Learning Path, after a completed round or a Round Limit choice. */
+  /** The recomputed Learning Path, after a completed round, a Round Limit choice, a Forced Unlock or a Declared Mastery. */
   'path:changed': LearningPath
 }
 
@@ -276,7 +291,11 @@ export const apiChannels = {
   startRemediation: 'mastery:startRemediation',
   cancelMastery: 'mastery:cancel',
   chooseAtRoundLimit: 'mastery:choose',
+  declareMastery: 'mastery:declare',
+  undoDeclaredMastery: 'mastery:undoDeclaration',
   getLearningPath: 'path:get',
+  forceUnlockStep: 'path:forceUnlock',
+  lockStepAgain: 'path:lockAgain',
   getDashboard: 'dashboard:get',
   getSettings: 'settings:get',
   updateSettings: 'settings:update',

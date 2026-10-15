@@ -40,6 +40,10 @@ export interface MasteryIpc {
   startRemediation(request: MasteryRemediationRequest, client: GenerationClient): void
   cancel(request: MasteryCancelRequest): void
   choose(request: MasteryChooseRequest): MasteryState
+  /** Declared Mastery ("I already know this"); refused for a locked topic like a Round. */
+  declare(request: MasteryTopicRequest): MasteryState
+  /** Undoes the Declared Mastery while no Round was played after it. */
+  undoDeclaration(request: MasteryTopicRequest): MasteryState
 }
 
 /**
@@ -128,6 +132,15 @@ export function createMasteryIpc(
     choose(request) {
       const { topicId, choice } = chooseRequest.parse(request)
       return mastery.choose(topicId, choice)
-    }
+    },
+
+    declare(request) {
+      const { topicId } = topicRequest.parse(request)
+      mastery.getState(topicId)
+      assertTopicUnlocked(topicId)
+      return mastery.declare(topicId)
+    },
+
+    undoDeclaration: (request) => mastery.undoDeclaration(topicRequest.parse(request).topicId)
   }
 }

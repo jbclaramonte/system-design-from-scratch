@@ -36,10 +36,13 @@ function step(
       inFoundationsModule: false,
       grounded: true,
       notionCount: 0,
-      mastery: status === 'locked' || status === 'available' ? 'not_started' : 'in_progress'
+      mastery: status === 'locked' || status === 'available' ? 'not_started' : 'in_progress',
+      declared: false,
+      canUndoDeclaration: false
     },
     status,
-    lockedBy: null
+    lockedBy: null,
+    forcedUnlock: false
   }
 }
 
@@ -158,6 +161,7 @@ describe('buildDashboard', () => {
     )
     expect(dashboard.overview).toEqual({
       masteredTopics: 0,
+      declaredTopics: 0,
       totalTopics: 1,
       percent: 0,
       roundsCompleted: 0,
@@ -413,5 +417,70 @@ describe('buildDashboard', () => {
     const dashboard = buildDashboard(snapshot([{ step: step(1, 'Cache'), notions: [], rounds }]))
     expect(dashboard.history).toHaveLength(HISTORY_ROUND_LIMIT)
     expect(dashboard.history[0]!.number).toBe(HISTORY_ROUND_LIMIT + 5)
+  })
+})
+
+describe('buildDashboard: Declared Mastery', () => {
+  const declaredStep = (id: number, title: string): TopicStep => {
+    const base = step(id, title, 'mastered')
+    return { ...base, topic: { ...base.topic, mastery: 'mastered', declared: true } }
+  }
+  const cacheAside = cache[0]!
+  const writeThrough = cache[1]!
+
+  it('counts declared topics apart and shows their notions as declared, with no score', () => {
+    const dashboard = buildDashboard({
+      ...snapshot([
+        { step: declaredStep(1, 'Cache'), notions: cache, rounds: [] },
+        { step: step(2, 'DNS'), notions: [{ id: 9, slug: 'a', title: 'A' }], rounds: [] }
+      ]),
+      path: path(1, 2)
+    })
+    expect(dashboard.overview).toMatchObject({ masteredTopics: 1, declaredTopics: 1 })
+    expect(dashboard.notionMap.map((map) => [map.slug, map.declared])).toEqual([
+      ['t1', true],
+      ['t2', false]
+    ])
+    expect(dashboard.notionMap[0]!.notions.map((cell) => cell.declared)).toEqual([true, true, true])
+    expect(dashboard.notionMap[0]!.notions[0]).toMatchObject({
+      latestScorePercent: null,
+      scores: [],
+      mastered: false
+    })
+    expect(dashboard.notionMap[1]!.notions[0]!.declared).toBe(false)
+    // Nothing invented: no round, no attempt, no weak point.
+    expect(dashboard.topics[0]).toMatchObject({ rounds: [], bestScorePercent: null })
+    expect(dashboard.weakPoints).toEqual([])
+    expect(dashboard.overview).toMatchObject({ roundsCompleted: 0, attemptCount: 0 })
+  })
+
+  it('shows the real score of a notion tested after the declaration, and weak points as usual', () => {
+    const dashboard = buildDashboard(
+      snapshot([
+        {
+          step: declaredStep(1, 'Cache'),
+          notions: cache,
+          rounds: [
+            round(
+              1,
+              1,
+              2,
+              [
+                [cacheAside, 100],
+                [writeThrough, 0]
+              ],
+              { passed: false }
+            )
+          ]
+        }
+      ])
+    )
+    const cells = dashboard.notionMap[0]!.notions
+    expect(cells.map((cell) => [cell.latestScorePercent, cell.declared])).toEqual([
+      [100, false],
+      [0, false],
+      [null, true]
+    ])
+    expect(dashboard.weakPoints.map((weak) => weak.notion.slug)).toEqual(['write-through'])
   })
 })

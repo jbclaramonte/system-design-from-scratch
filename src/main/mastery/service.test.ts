@@ -541,3 +541,125 @@ describe('mastery IPC', () => {
     expect(ipc.listTopics()).toMatchObject([{ slug: 'cache', mastery: 'not_started' }])
   })
 })
+
+describe('Declared Mastery', () => {
+  const attemptCount = () =>
+    db.prepare('SELECT COUNT(*) AS n FROM attempts').get<{ n: number }>()!.n
+
+  it('declares a topic mastered without inventing a round, an attempt or a score', () => {
+    const state = mastery.declare(topic.id)
+    expect(state).toMatchObject({
+      status: 'mastered',
+      declared: true,
+      canDeclare: false,
+      canUndoDeclaration: true,
+      failedRounds: 0,
+      lastRound: null,
+      step: { name: 'lesson', lessonReady: false }
+    })
+    expect(getTopicMastery(db, topic.id)).toBe('mastered')
+    expect(mastery.listTopics()).toMatchObject([
+      { slug: 'cache', mastery: 'mastered', declared: true, canUndoDeclaration: true }
+    ])
+    expect(listRoundsByTopic(db, topic.id)).toEqual([])
+    expect(attemptCount()).toBe(0)
+    expect(latestNotionScores(db, topic.id)).toEqual([])
+  })
+
+  it('is a no-op on a topic already declared or mastered by a Round', async () => {
+    mastery.declare(topic.id)
+    const row = () => db.prepare('SELECT * FROM declared_masteries').all()
+    const first = row()
+    expect(mastery.declare(topic.id)).toMatchObject({ declared: true })
+    expect(row()).toEqual(first)
+
+    mastery.undoDeclaration(topic.id)
+    readLesson()
+    play(await mastery.startRound(topic.id))
+    expect(mastery.declare(topic.id)).toMatchObject({ status: 'mastered', declared: false })
+    expect(row()).toEqual([])
+  })
+
+  it('is tested with the normal quiz: scores are recorded, a failure does not revoke it', async () => {
+    mastery.declare(topic.id)
+    readLesson()
+    // "Test me" reuses the normal start: the lesson comes first, then a round.
+    const start = await mastery.startRound(topic.id)
+    expect(start.round.number).toBe(1)
+    expect(mastery.getState(topic.id)).toMatchObject({ status: 'mastered', declared: true })
+
+    expect(play(start, ['cache-aside']).round.passed).toBe(false)
+    const failed = mastery.getState(topic.id)
+    expect(failed).toMatchObject({ status: 'mastered', declared: true, failedRounds: 1 })
+    expect(failed.step.name).toBe('remediation')
+    // The scores of the round show in the notion scores like any round.
+    expect(latestNotionScores(db, topic.id).find((n) => n.slug === 'cache-aside')).toMatchObject({
+      roundNumber: 1,
+      scorePercent: 0
+    })
+
+    // A passed round makes it a mastery earned by playing.
+    await readRemediations()
+    play(await mastery.startRound(topic.id))
+    expect(mastery.getState(topic.id)).toMatchObject({
+      status: 'mastered',
+      declared: false,
+      step: { name: 'mastered' }
+    })
+  })
+
+  it('replaces the Round Limit and skipped states', async () => {
+    updateSettings(db, { roundLimit: 1 })
+    readLesson()
+    play(await mastery.startRound(topic.id), ['cache-aside'])
+    expect(mastery.getState(topic.id).status).toBe('limit_reached')
+    expect(mastery.declare(topic.id)).toMatchObject({ status: 'mastered', declared: true })
+    expect(mastery.listTopics()[0]).toMatchObject({ mastery: 'mastered', declared: true })
+  })
+
+  it('is undone while no Round was played after it, and refused afterwards', async () => {
+    mastery.declare(topic.id)
+    expect(mastery.undoDeclaration(topic.id)).toMatchObject({
+      status: 'not_started',
+      declared: false,
+      canDeclare: true
+    })
+    // Nothing to undo: a no-op.
+    expect(mastery.undoDeclaration(topic.id)).toMatchObject({ declared: false })
+
+    mastery.declare(topic.id)
+    readLesson()
+    await mastery.startRound(topic.id)
+    expect(() => mastery.undoDeclaration(topic.id)).toThrow(/Round was played after/)
+    expect(mastery.getState(topic.id)).toMatchObject({
+      status: 'mastered',
+      declared: true,
+      canUndoDeclaration: false
+    })
+  })
+
+  it('goes through IPC: validated, refused on a locked topic, undone', () => {
+    const ipc = createMasteryIpc({ db, corpus, service: generation }, mastery, {
+      assertTopicUnlocked: (topicId) =>
+        createTopicLockGuard(
+          { db, corpus },
+          {
+            allowLockedTopics: false
+          }
+        )(topicId)
+    })
+    expect(() => ipc.declare({ topicId: -1 })).toThrow()
+    expect(() => ipc.declare({ topicId: 999 })).toThrow(/does not exist/)
+    expect(() => ipc.undoDeclaration({} as never)).toThrow()
+
+    // A Foundations Module topic before `cache`, not mastered, locks it.
+    createTopic(db, { slug: 'http', title: 'HTTP', position: 0, inFoundationsModule: true })
+    expect(() => ipc.declare({ topicId: topic.id })).toThrow(/locked/)
+    expect(mastery.getState(topic.id).declared).toBe(false)
+    const http = mastery.listTopics().find((t) => t.slug === 'http')!
+    expect(ipc.declare({ topicId: http.id })).toMatchObject({ status: 'mastered', declared: true })
+    // Declaring the previous topic unlocks `cache`, which can now be declared in turn.
+    expect(ipc.declare({ topicId: topic.id })).toMatchObject({ declared: true })
+    expect(ipc.undoDeclaration({ topicId: topic.id })).toMatchObject({ declared: false })
+  })
+})

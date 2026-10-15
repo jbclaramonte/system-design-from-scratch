@@ -69,7 +69,27 @@ export function createHandlers({
       path.notifyChanged(event.sender)
       return state
     },
+    'mastery:declare': (request, event) => {
+      const state = mastery.declare(request)
+      path.notifyChanged(event.sender)
+      return state
+    },
+    'mastery:undoDeclaration': (request, event) => {
+      const state = mastery.undoDeclaration(request)
+      path.notifyChanged(event.sender)
+      return state
+    },
     'path:get': () => path.get(),
+    'path:forceUnlock': (request, event) => {
+      const result = path.forceUnlock(request)
+      path.notifyChanged(event.sender)
+      return result
+    },
+    'path:lockAgain': (request, event) => {
+      const result = path.lockAgain(request)
+      path.notifyChanged(event.sender)
+      return result
+    },
     'dashboard:get': (request) => dashboard.get(request),
     'settings:get': () => settings.get(),
     'settings:update': (request) => settings.update(request),

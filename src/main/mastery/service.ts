@@ -17,7 +17,11 @@ import {
   listNotionsByTopic,
   listRemediationLessonsByNotion
 } from '../db/repositories/learningContent'
-import { setRoundLimitChoice } from '../db/repositories/mastery'
+import {
+  declareMastery,
+  removeDeclaredMastery,
+  setRoundLimitChoice
+} from '../db/repositories/mastery'
 import { getSettings } from '../db/repositories/settings'
 import type { Notion, Round } from '../db/types'
 import { GenerationError } from '../generation/errors'
@@ -41,7 +45,13 @@ import type {
 import type { RoundStart, RoundView } from '../../shared/quiz'
 import { listTopicMasteries, loadMasterySnapshot } from './queries'
 import { firstRoundQuizOptions, nextRoundQuizOptions } from './quizOptions'
-import { cannotChoose, cannotStartRound, deriveMastery, type DerivedMastery } from './state'
+import {
+  cannotChoose,
+  cannotStartRound,
+  cannotUndoDeclaration,
+  deriveMastery,
+  type DerivedMastery
+} from './state'
 
 export interface MasteryServiceDeps extends PipelineDeps {
   quiz: QuizService
@@ -80,6 +90,16 @@ export interface MasteryService {
   pregenerateRemediationStep(topicId: number, exceptNotionId?: number): void
   /** The learner's choice at the Round Limit (or coming back to a skipped topic). */
   choose(topicId: number, choice: RoundLimitChoice): MasteryState
+  /**
+   * Declares the topic as already known (Declared Mastery): it counts as mastered, with no Round,
+   * attempt or score. A no-op on a topic already mastered or declared.
+   */
+  declare(topicId: number): MasteryState
+  /**
+   * Removes the Declared Mastery. A no-op without one; refused once a Round was started on the
+   * topic after the declaration.
+   */
+  undoDeclaration(topicId: number): MasteryState
 }
 
 const toRoundView = (round: Round): RoundView => ({
@@ -168,7 +188,10 @@ export function createMasteryService(deps: MasteryServiceDeps): MasteryService {
         failedRounds: derived.failedRounds,
         masteryThreshold,
         roundLimit,
-        lastRound: lastRound ? toRoundView(lastRound) : null
+        lastRound: lastRound ? toRoundView(lastRound) : null,
+        declared: derived.declared,
+        canDeclare: derived.canDeclare,
+        canUndoDeclaration: derived.canUndoDeclaration
       }
     },
 
@@ -277,6 +300,22 @@ export function createMasteryService(deps: MasteryServiceDeps): MasteryService {
       if (refused) throw new Error(refused)
       if (step.name === 'limit_reached' || step.name === 'skipped') {
         setRoundLimitChoice(db, step.roundId, choice)
+      }
+      return service.getState(topicId)
+    },
+
+    declare(topicId) {
+      if (derive(topicId).canDeclare) declareMastery(db, topicId)
+      return service.getState(topicId)
+    },
+
+    undoDeclaration(topicId) {
+      requireTopic(topicId)
+      const snapshot = loadMasterySnapshot(db, topicId)
+      if (snapshot.declaredAt !== null) {
+        const refused = cannotUndoDeclaration(snapshot)
+        if (refused) throw new Error(refused)
+        removeDeclaredMastery(db, topicId)
       }
       return service.getState(topicId)
     }

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { NotionScore } from '../../shared/quiz'
 import {
   cannotChoose,
+  cannotUndoDeclaration,
   cannotStartRound,
   deriveMastery,
   failedRoundsSinceLastPass,
@@ -21,11 +22,16 @@ const score = (id: number, earned: number, questionCount: number): NotionScore =
   missed: earned < questionCount
 })
 
+/** Round `number` starts at minute `number` of a fixed hour, so declarations can sit between. */
+const startedAt = (number: number): string =>
+  new Date(Date.UTC(2026, 0, 1, 10, number)).toISOString()
+
 /** Notion 1 always right; notion 2 missed unless `passed`. */
 const completed = (number: number, passed: boolean): RoundSnapshot => ({
   id: number * 10,
   quizId: number,
   number,
+  startedAt: startedAt(number),
   completed: true,
   passed,
   notionScores: [score(1, 2, 2), passed ? score(2, 2, 2) : score(2, 0, 2)]
@@ -35,6 +41,7 @@ const open = (number: number): RoundSnapshot => ({
   id: number * 10,
   quizId: number,
   number,
+  startedAt: startedAt(number),
   completed: false,
   passed: null,
   notionScores: []
@@ -45,6 +52,7 @@ const snapshot = (changes: Partial<MasterySnapshot> = {}): MasterySnapshot => ({
   rounds: [],
   remediations: [],
   choices: [],
+  declaredAt: null,
   masteryThreshold: 100,
   roundLimit: 3,
   ...changes
@@ -287,6 +295,104 @@ describe('deriveMastery', () => {
       expect(state.status).toBe('in_progress')
       if (state.step.name !== 'remediation') throw new Error('expected remediation')
       expect(state.step.targets.map((t) => t.notion.id)).toEqual([1])
+    })
+  })
+})
+
+describe('Declared Mastery', () => {
+  // Between round 2 (minute 2) and round 4 (minute 4).
+  const declaredAt = startedAt(3)
+  const declared = (changes: Partial<MasterySnapshot> = {}) =>
+    deriveMastery(snapshot({ declaredAt, ...changes }))
+
+  it('makes a topic with no round mastered, flagged declared, without inventing a round', () => {
+    expect(declared()).toMatchObject({
+      status: 'mastered',
+      declared: true,
+      canDeclare: false,
+      canUndoDeclaration: true,
+      failedRounds: 0,
+      lastRoundId: null,
+      roundNumber: 1
+    })
+    // Without a declaration the topic is only in progress, and can be declared.
+    expect(deriveMastery(snapshot())).toMatchObject({
+      status: 'in_progress',
+      declared: false,
+      canDeclare: true,
+      canUndoDeclaration: false
+    })
+  })
+
+  it('is undone by removing the declaration', () => {
+    expect(declared({ lessonReady: false }).status).toBe('mastered')
+    expect(deriveMastery(snapshot({ declaredAt: null, lessonReady: false })).status).toBe(
+      'not_started'
+    )
+  })
+
+  it('keeps the loop step, so a declared topic can still be tested', () => {
+    const state = declared({ lessonReady: false })
+    expect(state.step).toEqual({ name: 'lesson', lessonReady: false })
+    expect(cannotStartRound(declared().step)).toBeNull()
+    const playing = declared({ rounds: [open(4)] })
+    expect(playing).toMatchObject({ status: 'mastered', declared: true })
+    expect(playing.step.name).toBe('round')
+  })
+
+  it('is not declared once a Round met the Mastery Threshold', () => {
+    const state = declared({ rounds: [completed(4, true)] })
+    expect(state).toMatchObject({ status: 'mastered', declared: false, canDeclare: false })
+    expect(state.step.name).toBe('mastered')
+    // Even if a later round failed: mastered once, mastered for good.
+    const failedAfter = declared({ rounds: [completed(4, true), completed(5, false)] })
+    expect(failedAfter).toMatchObject({ status: 'mastered', declared: false })
+  })
+
+  it('stays mastered and declared after a failed Round', () => {
+    const state = declared({ rounds: [completed(4, false)] })
+    expect(state).toMatchObject({ status: 'mastered', declared: true })
+    expect(state.failedRounds).toBe(1)
+    expect(state.step.name).toBe('remediation')
+  })
+
+  it('replaces the Round Limit and skipped states', () => {
+    const atLimit = [completed(4, false), completed(5, false), completed(6, false)]
+    expect(deriveMastery(snapshot({ rounds: atLimit })).status).toBe('limit_reached')
+    expect(declared({ rounds: atLimit })).toMatchObject({ status: 'mastered', declared: true })
+    const skipped = declared({ rounds: atLimit, choices: [{ roundId: 60, choice: 'skip' }] })
+    expect(skipped).toMatchObject({ status: 'mastered', declared: true })
+    expect(skipped.step.name).toBe('skipped')
+  })
+
+  it('refuses to declare a topic mastered by a Round, even one that regressed', () => {
+    expect(deriveMastery(snapshot({ rounds: [completed(1, true)] })).canDeclare).toBe(false)
+    const regressed = deriveMastery(snapshot({ rounds: [completed(1, true), completed(2, false)] }))
+    expect(regressed.status).toBe('in_progress')
+    expect(regressed.canDeclare).toBe(false)
+  })
+
+  describe('cannotUndoDeclaration', () => {
+    it('allows it while no Round was started after the declaration', () => {
+      expect(cannotUndoDeclaration(snapshot({ declaredAt }))).toBeNull()
+      // Rounds played before the declaration do not count.
+      expect(
+        cannotUndoDeclaration(snapshot({ declaredAt, rounds: [completed(1, false), open(2)] }))
+      ).toBeNull()
+    })
+
+    it('refuses it once a Round was started after, open or completed', () => {
+      for (const round of [open(4), completed(4, false), completed(4, true)]) {
+        const refused = cannotUndoDeclaration(snapshot({ declaredAt, rounds: [round] }))
+        expect(refused).toMatch(/Round was played after the declaration/)
+        expect(deriveMastery(snapshot({ declaredAt, rounds: [round] })).canUndoDeclaration).toBe(
+          false
+        )
+      }
+    })
+
+    it('has nothing to undo without a declaration', () => {
+      expect(cannotUndoDeclaration(snapshot())).toMatch(/no Declared Mastery/)
     })
   })
 })

@@ -15,6 +15,18 @@ function fakeIpcMain(): IpcMainLike & { listeners: Map<string, Listener> } {
   }
 }
 
+const emptyPath = {
+  steps: [],
+  nextStepKey: null,
+  progress: {
+    masteredTopics: 0,
+    totalTopics: 0,
+    percent: 0,
+    unlockedExercises: 0,
+    totalExercises: 0
+  }
+}
+
 const handlers: IpcHandlers = {
   'app:getVersion': () => '1.2.3',
   'app:getAbout': () => {
@@ -55,17 +67,15 @@ const handlers: IpcHandlers = {
   'mastery:choose': () => {
     throw new Error('no topic')
   },
-  'path:get': () => ({
-    steps: [],
-    nextStepKey: null,
-    progress: {
-      masteredTopics: 0,
-      totalTopics: 0,
-      percent: 0,
-      unlockedExercises: 0,
-      totalExercises: 0
-    }
-  }),
+  'mastery:declare': () => {
+    throw new Error('no topic')
+  },
+  'mastery:undoDeclaration': () => {
+    throw new Error('no topic')
+  },
+  'path:get': () => emptyPath,
+  'path:forceUnlock': () => emptyPath,
+  'path:lockAgain': () => emptyPath,
   'dashboard:get': () => {
     throw new Error('no database')
   },
@@ -162,12 +172,16 @@ describe('registerHandlers', () => {
       'lessonQuestion:cancel',
       'mastery:cancel',
       'mastery:choose',
+      'mastery:declare',
       'mastery:getLessonReview',
       'mastery:getState',
       'mastery:listTopics',
       'mastery:startRemediation',
       'mastery:startRound',
+      'mastery:undoDeclaration',
+      'path:forceUnlock',
       'path:get',
+      'path:lockAgain',
       'protocol:cancel',
       'protocol:getExercise',
       'protocol:markLessonSeen',

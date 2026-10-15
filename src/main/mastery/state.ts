@@ -1,6 +1,6 @@
 // Mastery Loop state machine. Pure: the state of a topic is derived from a snapshot of the
-// database (rounds, their per-notion scores, Remediation Lessons, Round Limit choices, settings),
-// so it survives restarts. Rules in docs/Mastery Loop Implementation.md.
+// database (rounds, their per-notion scores, Remediation Lessons, Round Limit choices, the Declared
+// Mastery, settings), so it survives restarts. Rules in docs/Mastery Loop Implementation.md.
 import {
   remediationAngles,
   type MasteryStep,
@@ -15,6 +15,8 @@ export interface RoundSnapshot {
   id: number
   quizId: number
   number: number
+  /** ISO 8601 time the round was started. */
+  startedAt: string
   completed: boolean
   /** Stored at completion against the threshold of that time; null while open. */
   passed: boolean | null
@@ -30,12 +32,18 @@ export interface MasterySnapshot {
   /** Recorded Remediation Lessons: the round that triggered them and their notion. */
   remediations: { roundId: number; notionId: number }[]
   choices: { roundId: number; choice: RoundLimitChoice }[]
+  /** ISO 8601 time the learner declared the topic as already known (Declared Mastery), or null. */
+  declaredAt: string | null
   masteryThreshold: number
   roundLimit: number
 }
 
 export interface DerivedMastery {
   status: TopicMastery
+  /**
+   * Where the Mastery Loop stands. A Declared Mastery replaces the `status`, never the step: it
+   * is the way into a quiz on a declared topic ("Test me").
+   */
   step: MasteryStep
   /** Number of the open round, or of the next round to play. */
   roundNumber: number
@@ -43,7 +51,19 @@ export interface DerivedMastery {
   failedRounds: number
   /** Latest completed round. */
   lastRoundId: number | null
+  /**
+   * The topic is mastered by declaration only: a Declared Mastery exists and no Round met the
+   * Mastery Threshold. False for a mastery earned by a Round, even when the topic was declared.
+   */
+  declared: boolean
+  /** The learner can declare the topic: no Declared Mastery yet and no Round met the threshold. */
+  canDeclare: boolean
+  /** The Declared Mastery can be undone: it exists and no Round was started since. */
+  canUndoDeclaration: boolean
 }
+
+/** What the Round loop alone says about a topic, before a Declared Mastery. */
+type LoopState = Omit<DerivedMastery, 'declared' | 'canDeclare' | 'canUndoDeclaration'>
 
 /**
  * Notions missed in a round: per-notion score below the Mastery Threshold. When a failed round
@@ -95,12 +115,8 @@ function remediationTargets(
   })
 }
 
-/**
- * The state of a topic in the Mastery Loop. Its status is the only topic status of the app:
- * `not_started` until a Lesson is recorded or a Round is opened (an open or abandoned one
- * included), then `in_progress` until mastered, skipped or at the Round Limit.
- */
-export function deriveMastery(snapshot: MasterySnapshot): DerivedMastery {
+/** The Round loop: rounds, Remediation Lessons and Round Limit choices; no declaration. */
+function deriveLoop(snapshot: MasterySnapshot): LoopState {
   const rounds = [...snapshot.rounds].sort((a, b) => a.number - b.number)
   const completed = rounds.filter((round) => round.completed)
   const last = completed.at(-1)
@@ -147,6 +163,46 @@ export function deriveMastery(snapshot: MasterySnapshot): DerivedMastery {
       anotherAngle: choice === 'another_angle',
       targets: remediationTargets(snapshot, last, numberOf)
     }
+  }
+}
+
+/** A Round met the Mastery Threshold once (stored at completion): a mastery earned by playing. */
+const hasPassedRound = (snapshot: MasterySnapshot): boolean =>
+  snapshot.rounds.some((round) => round.completed && round.passed === true)
+
+/**
+ * Why the Declared Mastery cannot be undone now, or null when it can: it must exist, and no
+ * Round may have been started on the topic since the declaration.
+ */
+export function cannotUndoDeclaration(snapshot: MasterySnapshot): string | null {
+  const { declaredAt } = snapshot
+  if (declaredAt === null) return 'The topic has no Declared Mastery to undo.'
+  if (snapshot.rounds.some((round) => round.startedAt >= declaredAt)) {
+    return 'A Round was played after the declaration: it cannot be undone.'
+  }
+  return null
+}
+
+/**
+ * The state of a topic in the Mastery Loop. Its status is the only topic status of the app:
+ * `not_started` until a Lesson is recorded or a Round is opened (an open or abandoned one
+ * included), then `in_progress` until mastered, skipped or at the Round Limit.
+ *
+ * A Declared Mastery makes the topic `mastered` whatever the rounds say (a Round Limit, a skip, a
+ * later failed round): like a topic mastered once, it stays mastered. `declared` tells it apart
+ * from a mastery earned by a Round. The step is the one of the loop, so a declared topic can
+ * still be tested.
+ */
+export function deriveMastery(snapshot: MasterySnapshot): DerivedMastery {
+  const loop = deriveLoop(snapshot)
+  const declaration = snapshot.declaredAt !== null
+  const earned = hasPassedRound(snapshot)
+  return {
+    ...loop,
+    status: declaration ? 'mastered' : loop.status,
+    declared: declaration && !earned,
+    canDeclare: !declaration && !earned,
+    canUndoDeclaration: declaration && cannotUndoDeclaration(snapshot) === null
   }
 }
 

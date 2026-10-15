@@ -28,6 +28,7 @@ function TopicList({ onOpen }: { onOpen: (topic: TopicMasterySummary) => void })
             <span className="dev-topic-title">{topic.title}</span>
             {!topic.grounded && <OutsidePrimerBadge />}
             <span className={masteryChip[topic.mastery]}>{masteryLabels[topic.mastery]}</span>
+            {topic.declared && <span className="chip">Declared</span>}
           </button>
         </li>
       ))}

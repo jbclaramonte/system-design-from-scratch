@@ -4,6 +4,8 @@ import { notionSourcesAndQuestionFlags } from './0002-notion-sources-and-questio
 import { masteryLoop } from './0003-mastery-loop'
 import { interviewProtocol } from './0004-interview-protocol'
 import { questionClarifications } from './0005-question-clarifications'
+import { forcedUnlocks } from './0006-forced-unlocks'
+import { declaredMasteries } from './0007-declared-masteries'
 
 /** Every migration, in order. Append new ones; never edit or reorder an applied one. */
 export const migrations: readonly Migration[] = [
@@ -11,5 +13,7 @@ export const migrations: readonly Migration[] = [
   notionSourcesAndQuestionFlags,
   masteryLoop,
   interviewProtocol,
-  questionClarifications
+  questionClarifications,
+  forcedUnlocks,
+  declaredMasteries
 ]

@@ -86,12 +86,11 @@ function blockerNote(ref: LearningPathTopicRef): string {
   }
 }
 
-const listTitles = (refs: readonly LearningPathTopicRef[]): string => {
-  const titles = refs.map((ref) => ref.title)
-  return titles.length <= 1
-    ? (titles[0] ?? '')
-    : `${titles.slice(0, -1).join(', ')} and ${titles.at(-1)}`
-}
+const joinTitles = (titles: readonly string[]): string =>
+  titles.length <= 1 ? (titles[0] ?? '') : `${titles.slice(0, -1).join(', ')} and ${titles.at(-1)}`
+
+const listTitles = (refs: readonly LearningPathTopicRef[]): string =>
+  joinTitles(refs.map((ref) => ref.title))
 
 /**
  * Why a locked step is locked ("Master X first", "Complete exercise Y first"), or null when it
@@ -111,6 +110,52 @@ export function lockMessage(step: TopicStep | DesignExerciseStep): string | null
       `Complete ${step.lockedByExercise.title} first.`
   ].filter((reason): reason is string => Boolean(reason))
   return reasons.length > 0 ? reasons.join(' ') : null
+}
+
+/** What a Forced Unlock skips: the topics and exercise still to master or complete, in words. */
+function skippedSteps(step: TopicStep | DesignExerciseStep): string[] {
+  if (step.kind === 'topic') return step.lockedBy ? [step.lockedBy.title] : []
+  return [
+    ...step.missingPrerequisites.map((ref) => ref.title),
+    ...(step.lockedByExercise ? [step.lockedByExercise.title] : [])
+  ]
+}
+
+/** A topic the learner can declare as already known: open and not mastered. */
+export const canDeclareTopic = (step: TopicStep): boolean =>
+  step.status === 'available' ||
+  step.status === 'in_progress' ||
+  step.status === 'skipped' ||
+  step.status === 'limit_reached'
+
+/** A step the learner can open anyway ("Unlock anyway"): a locked one. */
+export const canForceUnlock = (step: LearningPathStep): boolean => step.status === 'locked'
+
+/** A Forced Unlock can be undone while the step has no progress (`available`). */
+export const canLockAgain = (step: LearningPathStep): boolean =>
+  step.forcedUnlock && step.status === 'available'
+
+/** The marker of a step opened by a Forced Unlock; a finished step needs none. */
+export const showsForcedUnlock = (step: LearningPathStep): boolean =>
+  step.forcedUnlock && step.status !== 'mastered' && step.status !== 'completed'
+
+/** The question of the "Unlock anyway" confirmation: what opens, what does not change. */
+export function forcedUnlockConfirmation(step: TopicStep | DesignExerciseStep): string {
+  const skipped = joinTitles(skippedSteps(step))
+  return [
+    `Open ${stepTitle(step)} without credit?`,
+    skipped && `${skipped} will stay not mastered.`,
+    'Your progress does not change and the steps after it stay locked.',
+    'You can lock it again until you start it.'
+  ]
+    .filter(Boolean)
+    .join(' ')
+}
+
+/** The line of a step opened by a Forced Unlock: what was skipped. */
+export function forcedUnlockNote(step: TopicStep | DesignExerciseStep): string {
+  const skipped = joinTitles(skippedSteps(step))
+  return skipped ? `Opened without credit: ${skipped} not mastered.` : 'Opened without credit.'
 }
 
 /** A Design Exercise the learner can open from the path (to play it, or to read its review). */

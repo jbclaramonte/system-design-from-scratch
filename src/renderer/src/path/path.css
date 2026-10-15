@@ -260,6 +260,35 @@
   line-height: var(--type-body-sm-line);
 }
 
+/* Forced Unlock: the button under a lock message, its confirmation, the note of an opened step. */
+
+.path-unlock {
+  margin: var(--space-sm) 0 0 calc(20px + var(--space-md));
+}
+
+.path-exercise .path-unlock {
+  margin-left: 0;
+}
+
+.path-unlock .path-step-note {
+  margin: 0;
+}
+
+.path-unlock-confirm p,
+.path-unlock .declare-mastery-confirm p {
+  margin: 0 0 var(--space-sm);
+}
+
+.path-unlock .declare-mastery {
+  margin: 0;
+}
+
+.path-unlock-error {
+  margin: var(--space-xs) 0 0;
+  color: var(--color-error-text);
+  font-size: var(--type-body-md-size);
+}
+
 /* The next step unlocked by a mastered topic, at the end of the screen nav. */
 .screen-nav .path-unlocked {
   margin: 0 0 0 auto;

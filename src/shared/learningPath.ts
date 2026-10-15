@@ -12,8 +12,9 @@ export type LearningPathSection = (typeof learningPathSections)[number]
 /**
  * Status of a step:
  * - `locked`: the previous topic (or, for a Design Exercise, a prerequisite topic or the previous
- *   exercise) is not mastered (completed).
- * - `available`: unlocked, not started.
+ *   exercise) is not mastered (completed), and the learner did not force the unlock.
+ * - `available`: unlocked, not started. A step opened by a Forced Unlock is `available` too
+ *   (`forcedUnlock` tells them apart).
  * - `in_progress`, `skipped`, `limit_reached`: the topic's mastery, see the Mastery Loop. A
  *   Design Exercise is `in_progress` once a step was submitted.
  * - `mastered`: the topic met the Mastery Threshold once; it stays mastered.
@@ -48,8 +49,13 @@ export interface TopicStep {
   section: 'foundations' | 'primer'
   topic: TopicMasterySummary
   status: LearningPathStepStatus
-  /** The previous topic to master first, when `locked`. */
+  /** The previous topic to master first, when `locked` or opened by a Forced Unlock. */
   lockedBy: LearningPathTopicRef | null
+  /**
+   * The learner opened the step without mastering the previous topic (Forced Unlock). False once
+   * the previous topic is mastered: the unlock is no longer needed.
+   */
+  forcedUnlock: boolean
 }
 
 /** A Design Exercise named in a lock reason. */
@@ -79,6 +85,11 @@ export interface DesignExerciseStep {
   missingPrerequisites: LearningPathTopicRef[]
   /** The previous Design Exercise, when it must be completed first and is not yet. */
   lockedByExercise: LearningPathExerciseRef | null
+  /**
+   * The learner opened the exercise with a prerequisite topic not mastered or the previous
+   * exercise not completed (Forced Unlock). Both lists above still say what was skipped.
+   */
+  forcedUnlock: boolean
   rationale: string
 }
 
@@ -87,9 +98,12 @@ export type LearningPathStep = TopicStep | DesignExerciseStep
 export interface LearningPathProgress {
   masteredTopics: number
   totalTopics: number
-  /** Mastered topics over all topics, 0 to 100 (rounded down). */
+  /** Mastered topics over all topics, 0 to 100 (rounded down). Forced Unlocks do not count. */
   percent: number
-  /** Design Exercises whose prerequisites are all mastered (implemented or not). */
+  /**
+   * Design Exercises whose prerequisites are all mastered (implemented or not). A Forced Unlock
+   * does not count.
+   */
   unlockedExercises: number
   totalExercises: number
 }
@@ -100,4 +114,9 @@ export interface LearningPath {
   /** Key of the recommended step (the "Continue" call to action), null when there is none. */
   nextStepKey: string | null
   progress: LearningPathProgress
+}
+
+/** A Learning Path step named by its key (`topic:<slug>` or `design_exercise:<slug>`). */
+export interface LearningPathStepRequest {
+  stepKey: string
 }

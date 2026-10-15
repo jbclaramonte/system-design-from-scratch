@@ -76,11 +76,24 @@ export interface MasteryState {
   roundLimit: number
   /** The latest completed round, if any. */
   lastRound: RoundView | null
+  /**
+   * Mastered by Declared Mastery only: the learner declared the topic as already known and no
+   * Round met the Mastery Threshold. `status` is `mastered`; `step` is still the loop's step.
+   */
+  declared: boolean
+  /** The learner can declare the topic ("I already know this"). */
+  canDeclare: boolean
+  /** The declaration can be undone: no Round was started on the topic since. */
+  canUndoDeclaration: boolean
 }
 
 /** A topic of the Learning Path with its mastery. */
 export interface TopicMasterySummary extends TopicSummary {
   mastery: TopicMastery
+  /** Mastered by Declared Mastery only (see `MasteryState.declared`). */
+  declared: boolean
+  /** The Declared Mastery can be undone (see `MasteryState.canUndoDeclaration`). */
+  canUndoDeclaration: boolean
 }
 
 /** Latest score of a notion: the most recent completed round that tested it. */
