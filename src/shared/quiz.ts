@@ -266,3 +266,22 @@ export interface SubmittedAnswer {
 export type FreeAnswerGradingOutcome =
   | { status: 'graded'; feedback: QuestionFeedback }
   | { status: 'failed'; error: GenerationErrorInfo }
+
+/**
+ * A Question Clarification: a plainer wording of a question the learner does not understand and
+ * one concrete example. French. It never carries a hint at the answer (see
+ * `buildQuestionClarificationGeneration`).
+ */
+export type QuestionClarification = {
+  rewording: string
+  example: string
+}
+
+/**
+ * Outcome of a clarification over IPC. A failed Generation is an outcome with its typed error,
+ * like a free-answer grading; nothing is recorded in either case, and the question stays as it is.
+ * `fromCache`: read from the Content Cache, no Generation ran.
+ */
+export type QuestionClarificationOutcome =
+  | { status: 'clarified'; clarification: QuestionClarification; fromCache: boolean }
+  | { status: 'failed'; error: GenerationErrorInfo }

@@ -57,6 +57,13 @@ Personal desktop app to learn system design from scratch, built around this loop
 
 Lessons, remediation lessons, protocol step lessons and scenario questions include Mermaid diagrams written by the LLM (flowchart, sequence diagram, etc.), rendered in the app in strict mode with a text alternative. An invalid diagram falls back to a code block and never breaks the content. Diagrams only show what the excerpts support (ungrounded content is flagged as usual).
 
+### 4.5 Learning aids
+
+Small helpers around the text and the quiz, outside the mastery loop: they never count in a score, a round or a topic status.
+
+- **Lesson Question** (#52): select a passage of a [[Lesson]], a [[Remediation Lesson]] or a [[Protocol Step Lesson]], click Ask, and a panel on the right quotes it and answers in French, grounded on the text and the topic's excerpts ([[Lesson Question]]). The thread of follow-ups is kept in memory only. Not offered while a quiz round is open.
+- **Question Clarification** (#53): each [[Question]] of a quiz has an "I don't understand the question" button that shows a plainer French rewording and one concrete example, without ever hinting at the answer, and the question stays as it is ([[Question Clarification]]). Stored in the [[Content Cache]] per question; "Reformulate differently" asks for another version.
+
 ## 5. Mastery loop
 
 - Each [[Question]] is tagged with one or more notions.

@@ -5,7 +5,7 @@ tags: [concept, assessment]
 
 # Question
 
-One item of a [[Quiz]], tagged with [[Notion]]s. Types: single-choice, multiple-choice, scenario / trade-off, and short free answer. The first three are graded locally; free answers are graded by the LLM through a [[Generation]]. The learner can flag a faulty question; it is then regenerated on the same notions.
+One item of a [[Quiz]], tagged with [[Notion]]s. Types: single-choice, multiple-choice, scenario / trade-off, and short free answer. The first three are graded locally; free answers are graded by the LLM through a [[Generation]]. The learner can flag a faulty question; it is then regenerated on the same notions, or ask for a plainer wording with a [[Question Clarification]].
 
 ## Related
 

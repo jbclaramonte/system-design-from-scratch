@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useReducer, useRef } from 'react'
 import type { TopicSummary } from '../../../shared/topic'
 import { GenerationErrorView } from '../generation/GenerationErrorView'
+import { LessonAsk } from './ask/LessonAsk'
 import { LessonMarkdown } from './LessonMarkdown'
 import { LessonSources } from './LessonSources'
 import {
@@ -166,16 +167,18 @@ export function LessonScreen({
           />
         )}
       </header>
-      <div
-        className="lesson-scroll"
-        ref={scrollRef}
-        onScroll={(event) => (followRef.current = isNearBottom(event.currentTarget))}
-      >
-        <article className="lesson-body" data-testid="lesson-body" aria-busy={running}>
-          <LessonMarkdown markdown={state.text} sources={state.sources} streaming={running} />
-        </article>
-        {state.status === 'done' && <LessonSources sources={state.sources} />}
-      </div>
+      <LessonAsk context={{ kind: 'lesson', topicId: topic.id }} lesson={state.text} enabled={done}>
+        <div
+          className="lesson-scroll"
+          ref={scrollRef}
+          onScroll={(event) => (followRef.current = isNearBottom(event.currentTarget))}
+        >
+          <article className="lesson-body" data-testid="lesson-body" aria-busy={running}>
+            <LessonMarkdown markdown={state.text} sources={state.sources} streaming={running} />
+          </article>
+          {state.status === 'done' && <LessonSources sources={state.sources} />}
+        </div>
+      </LessonAsk>
     </section>
   )
 }

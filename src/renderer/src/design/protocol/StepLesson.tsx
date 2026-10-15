@@ -1,6 +1,7 @@
 import { useEffect, useReducer, useRef, useState } from 'react'
 import type { ProtocolStep } from '../../../../shared/protocol'
 import { GenerationErrorView } from '../../generation/GenerationErrorView'
+import { LessonAsk } from '../../lesson/ask/LessonAsk'
 import { LessonMarkdown } from '../../lesson/LessonMarkdown'
 import {
   lessonErrorTitle,
@@ -102,9 +103,15 @@ function StepLessonStream({
           testId="step-lesson-error"
         />
       )}
-      <div className="lesson-body" data-testid="step-lesson-body">
-        <LessonMarkdown markdown={state.text} sources={state.sources} streaming={running} />
-      </div>
+      <LessonAsk
+        context={{ kind: 'protocol_step', step }}
+        lesson={state.text}
+        enabled={state.status === 'done'}
+      >
+        <div className="lesson-body" data-testid="step-lesson-body">
+          <LessonMarkdown markdown={state.text} sources={state.sources} streaming={running} />
+        </div>
+      </LessonAsk>
       <p className="protocol-lesson-actions">
         <button
           type="button"

@@ -6,6 +6,7 @@ import { corpusPath, loadCorpus } from './corpus'
 import { createDashboardIpc } from './dashboard'
 import { openAppDatabase, type Database } from './db'
 import { createGenerationIpc, GenerationService } from './generation'
+import { createLessonQuestionIpc } from './lessonQuestion'
 import { createDesignIpc } from './ipc/design'
 import { createHandlers } from './ipc/handlers'
 import { createMasteryIpc, createMasteryService } from './mastery'
@@ -16,6 +17,7 @@ import { getSettings } from './db/repositories/settings'
 import { resolveCliPath } from './generation/resolveCli'
 import { createQuizIpc } from './ipc/quiz'
 import { createFreeAnswerGrader } from './quiz/freeAnswerGrader'
+import { createQuestionClarifier } from './quiz/questionClarifier'
 import { localGraders } from './quiz/grading'
 import { createQuizService } from './quiz/service'
 import { registerHandlers } from './ipc/registerHandlers'
@@ -105,7 +107,8 @@ void app.whenReady().then(() => {
     callback(isAllowedPermission(permission))
   )
   const quizService = createQuizService(db, localGraders, {
-    freeAnswerGrader: createFreeAnswerGrader(generation)
+    freeAnswerGrader: createFreeAnswerGrader(generation),
+    questionClarifier: createQuestionClarifier(generation, db)
   })
   const masteryDeps = { db, corpus, service: generation }
   // Dev builds may open any topic (dev screens); a packaged app enforces the Learning Path lock.
@@ -124,6 +127,10 @@ void app.whenReady().then(() => {
       generation: createGenerationIpc(generation),
       design: createDesignIpc(db, { allowScratch: !app.isPackaged }),
       lesson: createLessonIpc({ db, corpus, service: generation }, { assertTopicUnlocked }),
+      lessonQuestion: createLessonQuestionIpc(
+        { db, corpus, service: generation },
+        { assertTopicUnlocked }
+      ),
       quiz: createQuizIpc(db, quizService, {
         allowDevFixture: !app.isPackaged,
         assertTopicUnlocked

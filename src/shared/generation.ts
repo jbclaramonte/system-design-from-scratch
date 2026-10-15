@@ -10,6 +10,8 @@ export type { Json }
  * What a Generation produces. Lessons, remediation lessons, quizzes and Protocol Step Lessons are
  * stored in the Content Cache. A Notion Outline is stored in the `notions` table instead, once per
  * topic. `design_feedback` covers step feedback, Hints and the final review (never cached).
+ * `lesson_question` answers a Lesson Question (streamed, never cached). `question_clarification`
+ * rewords a Quiz question (structured, stored in the Content Cache per Question).
  */
 export const generationKinds = [
   'lesson',
@@ -18,7 +20,9 @@ export const generationKinds = [
   'notion_outline',
   'free_answer_grading',
   'design_feedback',
-  'protocol_step_lesson'
+  'protocol_step_lesson',
+  'lesson_question',
+  'question_clarification'
 ] as const
 export type GenerationKind = (typeof generationKinds)[number]
 

@@ -241,6 +241,17 @@ export function findOpenRound(db: Database, quizId: number): Round | undefined {
   return row && toRound(row)
 }
 
+/** True while a Round of the topic is being played (started, not completed). */
+export function hasOpenRound(db: Database, topicId: number): boolean {
+  return (
+    db
+      .prepare(
+        'SELECT 1 AS open FROM rounds WHERE topic_id = $topicId AND completed_at IS NULL LIMIT 1'
+      )
+      .get<{ open: number }>({ topicId }) !== undefined
+  )
+}
+
 export function listRoundsByTopic(db: Database, topicId: number): Round[] {
   return db
     .prepare(`SELECT ${ROUND_COLUMNS} FROM rounds WHERE topic_id = $topicId ORDER BY id`)

@@ -61,7 +61,8 @@ sequenceDiagram
 
 - `events`: async iterable of `GenerationEvent` (`queued`, `started`, `text_delta`, `retry`, then `done` or `error`). Types in `src/shared/generation.ts`, shared with the renderer.
 - `result`: promise of the `GenerationOutput` (`content`, `fromCache`, `grounded`, `sourceSections`, `cacheKey`, `usage`), rejected with a `GenerationError`.
-- `kind`: `lesson`, `remediation_lesson`, `quiz`, `notion_outline`, `free_answer_grading`, `design_feedback` (step feedback, [[Hint]]s, final review), `protocol_step_lesson` ([[Protocol Step Lesson]]).
+- `kind`: `lesson`, `remediation_lesson`, `quiz`, `notion_outline`, `free_answer_grading`, `design_feedback` (step feedback, [[Hint]]s, final review), `protocol_step_lesson` ([[Protocol Step Lesson]]), `lesson_question` (a [[Lesson Question]]: streamed, never cached), `question_clarification` ([[Question Clarification]]: structured, cached per Question).
+- `refresh`: skips the Content Cache read and stores the new output over the entry ("Reformulate differently" of a [[Question Clarification]]).
 - `images`: PNG images sent before the prompt text (the [[Design Export]] capture of a graph step). The CLI then gets `--input-format stream-json` and one stream-json user message on stdin (`buildCliInput`); see [[Interview Protocol Implementation#Image input through the Claude Code CLI]]. Not part of the cache key: only for uncached kinds.
 - `prompt`: `{ version, system, user }`. `version` is part of the cache key: bump it with every prompt change.
 - `schema`: a Zod schema. When set, the Generation is structured: the schema is converted to JSON schema (draft-07, without `$schema`, which the CLI rejects) and passed as `--json-schema`; the CLI returns `structured_output`, which is validated again with Zod. Structured Generations send no `text_delta` (the CLI streams partial JSON fragments, not worth rendering).

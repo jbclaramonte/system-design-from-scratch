@@ -392,6 +392,31 @@ label.quiz-prompt {
   margin: 0;
 }
 
+/* Question Clarification (#53): a button under the question, then the reworded question. */
+
+.quiz-clarify {
+  display: grid;
+  gap: var(--space-sm);
+  min-width: 0;
+}
+
+.quiz-clarify > * {
+  min-width: 0;
+  margin: 0;
+}
+
+.quiz-clarification {
+  display: grid;
+  gap: var(--space-sm);
+  border-color: var(--color-progress-border);
+  background: var(--color-progress-fill);
+}
+
+.quiz-clarification > p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
 /* Grading status: the shared .status-strip with a pulsing dot. */
 
 .quiz-pending-dot {

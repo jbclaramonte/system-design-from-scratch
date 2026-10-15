@@ -7,7 +7,11 @@ import type { TopicLockGuard } from '../path/lock'
 import { createDevQuiz } from '../quiz/devFixture'
 import type { QuizService } from '../quiz/service'
 import type { IpcRequest, IpcResponse } from '../../shared/ipc'
-import type { FreeAnswerGradingOutcome, QuestionFeedback } from '../../shared/quiz'
+import type {
+  FreeAnswerGradingOutcome,
+  QuestionClarificationOutcome,
+  QuestionFeedback
+} from '../../shared/quiz'
 
 // The renderer is not trusted to send well-formed requests: validate before use. Answers are
 // only checked for shape here; the grader validates them against the question.
@@ -31,6 +35,7 @@ const contestRequest = roundRequest.extend({
   justification: z.string().max(10_000)
 })
 const gradingRequest = roundRequest.extend({ questionId: id })
+const clarifyRequest = gradingRequest.extend({ another: z.boolean().optional() })
 const flagRequest = z.object({ questionId: id, reason: z.string().max(10_000) })
 
 export interface QuizIpc {
@@ -50,6 +55,11 @@ export interface QuizIpc {
     client: GenerationClient
   ): Promise<IpcResponse<'quiz:contestGrade'>>
   cancelGrading(request: IpcRequest<'quiz:cancelGrading'>): void
+  clarifyQuestion(
+    request: IpcRequest<'quiz:clarifyQuestion'>,
+    client: GenerationClient
+  ): Promise<IpcResponse<'quiz:clarifyQuestion'>>
+  cancelClarification(request: IpcRequest<'quiz:cancelClarification'>): void
   flagQuestion(request: IpcRequest<'quiz:flagQuestion'>): void
 }
 
@@ -67,6 +77,8 @@ export function createQuizIpc(
 ): QuizIpc {
   /** Free-answer gradings in progress, by `roundId:questionId`, for `quiz:cancelGrading`. */
   const gradings = new Map<string, AbortController>()
+  /** Clarifications in progress, by `roundId:questionId`, for `quiz:cancelClarification`. */
+  const clarifications = new Map<string, AbortController>()
 
   /**
    * Runs a grading cancellable by `quiz:cancelGrading` or the window closing. A failed
@@ -131,6 +143,37 @@ export function createQuizIpc(
       return grading(roundId, questionId, client, (signal) =>
         service.contestGrade(roundId, questionId, justification, signal)
       )
+    },
+    async clarifyQuestion(request, client) {
+      const { roundId, questionId, another } = clarifyRequest.parse(request)
+      const key = `${roundId}:${questionId}`
+      const controller = new AbortController()
+      const abort = () => controller.abort()
+      const own = !clarifications.has(key)
+      if (own) clarifications.set(key, controller)
+      client.once('destroyed', abort)
+      try {
+        const { clarification, fromCache } = await service.clarifyQuestion(roundId, questionId, {
+          another,
+          signal: controller.signal
+        })
+        const outcome: QuestionClarificationOutcome = {
+          status: 'clarified',
+          clarification,
+          fromCache
+        }
+        return outcome
+      } catch (error) {
+        if (error instanceof GenerationError) return { status: 'failed', error: error.toInfo() }
+        throw error
+      } finally {
+        if (own) clarifications.delete(key)
+        client.removeListener('destroyed', abort)
+      }
+    },
+    cancelClarification(request) {
+      const { roundId, questionId } = gradingRequest.parse(request)
+      clarifications.get(`${roundId}:${questionId}`)?.abort()
     },
     cancelGrading(request) {
       const { roundId, questionId } = gradingRequest.parse(request)

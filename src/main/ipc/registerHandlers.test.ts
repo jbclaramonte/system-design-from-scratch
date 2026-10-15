@@ -40,6 +40,8 @@ const handlers: IpcHandlers = {
   },
   'lesson:start': () => undefined,
   'lesson:cancel': () => undefined,
+  'lessonQuestion:ask': () => undefined,
+  'lessonQuestion:cancel': () => undefined,
   'mastery:listTopics': () => [],
   'mastery:getState': () => {
     throw new Error('no topic')
@@ -114,6 +116,8 @@ const handlers: IpcHandlers = {
     throw new Error('no round')
   },
   'quiz:cancelGrading': () => undefined,
+  'quiz:clarifyQuestion': () => ({ status: 'failed', error: { code: 'unknown', message: '' } }),
+  'quiz:cancelClarification': () => undefined,
   'quiz:flagQuestion': () => undefined,
   'protocol:openDevExercise': () => ({ id: 1, slug: 'dev-protocol-1', title: 'Dev' }),
   'protocol:getExercise': () => {
@@ -154,6 +158,8 @@ describe('registerHandlers', () => {
       'generation:start',
       'lesson:cancel',
       'lesson:start',
+      'lessonQuestion:ask',
+      'lessonQuestion:cancel',
       'mastery:cancel',
       'mastery:choose',
       'mastery:getLessonReview',
@@ -171,7 +177,9 @@ describe('registerHandlers', () => {
       'protocol:saveDraft',
       'protocol:startStepLesson',
       'protocol:submitStep',
+      'quiz:cancelClarification',
       'quiz:cancelGrading',
+      'quiz:clarifyQuestion',
       'quiz:completeRound',
       'quiz:contestGrade',
       'quiz:createDevQuiz',

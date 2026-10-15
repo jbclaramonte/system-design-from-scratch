@@ -5,7 +5,7 @@ tags: [concept, generation]
 
 # Content Cache
 
-SQLite store of every generated lesson, remediation lesson and quiz, reused when a topic is redone.
+SQLite store of every generated lesson, remediation lesson, quiz, Protocol Step Lesson and [[Question Clarification]], reused when a topic is redone.
 
 ## Related
 

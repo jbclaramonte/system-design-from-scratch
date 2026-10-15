@@ -1,6 +1,7 @@
 import { useEffect, useReducer, useState } from 'react'
 import type { RemediationTarget } from '../../../shared/mastery'
 import { GenerationErrorView } from '../generation/GenerationErrorView'
+import { LessonAsk } from '../lesson/ask/LessonAsk'
 import { LessonMarkdown } from '../lesson/LessonMarkdown'
 import {
   initialLessonState,
@@ -106,9 +107,15 @@ export function RemediationLesson({
           testId="remediation-error"
         />
       )}
-      <div className="lesson-body" data-testid="remediation-body">
-        <LessonMarkdown markdown={state.text} sources={state.sources} streaming={running} />
-      </div>
+      <LessonAsk
+        context={{ kind: 'remediation', topicId, notionId: target.notion.id }}
+        lesson={state.text}
+        enabled={state.status === 'done'}
+      >
+        <div className="lesson-body" data-testid="remediation-body">
+          <LessonMarkdown markdown={state.text} sources={state.sources} streaming={running} />
+        </div>
+      </LessonAsk>
     </article>
   )
 }

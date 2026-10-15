@@ -1,0 +1,168 @@
+/* Lesson Question (#52): the Ask button next to a selection and the panel on the right of the
+   Lesson. Tokens only (docs/Design System.md). The panel is fixed to the right edge of the window,
+   under the app header and above the footer; on a wide window the shell container makes room for
+   it, on a narrow one it covers the right part of the text (the reading column is not squeezed). */
+
+:root {
+  --lesson-ask-width: 24rem;
+}
+
+/* A DOM boundary around the text, without a box of its own: the text keeps its parent's layout. */
+.lesson-ask-content {
+  display: contents;
+}
+
+.lesson-ask-button {
+  position: fixed;
+  z-index: 20;
+  padding: var(--space-xs) var(--space-md);
+  border-color: var(--color-border-active);
+  background: var(--color-surface-elevated);
+  box-shadow: var(--shadow-layer-3);
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.lesson-ask-button:hover:not(:disabled) {
+  border-color: var(--color-border-focus);
+  background: var(--color-surface-subtle);
+}
+
+.lesson-ask-panel {
+  position: fixed;
+  z-index: 15;
+  top: var(--layout-header-height);
+  right: 0;
+  bottom: 2rem; /* the shell footer */
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  width: min(var(--lesson-ask-width), 100vw);
+  padding: var(--space-md);
+  border-left: 1px solid var(--color-border-elevated);
+  background: var(--color-surface-base);
+  box-shadow: var(--shadow-layer-3);
+}
+
+/* Wide window: the text moves left instead of being covered. */
+@media (min-width: 62.5rem) {
+  .shell-content:has(.lesson-ask-panel) {
+    padding-right: var(--lesson-ask-width);
+  }
+
+  .lesson-ask-panel {
+    box-shadow: none;
+  }
+}
+
+.lesson-ask-header {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+.lesson-ask-header h2 {
+  margin: 0;
+  font-size: var(--type-headline-sm-size);
+  line-height: var(--type-headline-sm-line);
+}
+
+/* A quoted passage: clipped, the full text stays selectable and scrollable. */
+.lesson-ask-passage {
+  margin: 0;
+  padding: var(--space-xs) var(--space-sm);
+  border-left: 2px solid var(--color-border-active);
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-sm-size);
+  line-height: var(--type-body-sm-line);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.lesson-ask-selection {
+  display: grid;
+  flex: none;
+  gap: var(--space-xs);
+}
+
+.lesson-ask-selection > p {
+  margin: 0;
+}
+
+.lesson-ask-current {
+  max-height: 7rem;
+  overflow-y: auto;
+  border-left-color: var(--color-progress);
+  background: var(--color-progress-fill);
+  color: var(--color-text-primary);
+}
+
+.lesson-ask-thread {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-md);
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.lesson-ask-exchange {
+  display: grid;
+  gap: var(--space-sm);
+  min-width: 0;
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--color-border-hairline);
+}
+
+.lesson-ask-exchange > * {
+  min-width: 0;
+  margin: 0;
+}
+
+.lesson-ask-exchange .lesson-ask-passage {
+  display: -webkit-box;
+  max-height: none;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.lesson-ask-question {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+/* The answer reads like the lesson, a size smaller. */
+.lesson-ask-panel .lesson-ask-answer {
+  max-width: none;
+  font-size: var(--type-body-md-size);
+  line-height: var(--type-body-md-line);
+  letter-spacing: var(--type-body-md-tracking);
+}
+
+.lesson-ask-panel .lesson-ask-answer > :last-child {
+  margin-bottom: 0;
+}
+
+.lesson-ask-form {
+  display: grid;
+  flex: none;
+  gap: var(--space-xs);
+}
+
+.lesson-ask-form textarea {
+  width: 100%;
+  resize: vertical;
+}
+
+.lesson-ask-form-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}

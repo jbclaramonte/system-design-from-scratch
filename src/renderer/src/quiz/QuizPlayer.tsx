@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { QuestionFeedback, RoundResult, RoundStart } from '../../../shared/quiz'
+import { ClarifyQuestion } from './ClarifyQuestion'
 import { ContestForm } from './ContestForm'
 import { errorMessage } from './errorMessage'
 import { FreeAnswerForm } from './FreeAnswerForm'
@@ -266,6 +267,7 @@ export function QuizPlayer({
             showGraded(graded)
           }}
           onAnswerLater={() => setSkipped((previous) => new Set(previous).add(question.id))}
+          clarification={<ClarifyQuestion roundId={round.id} questionId={question.id} />}
         />
       ) : (
         <form
@@ -279,6 +281,7 @@ export function QuizPlayer({
             <legend lang="fr" className="quiz-prompt">
               {question.prompt}
             </legend>
+            <ClarifyQuestion key={question.id} roundId={round.id} questionId={question.id} />
             {question.choices.map((choice, choiceIndex) => (
               <label key={choiceIndex} lang="fr" className="quiz-choice">
                 <input

@@ -246,9 +246,15 @@ const jsonSchemaArg = process.argv.includes('--json-schema')
   : null
 const isDiagramRepair = jsonSchemaArg !== null && jsonSchemaArg.includes('"diagrams"')
 
+// A Question Clarification (#53): its schema has a `rewording`. The question text is the quiz's,
+// so the scenario cannot come from the prompt.
+const isClarification = jsonSchemaArg !== null && jsonSchemaArg.includes('"rewording"')
+
 const scenario = isDiagramRepair
   ? 'diagram-repair'
-  : (/scenario:([\w-]+)/.exec(stdin)?.[1] ?? 'text')
+  : isClarification
+    ? 'clarification'
+    : (/scenario:([\w-]+)/.exec(stdin)?.[1] ?? 'text')
 const isRetry = stdin.includes('previous output was invalid')
 
 switch (scenario) {
@@ -290,6 +296,16 @@ switch (scenario) {
   }
   case 'diagram-repair': {
     const output = diagramRepair()
+    init()
+    structured(output)
+    end('', { structured_output: output })
+    break
+  }
+  case 'clarification': {
+    const output = {
+      rewording: 'Reformulation du faux CLI : la même question, en mots simples.',
+      example: 'Exemple du faux CLI : une bibliothèque de quartier.'
+    }
     init()
     structured(output)
     end('', { structured_output: output })

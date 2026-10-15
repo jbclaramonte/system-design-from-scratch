@@ -22,6 +22,7 @@ Local SQLite database of the app, owned by the Electron main process. Table name
 | 1 | `initial-schema` | Every table below. |
 | 2 | `notion-sources-and-question-flags` | `notions.source_sections`; `questions.flagged_at`, `flag_reason`, `replaced_by_question_id` (#7). |
 | 3 | `mastery-loop` | Table `round_limit_choices`; settings `questions_per_quiz`, `claude_cli_path` (#11). |
+| 5 | `question-clarifications` | `content_cache` rebuilt (same save and restore of the lesson, remediation lesson and quiz keys as migration 4) to accept the `question_clarification` kind (#53). |
 | 4 | `interview-protocol` | `content_cache` rebuilt to accept the `protocol_step_lesson` kind (the `content_cache_key` of lessons, quizzes and remediation lessons are saved and restored around the rebuild); `design_exercises.problem_statement`; tables `protocol_step_submissions`, `protocol_step_drafts`, `protocol_step_encounters` (#14). |
 
 ## Diagram
@@ -229,7 +230,7 @@ Generated rows carry `grounded` and `source_sections` ([[Grounding]]) and an opt
 
 ### Generation and data
 
-- `content_cache`: [[Content Cache]]. `cache_key` is the SHA-256 of the canonical JSON of `{ kind, inputs, promptVersion }` (object keys sorted). `kind` is `lesson`, `remediation_lesson`, `quiz` or `protocol_step_lesson` (one per step, see [[Protocol Step Lesson]]; a `notion_outline` Generation is stored in `notions` instead). Storing an entry with an existing key replaces its content.
+- `content_cache`: [[Content Cache]]. `cache_key` is the SHA-256 of the canonical JSON of `{ kind, inputs, promptVersion }` (object keys sorted). `kind` is `lesson`, `remediation_lesson`, `quiz`, `protocol_step_lesson` (one per step, see [[Protocol Step Lesson]]) or `question_clarification` (one per Question, see [[Question Clarification]]; a [[Lesson Question]] is never stored; a `notion_outline` Generation is stored in `notions` instead). Storing an entry with an existing key replaces its content.
 - `settings`: key/value, values as JSON. Seeded with `mastery_threshold = 100` ([[Mastery Threshold]]), `round_limit = 3` ([[Round Limit]]), `questions_per_quiz = null` (automatic) and `claude_cli_path = null` (automatic lookup). Edited on the Settings screen ([[Mastery Loop Implementation#Settings]]).
 - `schema_migrations`: applied migrations.
 

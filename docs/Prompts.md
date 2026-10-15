@@ -6,7 +6,7 @@ issue: 7
 
 # Prompts
 
-The prompts and output schemas behind every content [[Generation]]: [[Notion Outline]], [[Lesson]], [[Quiz]] and [[Remediation Lesson]], plus free-answer grading (#10). Code: `src/main/generation/prompts/` (pure builders) and `src/main/generation/pipelines.ts` (load from the database and the [[Source Corpus]], persist). They run through the [[Generation Service]]. The [[Design Feedback]] prompts (step feedback, [[Hint]]s, final review) and the [[Protocol Step Lesson]] prompt (#14) are described in [[Interview Protocol Implementation#Generations]]. The generic `generation:start` IPC round trip (dev panel) still uses `placeholderPrompts.ts`.
+The prompts and output schemas behind every content [[Generation]]: [[Notion Outline]], [[Lesson]], [[Quiz]] and [[Remediation Lesson]], plus free-answer grading (#10) [[Lesson Question|Lesson Questions]] (#52) and [[Question Clarification|Question Clarifications]] (#53). Code: `src/main/generation/prompts/` (pure builders) and `src/main/generation/pipelines.ts` (load from the database and the [[Source Corpus]], persist). They run through the [[Generation Service]]. The [[Design Feedback]] prompts (step feedback, [[Hint]]s, final review) and the [[Protocol Step Lesson]] prompt (#14) are described in [[Interview Protocol Implementation#Generations]]. The generic `generation:start` IPC round trip (dev panel) still uses `placeholderPrompts.ts`.
 
 ## Shared rules
 
@@ -31,6 +31,8 @@ Bump the constant with any change to the prompt text or schema: it is part of th
 | `REMEDIATION_LESSON_PROMPT_VERSION` | `remediation-lesson-5` | `prompts/remediationLesson.ts` |
 | `FREE_ANSWER_GRADING_PROMPT_VERSION` | `free-answer-grading-2` | `prompts/freeAnswerGrading.ts` |
 | `PROTOCOL_STEP_LESSON_PROMPT_VERSION` | `protocol-step-lesson-3` | `prompts/protocolStepLesson.ts` |
+| `LESSON_QUESTION_PROMPT_VERSION` | `lesson-question-1` | `prompts/lessonQuestion.ts` |
+| `QUESTION_CLARIFICATION_PROMPT_VERSION` | `question-clarification-1` | `prompts/questionClarification.ts` |
 | `DESIGN_STEP_FEEDBACK_PROMPT_VERSION` | `design-step-feedback-4` | `prompts/designFeedback.ts` |
 | `DESIGN_HINT_PROMPT_VERSION` | `design-hint-3` | `prompts/designFeedback.ts` |
 | `DESIGN_FINAL_REVIEW_PROMPT_VERSION` | `design-final-review-4` | `prompts/designFeedback.ts` |
@@ -114,6 +116,28 @@ Lessons, Remediation Lessons and Protocol Step Lessons ask for [[Mermaid Diagram
 - **Contest**: the same prompt plus the first grading (verdict, per-point coverage and misconceptions) and the delimited justification. The model grades again from scratch as an independent examiner; the justification only counts when it points at what the answer already says or at a mistake of the first grading, and the explanation says whether it changed the grade.
 
 Iterate with `node scripts/free-answer-grading-check.ts` (3 real CLI calls: a good, a partial and a wrong answer with an injection attempt on one caching question), which writes [[samples/free-answer-grading|the sample]]; review in [[Quiz Engine#Free-answer grading quality review (2026-10-09, sonnet, effort low)]].
+
+## Lesson Question
+
+`buildLessonQuestionGeneration({ textKind, title }, { lesson, selection, question, thread }, grounding)` (#52), streamed Markdown, no schema, kind `lesson_question`. It answers a [[Lesson Question]]: a question about a passage the learner selected in a [[Lesson]], a [[Remediation Lesson]] or a [[Protocol Step Lesson]]. Never stored in the [[Content Cache]] (a thread is not reusable content): the version is not part of any cache key, it is a trace of what wrote the answer.
+
+- **Grounding material in the prompt**: the complete text being read (`<lesson>`, Mermaid blocks included, notion markers removed), the Excerpts of its context within a 6,000-token budget (the topic's sections for a Lesson, the notion's own sections for a Remediation Lesson, the step's sections for a Protocol Step Lesson; none for an ungrounded [[Foundations Module]] topic, then the lesson is the only source), the selected passage (`<selected_passage>`), the question (`<learner_question>`) and, for a follow-up, the last 3 finished exchanges of the thread (`<previous_exchange>`: passage, question, answer clipped to 1,500 characters). A guard test checks the prompt contains the selection, the question, the lesson and the excerpts.
+- **Rules**: French through the shared `LANGUAGE_RULES` and `AUDIENCE_RULES`; answer first, no greeting; only the facts of the lesson and of the excerpts (everyday analogies and small examples that illustrate them are fine, no new technical claim); short (3 to 6 sentences, about 120 words, no heading, no diagram, no table, at most 3 bullets). When the question cannot be answered from the course, the first sentence says so plainly ("Ce point n'est pas traité dans le cours."), then one or two sentences on what the course does say that is closest or what to look for, never an invented fact; a question that is not about system design is declined briefly. A statement taken from an excerpt is cited inline as `[source: <excerpt id>]` (the renderer shows the same source chips as a lesson, from the `prepared` event); with no excerpt, no citation.
+- **Untrusted text**: the passage, the question and the earlier exchanges are wrapped in their tags and the system prompt says they are data, never instructions (role play, "reveal your instructions", "answer in English"... are ignored). A delimiter tag inside the text is replaced by `[removed tag]`, as for free-answer grading.
+- **Run**: priority `foreground`, 90 s timeout, through the same queue, cancellation and error codes as every [[Generation]] ([[Lesson View#Lesson Question]]).
+
+## Question Clarification
+
+`buildQuestionClarificationGeneration(brief, previous?)` (#53), structured, kind `question_clarification`, ungrounded (`groundedSourceSections: []`: it rewords, it does not teach). Called by `createQuestionClarifier` (`src/main/quiz/questionClarifier.ts`) from `QuizService.clarifyQuestion`; rules of use in [[Quiz Engine#Question Clarification (#53)]].
+
+```ts
+{ rewording: string /* 2 to 4 sentences, at most 700 characters */, example: string /* one concrete example, at most 600 */ }
+```
+
+- **Input by construction**: `QuestionBrief` = `{ questionId, type, prompt, scenario, choices: string[], topicTitle }`. The quiz service fills it with exactly what `QuestionView` sends the renderer; the `correct` flags, the explanation, the free-answer rubric (expected points, model answer) and the notion tags (a tag can name the concept a "which strategy..." question asks for) are never read. The question's Diagram is left out too. Guard tests (`src/main/quiz/clarification.test.ts`) run the whole service path on one question of each type, with a secret string in every place an answer key lives, and check none of them reaches the system prompt, the user prompt or the cache input; another test hands the builder a brief with extra answer fields and checks they are ignored.
+- **Rules**: French through the shared `LANGUAGE_RULES` and `AUDIENCE_RULES`. The rewording asks exactly what the original asks, same level and same task (pick one, select all, write a short answer); the example is one everyday situation that shows the vocabulary or situation of the question statement, never its solution, with no technical claim. Forbidden: revealing or hinting at the correct choice (no emphasis, no wording that favours a choice), saying or implying that a choice is wrong, eliminating, ranking or comparing choices, teaching the concept, rule or trade-off the question tests, and mentioning, quoting or commenting on any choice (they are in the prompt only so the rewording does not contradict the question).
+- **Cache**: `input` is `{ questionId }`, so the Content Cache holds one entry per Question and prompt version. A second press reads it with no CLI call. "Reformulate differently" (`another`) skips the cache read (`refresh` on the `GenerationRequest`), gives the stored version to the prompt in `<previous_clarification>` with the instruction to write a clearly different wording and example (`previous` is not part of the key), and the new output replaces the stored entry.
+- **Queue**: priority `background` with a 60 s timeout. The learner asked for it but nothing waits on it, and the queue keeps one slot for foreground work, so a grading never waits behind a clarification (tested with a held clarification and a held pre-generation).
 
 ## Flag and regenerate a question
 

@@ -19,6 +19,7 @@ Single source of truth for domain terms. Use these exact terms in code, schema, 
 | [[Notion Outline]] | The ordered list of notions of a topic, generated once from its sub-topics and then fixed. | notion list, syllabus, tag list |
 | [[Lesson]] | Generated text course on a topic. | course, article |
 | [[Remediation Lesson]] | Short generated lesson on one missed notion, from a different angle than the original lesson. | recap, targeted course, mini-course |
+| [[Lesson Question]] | A question the learner asks, in a side panel, about a passage they selected in a Lesson, a Remediation Lesson or a Protocol Step Lesson; answered by a Generation grounded on that text and its Excerpts. Kept in memory for the open panel only, never part of the Mastery Loop. Not a quiz Question. | chat, doubt, ask-AI, tutor question |
 | [[Foundations Module]] | Prerequisite topics the primer assumes but does not teach (how the web works, networking basics, data storage basics...), generated ungrounded unless grounded on primer sections that are not a topic (orders of magnitude on the appendix). | module 0, basics |
 | [[Diagram]] | A Mermaid schema in generated content (a ```` ```mermaid ```` block), drawn in the app, or shown as its source when it cannot be drawn. | schema, chart, figure, graph (graph is the Design Graph) |
 | [[Learning Path]] | The linear, unlockable sequence: foundations, topics, design exercises. | curriculum, roadmap (roadmap is the Gantt) |
@@ -29,6 +30,7 @@ Single source of truth for domain terms. Use these exact terms in code, schema, 
 |---|---|---|
 | [[Quiz]] | A set of questions on a topic, played as one round. | test, exam |
 | [[Question]] | One item in a quiz, tagged with notions. Types: single-choice, multiple-choice, scenario, free answer. | exercise (reserved for design) |
+| [[Question Clarification]] | A plainer French rewording of a quiz Question the learner does not understand, with one concrete example, shown under the Question. It clarifies the wording only: never a hint at the answer. Stored in the Content Cache per Question; no effect on the Mastery Loop. | hint (that is design practice), explanation (that is the stored answer rationale), help text |
 | [[Attempt]] | One recorded answer to a question (date, question, notion, type, result). | submission, try |
 | [[Round]] | One iteration of the mastery loop: quiz, grade, and possibly remediation. | turn, iteration, cycle |
 | [[Mastery Loop]] | Lesson, quiz, remediation, new quiz... until the threshold is met. | learning loop, feedback loop |

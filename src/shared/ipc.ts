@@ -12,6 +12,7 @@
 import type { GenerationEvent, GenerationKind, GenerationPriority, Json } from './generation'
 import type { DesignExport, DesignExportSummary } from './designGraph'
 import type { LessonCancelRequest, LessonStartRequest, LessonStreamEvent } from './lesson'
+import type { LessonQuestionAskRequest, LessonQuestionCancelRequest } from './lessonQuestion'
 import type { TopicDetail, TopicGetRequest, TopicSummary } from './topic'
 import type {
   LessonReview,
@@ -47,6 +48,7 @@ import type { LearningPath } from './learningPath'
 import type { Dashboard, DashboardRequest } from './dashboard'
 import type {
   FreeAnswerGradingOutcome,
+  QuestionClarificationOutcome,
   QuestionFeedback,
   QuizRef,
   QuizSummary,
@@ -153,6 +155,13 @@ export interface IpcChannels {
   /** Starts (or serves from the Content Cache) the topic's Lesson; events on `lesson:event`. */
   'lesson:start': { request: LessonStartRequest; response: void }
   'lesson:cancel': { request: LessonCancelRequest; response: void }
+  /**
+   * Asks a question about a selected passage of a Lesson, a Remediation Lesson or a Protocol Step
+   * Lesson; the answer streams on `lessonQuestion:event`. Refused (the call rejects) while a Quiz
+   * round of the topic is open. Nothing is stored.
+   */
+  'lessonQuestion:ask': { request: LessonQuestionAskRequest; response: void }
+  'lessonQuestion:cancel': { request: LessonQuestionCancelRequest; response: void }
   /** Topics with their number of quizzes. */
   'quiz:listTopics': { request: void; response: QuizTopic[] }
   'quiz:listQuizzes': { request: { topicId: number }; response: QuizSummary[] }
@@ -184,6 +193,21 @@ export interface IpcChannels {
   }
   /** Cancels the free-answer grading (or contest re-grade) of a question in progress. */
   'quiz:cancelGrading': { request: { roundId: number; questionId: number }; response: void }
+  /**
+   * Rewords a question of the open round that is not answered yet (a Question Clarification):
+   * from the Content Cache when it exists (no Generation), else generated and stored. `another`
+   * skips the cache for a different version and replaces the stored one. Records nothing: no
+   * effect on the score, the round or the grading.
+   */
+  'quiz:clarifyQuestion': {
+    request: { roundId: number; questionId: number; another?: boolean }
+    response: QuestionClarificationOutcome
+  }
+  /** Cancels the clarification of a question in progress. */
+  'quiz:cancelClarification': {
+    request: { roundId: number; questionId: number }
+    response: void
+  }
   /** Flags a question in play as faulty with a reason (for example its Diagram could not be drawn). */
   'quiz:flagQuestion': { request: { questionId: number; reason: string }; response: void }
   /** Dev only (rejected in a packaged app): gets or creates the fixture exercise playing index n. */
@@ -215,6 +239,7 @@ export interface IpcChannels {
 export interface IpcEvents {
   'generation:event': GenerationStreamEvent
   'lesson:event': LessonStreamEvent
+  'lessonQuestion:event': LessonStreamEvent
   'mastery:event': MasteryStreamEvent
   'protocol:event': LessonStreamEvent
   /** The recomputed Learning Path, after a completed round or a Round Limit choice. */
@@ -242,6 +267,8 @@ export const apiChannels = {
   getTopic: 'topic:get',
   startLesson: 'lesson:start',
   cancelLesson: 'lesson:cancel',
+  askLessonQuestion: 'lessonQuestion:ask',
+  cancelLessonQuestion: 'lessonQuestion:cancel',
   listMasteryTopics: 'mastery:listTopics',
   getMasteryState: 'mastery:getState',
   getLessonReview: 'mastery:getLessonReview',
@@ -264,6 +291,8 @@ export const apiChannels = {
   submitFreeAnswer: 'quiz:submitFreeAnswer',
   contestGrade: 'quiz:contestGrade',
   cancelGrading: 'quiz:cancelGrading',
+  clarifyQuestion: 'quiz:clarifyQuestion',
+  cancelClarification: 'quiz:cancelClarification',
   flagQuestion: 'quiz:flagQuestion',
   openDevProtocolExercise: 'protocol:openDevExercise',
   getProtocolExercise: 'protocol:getExercise',
@@ -280,6 +309,7 @@ export const apiChannels = {
 export const apiEvents = {
   onGenerationEvent: 'generation:event',
   onLessonEvent: 'lesson:event',
+  onLessonQuestionEvent: 'lessonQuestion:event',
   onMasteryEvent: 'mastery:event',
   onProtocolEvent: 'protocol:event',
   onLearningPathChanged: 'path:changed'

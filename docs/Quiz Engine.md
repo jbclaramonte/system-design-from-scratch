@@ -15,11 +15,12 @@ Plays a [[Quiz]] as one [[Round]], grades single-choice, multiple-choice and sce
 | Shared types (views without answer keys, feedback, scores) | `src/shared/quiz.ts` |
 | Pure grading and scores (and the free-answer pieces that need no Generation) | `src/main/quiz/grading.ts` |
 | Free-answer grader (Generation Service adapter) | `src/main/quiz/freeAnswerGrader.ts` (`createFreeAnswerGrader`) |
+| Question Clarification (Generation Service adapter) | `src/main/quiz/questionClarifier.ts` (`createQuestionClarifier`), see [[#Question Clarification (#53)]] |
 | Free-answer grading prompt and schema | `src/main/generation/prompts/freeAnswerGrading.ts`, see [[Prompts#Free-answer grading]] |
 | Quiz service (rounds, attempts, guards) | `src/main/quiz/service.ts` (`createQuizService`) |
 | IPC (`quiz:*` channels, request validation, grading cancellation) | `src/main/ipc/quiz.ts` |
 | Dev fixture quiz | `src/main/quiz/devFixture.ts` |
-| Screens | `src/renderer/src/quiz/` (`QuizScreen`, `QuizPicker`, `QuizPlayer`, `QuestionDiagram`, `FreeAnswerForm`, `ContestForm`, `GradingStatus`, `QuestionFeedbackView`, `QuizResults`), styles in `quiz.css`, choice states in `choiceMark.ts` |
+| Screens | `src/renderer/src/quiz/` (`QuizScreen`, `QuizPicker`, `QuizPlayer`, `QuestionDiagram`, `FreeAnswerForm`, `ContestForm`, `GradingStatus`, `ClarifyQuestion`, `QuestionFeedbackView`, `QuizResults`), styles in `quiz.css`, choice states in `choiceMark.ts` |
 | Repository additions | `nextRoundNumber`, `findOpenRound`, `updateAttemptGrading` in `src/main/db/repositories/assessment.ts` |
 
 ## Answer keys stay in the main process
@@ -98,6 +99,17 @@ A learner who thinks the grade is wrong can contest it **once per question**, wh
 One question at a time, with feedback right after each answer: a complete beginner gets the explanation while the question is fresh, the focus stays on one idea, and each answer is recorded as soon as it is given (an interrupted round resumes where it stopped). Native radio buttons (single choice, scenario) and checkboxes (multiple choice) in a `fieldset` / `legend`, so the keyboard works without custom handling (arrows / Space to select, Enter to submit); the focus moves to each new question heading and to the Next button after feedback. French content is marked `lang="fr"` and wraps freely in the reading column (see [[#Visual design (#33)]]).
 
 Free answers (`FreeAnswerForm`): a labelled text area limited to 1200 characters with a counter; Ctrl+Enter (⌘+Enter) sends, Enter adds a line. While grading, the text is read-only and a status line offers Cancel. A failure shows the actionable message of its code and keeps the text: Retry, or Answer later (the question is set aside, its draft kept; the end screen lists the questions left and brings them back, since every question counts). After grading: the verdict, the answer, each expected point covered or missing, misconceptions, explanation, what to review, the model answer, and Contest this grade (`ContestForm`: a short justification, same pending / cancel / error states).
+
+### Question Clarification (#53)
+
+A learner who does not understand a [[Question]] could only answer at random, which pollutes the [[Mastery Loop]]. Every unanswered question of every type (single choice, multiple choice, scenario, free answer) shows **I don't understand the question** between the prompt and the choices (or the text area). It shows a plainer French rewording and one concrete example in a card, with a reminder that the original question is the one answered; the question and its choices stay visible. See [[Question Clarification]], [[Prompts#Question Clarification]].
+
+- **Never an answer**: the Generation only sees the prompt, the scenario and the choice texts (no answer key, explanation, rubric or notion tag), and the prompt forbids any hint. Nothing in the app checks the output after the fact: the guarantee is the input plus the prompt, and the sample review is manual.
+- **No effect on the loop**: `quiz:clarifyQuestion` (`{ roundId, questionId, another? }`) writes no Attempt, Round, question or notion row and changes no score or grading (tested on the tables and on the score of a full round). It is refused for an answered question, a completed round or a question outside the round.
+- **Cache**: one Content Cache entry per Question (kind `question_clarification`). Hide, then the button again, reads it with no CLI call; **Reformulate differently** generates another version and replaces it. The quiz of a topic redone later keeps its question ids per quiz, so the entry is reused for the same quiz.
+- **Queue and errors**: a background Generation, cancellable (Cancel in the status line, leaving the question, closing the window), independent of the grading of an answer: the learner can answer while it runs. A failure shows the actionable message of its code with Retry and "Nothing was recorded: retry, or answer as it is" ([[Generation Service#Error display]]); the outcome is `{ status: 'failed', error }` like a free-answer grading.
+
+Manual check (2026-10-14, #53): the dev build (`electron-vite dev`, the dev Quiz screen and its fixture quiz) with a scratch `--user-data-dir` and a fake CLI. Expected and seen: the button sits between the prompt and the choices; pressing it shows the rewording and the example with the choices still visible; Hide then the button again reads the cache (no new CLI call); Reformulate differently makes a second call whose prompt holds the first version and replaces the text; the CLI prompt holds no explanation or answer key; the next question gets its own entry; a slow clarification can be cancelled (notice, button back, nothing cached); no Attempt or Round row was written by any clarification. Free answers are covered by the server-rendered and service tests, not by this run. Not checked with the real CLI.
 
 ### Visual design (#33)
 

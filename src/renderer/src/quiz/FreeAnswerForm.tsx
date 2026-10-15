@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import {
   FREE_ANSWER_MAX_LENGTH,
   type QuestionFeedback,
@@ -27,7 +27,8 @@ export function FreeAnswerForm({
   draft,
   onDraftChange,
   onGraded,
-  onAnswerLater
+  onAnswerLater,
+  clarification
 }: {
   roundId: number
   question: QuestionView
@@ -35,6 +36,8 @@ export function FreeAnswerForm({
   onDraftChange: (text: string) => void
   onGraded: (feedback: QuestionFeedback) => void
   onAnswerLater: () => void
+  /** Under the question: the Question Clarification (#53). */
+  clarification?: ReactNode
 }) {
   const [text, setText] = useState(draft)
   const { pending, error, run, cancel } = useGrading(roundId, question.id)
@@ -61,6 +64,7 @@ export function FreeAnswerForm({
         <label htmlFor={inputId} lang="fr" className="quiz-prompt">
           {question.prompt}
         </label>
+        {clarification}
         <p id={`${inputId}-hint`} className="muted">
           Answer in one to a few sentences, in your own words. Ctrl+Enter (⌘+Enter) to send.
         </p>

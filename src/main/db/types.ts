@@ -166,7 +166,8 @@ export interface ProtocolStepEncounter extends Timestamps {
   designExerciseId: number | null
 }
 
-export type ContentCacheKind = 'lesson' | 'remediation_lesson' | 'quiz' | 'protocol_step_lesson'
+export type ContentCacheKind =
+  'lesson' | 'remediation_lesson' | 'quiz' | 'protocol_step_lesson' | 'question_clarification'
 
 export interface ContentCacheEntry extends Timestamps, Grounded {
   cacheKey: string

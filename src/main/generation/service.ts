@@ -45,6 +45,11 @@ export interface GenerationRequest<T extends Json = Json> {
   images?: CliImage[]
   /** Default `foreground`. */
   priority?: GenerationPriority
+  /**
+   * Skips the Content Cache read: the output is generated again and replaces the stored entry
+   * ("Reformulate differently"). Only meaningful for cached kinds.
+   */
+  refresh?: boolean
   signal?: AbortSignal
   timeoutMs?: number
   /**
@@ -118,7 +123,8 @@ const contentCacheKinds = new Set<GenerationKind>([
   'lesson',
   'remediation_lesson',
   'quiz',
-  'protocol_step_lesson'
+  'protocol_step_lesson',
+  'question_clarification'
 ])
 const isContentCacheKind = (kind: GenerationKind): kind is ContentCacheKind =>
   contentCacheKinds.has(kind)
@@ -252,7 +258,7 @@ export class GenerationService {
       ? contentCacheKey(request.kind, request.input, request.prompt.version)
       : null
 
-    const cached = key ? this.fromCache(key, request.schema) : undefined
+    const cached = key && !request.refresh ? this.fromCache(key, request.schema) : undefined
     if (cached) {
       subscriber.push({ type: 'done', output: cached })
       return { events: stream, result }

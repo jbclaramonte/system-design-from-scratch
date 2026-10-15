@@ -21,11 +21,13 @@ import {
 import { getTopic, listNotionsByTopic, listTopics } from '../db/repositories/learningContent'
 import { getSettings } from '../db/repositories/settings'
 import type { Attempt, Question, Quiz, Round } from '../db/types'
+import type { QuestionBrief } from '../generation/prompts/questionClarification'
 import {
   CONTEST_JUSTIFICATION_MAX_LENGTH,
   FLAG_REASON_MAX_LENGTH,
   type FreeAnswerGradingRecord,
   type NotionRef,
+  type QuestionClarification,
   type QuestionFeedback,
   type QuestionView,
   type QuizSummary,
@@ -37,6 +39,7 @@ import {
   type SubmittedAnswer
 } from '../../shared/quiz'
 import type { FreeAnswerGrader } from './freeAnswerGrader'
+import type { QuestionClarifier } from './questionClarifier'
 import {
   freeAnswerFeedback,
   gradeAnswer,
@@ -80,6 +83,17 @@ export interface QuizService {
     justification: string,
     signal?: AbortSignal
   ): Promise<QuestionFeedback>
+  /**
+   * Rewords a question of the open round that is not answered yet (a Question Clarification), from
+   * what the learner sees only: the prompt, the scenario and the choice texts. Records nothing and
+   * touches no score: the question, its grading and the round stay as they are. Rejects with the
+   * `GenerationError` when the Generation fails.
+   */
+  clarifyQuestion(
+    roundId: number,
+    questionId: number,
+    options?: { another?: boolean; signal?: AbortSignal }
+  ): Promise<{ clarification: QuestionClarification; fromCache: boolean }>
   /** Submits the given answers (if any), then grades the round. Atomic. */
   completeRound(roundId: number, answers?: readonly SubmittedAnswer[]): RoundResult
   /** Result of a completed round. */
@@ -105,13 +119,15 @@ const toRoundView = (round: Round): RoundView => ({
 export interface QuizServiceOptions {
   /** Grades free answers. Without it, free-answer questions are skipped (left out of scores). */
   freeAnswerGrader?: FreeAnswerGrader
+  /** Rewords questions. Without it, `clarifyQuestion` is refused. */
+  questionClarifier?: QuestionClarifier
 }
 
 /** `graders` (synchronous, choice questions) defaults to the local ones. */
 export function createQuizService(
   db: Database,
   graders: Graders = localGraders,
-  { freeAnswerGrader }: QuizServiceOptions = {}
+  { freeAnswerGrader, questionClarifier }: QuizServiceOptions = {}
 ): QuizService {
   const gradable = (question: Question) =>
     graders[question.type] !== undefined ||
@@ -208,6 +224,22 @@ export function createQuizService(
       return await run()
     } finally {
       gradingInProgress.delete(key)
+    }
+  }
+
+  /**
+   * What the clarification prompt may see: exactly what `toQuestionView` sends the renderer. The
+   * `correct` flags, the explanation and the free-answer rubric are never read here.
+   */
+  function clarificationBrief(round: Round, question: Question): QuestionBrief {
+    const choiceBody = question.type === 'free_answer' ? null : parseChoiceBody(question.body)
+    return {
+      questionId: question.id,
+      type: question.type,
+      prompt: question.prompt,
+      scenario: choiceBody?.scenario ?? null,
+      choices: choiceBody?.choices.map((choice) => choice.text) ?? [],
+      topicTitle: getTopic(db, requireQuiz(round.quizId).topicId)?.title ?? ''
     }
   }
 
@@ -388,6 +420,14 @@ export function createQuizService(
           return freeAnswerFeedback(question, text, contested, { contestable: false })
         })
       })
+    },
+
+    async clarifyQuestion(roundId, questionId, options) {
+      if (!questionClarifier) throw new Error('Question clarification is not available.')
+      const round = requireOpenRound(roundId)
+      const question = requireQuestionInPlay(round, questionId)
+      requireUnanswered(round, questionId)
+      return questionClarifier.clarify(clarificationBrief(round, question), options)
     },
 
     completeRound(roundId, answers = []) {

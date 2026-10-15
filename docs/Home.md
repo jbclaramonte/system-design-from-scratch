@@ -31,9 +31,9 @@ Desktop app to learn system design: lesson, quiz, targeted remediation until mas
 
 ## Concept notes
 
-Learning content: [[Topic]], [[Notion]], [[Notion Outline]], [[Lesson]], [[Remediation Lesson]], [[Foundations Module]], [[Learning Path]], [[Diagram]]
+Learning content: [[Topic]], [[Notion]], [[Notion Outline]], [[Lesson]], [[Remediation Lesson]], [[Lesson Question]], [[Foundations Module]], [[Learning Path]], [[Diagram]]
 
-Assessment: [[Quiz]], [[Question]], [[Attempt]], [[Round]], [[Mastery Loop]], [[Mastery Threshold]], [[Round Limit]], [[Notion Map]], [[Dashboard]], [[Weak Point]]
+Assessment: [[Quiz]], [[Question]], [[Question Clarification]], [[Attempt]], [[Round]], [[Mastery Loop]], [[Mastery Threshold]], [[Round Limit]], [[Notion Map]], [[Dashboard]], [[Weak Point]]
 
 Design practice: [[Design Exercise]], [[Interview Protocol]], [[Protocol Step]], [[Protocol Step Lesson]], [[Hint]], [[Reference Solution]], [[Design Canvas]], [[Design Scene]], [[Design Graph]], [[Design Feedback]]
 

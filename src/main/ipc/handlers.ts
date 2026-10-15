@@ -3,6 +3,7 @@ import type { AboutIpc } from '../about'
 import type { LessonIpc } from '../content/lessonIpc'
 import type { DashboardIpc } from '../dashboard/dashboardIpc'
 import type { GenerationIpc } from '../generation/ipc'
+import type { LessonQuestionIpc } from '../lessonQuestion'
 import type { MasteryIpc } from '../mastery/masteryIpc'
 import type { LearningPathIpc } from '../path/pathIpc'
 import type { ProtocolIpc } from '../protocol/protocolIpc'
@@ -16,6 +17,7 @@ export interface HandlerDependencies {
   generation: GenerationIpc
   design: DesignIpc
   lesson: LessonIpc
+  lessonQuestion: LessonQuestionIpc
   quiz: QuizIpc
   mastery: MasteryIpc
   path: LearningPathIpc
@@ -29,6 +31,7 @@ export function createHandlers({
   generation,
   design,
   lesson,
+  lessonQuestion,
   quiz,
   mastery,
   path,
@@ -53,6 +56,8 @@ export function createHandlers({
     'topic:get': (request) => lesson.getTopic(request),
     'lesson:start': (request, event) => lesson.start(request, event.sender),
     'lesson:cancel': (request) => lesson.cancel(request),
+    'lessonQuestion:ask': (request, event) => lessonQuestion.ask(request, event.sender),
+    'lessonQuestion:cancel': (request) => lessonQuestion.cancel(request),
     'mastery:listTopics': () => mastery.listTopics(),
     'mastery:getState': (request) => mastery.getState(request),
     'mastery:getLessonReview': (request) => mastery.getLessonReview(request),
@@ -84,6 +89,8 @@ export function createHandlers({
     'quiz:submitFreeAnswer': (request, event) => quiz.submitFreeAnswer(request, event.sender),
     'quiz:contestGrade': (request, event) => quiz.contestGrade(request, event.sender),
     'quiz:cancelGrading': (request) => quiz.cancelGrading(request),
+    'quiz:clarifyQuestion': (request, event) => quiz.clarifyQuestion(request, event.sender),
+    'quiz:cancelClarification': (request) => quiz.cancelClarification(request),
     'quiz:flagQuestion': (request) => quiz.flagQuestion(request),
     'protocol:openDevExercise': (request) => protocol.openDevExercise(request),
     'protocol:getExercise': (request) => protocol.getExercise(request),
