@@ -18,6 +18,7 @@ import {
   type DesignExerciseDefinition
 } from './designExercises'
 import { exerciseIndexOf } from './exercises'
+import { referenceForSteps } from './reference'
 
 const corpus = loadCorpus(corpusPath(process.cwd()))
 
@@ -67,12 +68,28 @@ describe('DESIGN_EXERCISES', () => {
     }
   })
 
-  it('starts with Pastebin (2 active steps), then Twitter (adds estimations)', () => {
-    expect(DESIGN_EXERCISES.map((e) => e.slug)).toEqual(['pastebin', 'twitter'])
+  it('lists the catalogue in order, each exercise adding its Protocol Steps', () => {
+    expect(DESIGN_EXERCISES.map((e) => [e.slug, activeStepsFor(e.orderIndex).length])).toEqual([
+      ['pastebin', 2],
+      ['twitter', 3],
+      ['query_cache', 5],
+      ['web_crawler', 6],
+      ['social_graph', 7],
+      ['sales_rank', 7],
+      ['mint', 7],
+      ['scaling_aws', 7]
+    ])
     expect(activeStepsFor(1)).toEqual(['functional_requirements', 'high_level_design'])
     expect(activeStepsFor(2)).toEqual([
       'functional_requirements',
       'estimations',
+      'high_level_design'
+    ])
+    expect(activeStepsFor(3)).toEqual([
+      'functional_requirements',
+      'estimations',
+      'api',
+      'data_model',
       'high_level_design'
     ])
   })
@@ -97,7 +114,7 @@ describe('DESIGN_EXERCISES', () => {
       )
     }
     expect(previousDesignExercise('pastebin')).toBeNull()
-    expect(previousDesignExercise('mint')).toBeNull()
+    expect(previousDesignExercise('dev-protocol-1')).toBeNull()
   })
 
   /** Direct address, per language: "tu" in French, "you" in English. */
@@ -126,6 +143,34 @@ describe('DESIGN_EXERCISES', () => {
       }
     })
   })
+
+  describe.each(DESIGN_EXERCISES.map((e) => [e.slug, e] as const))(
+    'Reference Solution of %s in the prompts',
+    (_slug, exercise: DesignExerciseDefinition) => {
+      const solution = corpus.getReferenceSolution(exercise.referenceSolutionId)!
+      const active = activeStepsFor(exercise.orderIndex)
+      const partOf = (id: string) =>
+        solution.steps.find((s) => s.id.startsWith(id))!.markdown.trim()
+
+      it('has a part for every active step', () => {
+        for (const step of active) {
+          const text = referenceForSteps(solution, [step])
+          expect(text, `${exercise.slug}: ${step}`).toMatch(/\n\n## /)
+        }
+        expect(partOf('step-3-')).not.toBe('')
+      })
+
+      it('gives no part of an inactive step to a prompt of the exercise', () => {
+        const text = referenceForSteps(solution, active)
+        const hasDeepDive = active.includes('deep_dive')
+        expect(text.includes(partOf('step-4-'))).toBe(hasDeepDive)
+        expect(text.includes(partOf('additional-talking-points'))).toBe(hasDeepDive)
+        expect(text.includes('## Constraints')).toBe(
+          active.includes('estimations') || active.includes('non_functional_requirements')
+        )
+      })
+    }
+  )
 
   it('has a statement in every language, different from each other', () => {
     for (const exercise of DESIGN_EXERCISES) {
@@ -156,31 +201,32 @@ describe('DESIGN_EXERCISES', () => {
 
 describe('seedDesignExercises', () => {
   it('inserts the catalogue once, grounded, positioned by order index', () => {
-    expect(seedDesignExercises(db, corpus)).toBe(2)
+    expect(seedDesignExercises(db, corpus)).toBe(DESIGN_EXERCISES.length)
     expect(seedDesignExercises(db, corpus)).toBe(0)
     const rows = listDesignExercises(db)
-    expect(rows.map((r) => [r.slug, r.position, r.grounded, r.referenceSolutionSection])).toEqual([
-      ['pastebin', 1, true, 'pastebin'],
-      ['twitter', 2, true, 'twitter']
-    ])
+    expect(rows.map((r) => [r.slug, r.position, r.grounded, r.referenceSolutionSection])).toEqual(
+      DESIGN_EXERCISES.map((e) => [e.slug, e.orderIndex, true, e.slug])
+    )
     // The stored statement is the French one, the fallback of an exercise outside the catalogue.
     expect(rows[0]!.problemStatement).toBe(DESIGN_EXERCISES[0]!.problemStatements.fr)
-    expect(rows.map((row) => exerciseIndexOf(rows, row))).toEqual([1, 2])
+    expect(rows.map((row) => exerciseIndexOf(rows, row))).toEqual(
+      DESIGN_EXERCISES.map((e) => e.orderIndex)
+    )
   })
 
   it('never updates an existing row, and inserts a new exercise only', () => {
     seedDesignExercises(db, corpus, DESIGN_EXERCISES.slice(0, 1))
     const [first] = listDesignExercises(db)
     const changed = DESIGN_EXERCISES.map((e) => ({ ...e, title: `${e.title} (changed)` }))
-    expect(seedDesignExercises(db, corpus, changed)).toBe(1)
+    expect(seedDesignExercises(db, corpus, changed)).toBe(DESIGN_EXERCISES.length - 1)
     const rows = listDesignExercises(db)
     expect(rows[0]).toEqual(first)
     expect(rows[1]!.title).toBe(`${DESIGN_EXERCISES[1]!.title} (changed)`)
   })
 
   it('refuses an exercise whose Reference Solution is not in the corpus, inserting nothing', () => {
-    const broken = [...DESIGN_EXERCISES, { ...DESIGN_EXERCISES[0]!, slug: 'x', orderIndex: 3 }]
-    broken[2]!.referenceSolutionId = 'nope'
+    const broken = [...DESIGN_EXERCISES, { ...DESIGN_EXERCISES[0]!, slug: 'x', orderIndex: 99 }]
+    broken[DESIGN_EXERCISES.length]!.referenceSolutionId = 'nope'
     expect(() => seedDesignExercises(db, corpus, broken)).toThrow(/nope/)
     expect(listDesignExercises(db)).toEqual([])
   })

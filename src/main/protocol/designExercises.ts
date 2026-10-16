@@ -68,6 +68,144 @@ const TWITTER_USE_CASE_TERMS: readonly ReferenceTerm[] = [
   { id: 'analytics (out of scope)', pattern: /analytic|statisti/i }
 ]
 
+const QUERY_CACHE_TERMS: readonly ReferenceTerm[] = [
+  { id: 'cache hit', pattern: /\bhits?\b|succès (de|du) cache/i },
+  { id: 'cache miss', pattern: /\bmiss(es)?\b|échec (de|du) cache|absente? du cache/i },
+  { id: 'high availability', pattern: /disponibilit|availability/i },
+  { id: 'popular queries (uneven traffic)', pattern: /populaire|popular|inégal|not evenly/i },
+  {
+    id: 'eviction (limited memory)',
+    pattern: /évict|évinc|evict|\blru\b|least recently|mémoire (limitée|restreinte)|limited memory/i
+  },
+  { id: 'expiring or refreshing entries', pattern: /expir|\bttl\b|rafraîch|refresh|péremption/i },
+  { id: 'fast lookups, low latency', pattern: /latence|latency|lookups? rapides?|fast lookup/i }
+]
+
+const WEB_CRAWLER_TERMS: readonly ReferenceTerm[] = [
+  { id: 'reverse index', pattern: /reverse index|inverted index|index invers/i },
+  { id: 'titles and snippets', pattern: /snippet|extrait/i },
+  {
+    id: 'user searches a term',
+    pattern:
+      /search term|terme de recherche|termes? recherch|saisi(t|r) (un|une) (terme|recherche)/i
+  },
+  { id: 'high availability', pattern: /disponibilit|availability/i },
+  {
+    id: 'infinite loop (cycles, duplicates)',
+    pattern: /infinite loop|boucle infinie|cycle|cyclique|doublon|duplicate|dupliqu/i
+  },
+  {
+    id: 'freshness (recrawl)',
+    pattern:
+      /fraîcheur|freshness|re-?crawl|revisit|actualis|rafraîch|refresh|régulièrement|regularly/i
+  },
+  { id: 'anonymous users', pattern: /anonym/i },
+  { id: 'popular searches (uneven traffic)', pattern: /populaire|popular|inégal|not evenly/i },
+  { id: 'page rank (out of scope)', pattern: /page ?rank/i },
+  { id: 'search analytics (out of scope)', pattern: /analytic|statisti/i },
+  { id: 'personalized results (out of scope)', pattern: /personnalis|personali[sz]ed/i },
+  { id: 'existing systems such as solr (out of scope)', pattern: /solr|nutch/i }
+]
+
+const SOCIAL_GRAPH_TERMS: readonly ReferenceTerm[] = [
+  {
+    id: 'shortest path',
+    pattern:
+      /shortest path|plus courts? chemins?|chemin le plus court|degr[ée]s? de séparation|degrees of separation|\bbfs\b/i
+  },
+  {
+    id: 'user searches for someone',
+    pattern:
+      /search(es)? for (someone|a person|people)|recherche (de|d')(quelqu|une personne|personne)|chercher (quelqu|une personne)|friend search/i
+  },
+  { id: 'high availability', pattern: /disponibilit|availability/i },
+  { id: 'popular searches (uneven traffic)', pattern: /populaire|popular|inégal|not evenly/i },
+  { id: 'unweighted edges', pattern: /unweighted|non pondér|sans poids|weighted|pondér/i },
+  {
+    id: 'data does not fit on one machine',
+    pattern: /single machine|une seule machine|tient pas (sur|dans)|won't fit|ne rentre pas/i
+  },
+  {
+    id: 'no graph database (out of scope)',
+    pattern: /neo4j|graphql|graph database|base (de données )?(orientée )?graphes?/i
+  },
+  { id: 'friends', pattern: /\bfriends?\b|\bamis?\b|\bamies?\b/i }
+]
+
+const SALES_RANK_TERMS: readonly ReferenceTerm[] = [
+  {
+    id: 'past week window',
+    pattern: /past week|last week|seven days|semaine|sept jours|7 jours|hebdomadaire/i
+  },
+  { id: 'hourly updates', pattern: /hourly|every hour|toutes les heures|chaque heure|horaire/i },
+  {
+    id: 'items in several categories',
+    pattern: /multiple categories|several categories|plusieurs catégories|subcategor|sous-catégor/i
+  },
+  {
+    id: 'most popular products',
+    pattern: /most popular|best[- ]sell|plus populaires|plus vendus|meilleures ventes/i
+  },
+  { id: 'high availability', pattern: /disponibilit|availability/i },
+  { id: 'uneven traffic', pattern: /inégal|not evenly|non uniforme/i },
+  {
+    id: 'read-heavy traffic',
+    pattern: /read to write|read[- ]heavy|lectures? (pour|par|contre) écritures?|plus de lectures/i
+  },
+  {
+    id: 'rest of the e-commerce site (out of scope)',
+    pattern: /e-?commerce|site marchand|reste du site|rest of the (site|store)/i
+  }
+]
+
+const MINT_TERMS: readonly ReferenceTerm[] = [
+  {
+    id: 'connecting a financial account',
+    pattern:
+      /financial account|compte (financier|bancaire)|bank account|(lier|connecter|relier) (un|son|ses) comptes?|connects? (a|an|their|his|her) accounts?/i
+  },
+  { id: 'extracting transactions', pattern: /transactions?/i },
+  { id: 'daily updates', pattern: /daily|quotidien|chaque jour|tous les jours/i },
+  { id: 'categorizing transactions', pattern: /categori[sz]|catégor/i },
+  { id: 'manual category override', pattern: /override|surcharg|manual|manuel/i },
+  {
+    id: 'monthly spending analysis',
+    pattern: /monthly spending|dépenses? (mensuel|par mois|du mois)|mensuel/i
+  },
+  { id: 'budget', pattern: /budget/i },
+  { id: 'notifications', pattern: /notif/i },
+  { id: 'high availability', pattern: /disponibilit|availability/i },
+  { id: 'logging and analytics (out of scope)', pattern: /analytic|logging|journalis/i },
+  {
+    id: 'active users only',
+    pattern: /30 days|trente jours|active users|utilisateurs actifs/i
+  },
+  {
+    id: 'write-heavy traffic',
+    pattern: /write-heavy|write to read|écritures? (massive|intensive)|plus d'écritures/i
+  }
+]
+
+const SCALING_AWS_TERMS: readonly ReferenceTerm[] = [
+  {
+    id: 'read or write requests',
+    pattern: /read or write|read and write|lectures? (ou|et) (d')?écritures?|lecture ou écriture/i
+  },
+  { id: 'storing user data', pattern: /user data|données (des |de l'|d')?utilisateurs?/i },
+  { id: 'evolving iteratively', pattern: /evolv|évolu|iterativ|itérati|incremental|incrément/i },
+  { id: 'high availability', pattern: /disponibilit|availability/i },
+  { id: 'uneven traffic', pattern: /inégal|not evenly|non uniforme/i },
+  { id: 'relational data', pattern: /relational|relationnel/i },
+  {
+    id: 'benchmark, load test, profiling',
+    pattern: /benchmark|load test|test de charge|profil(ing|age)/i
+  },
+  {
+    id: 'read-heavy traffic',
+    pattern: /read to write|read[- ]heavy|lectures? (pour|par|contre) écritures?|plus de lectures/i
+  }
+]
+
 /** In exercise order. Prerequisite topics: `DESIGN_EXERCISE_PREREQUISITES` (src/main/path). */
 export const DESIGN_EXERCISES: readonly DesignExerciseDefinition[] = [
   {
@@ -91,6 +229,72 @@ export const DESIGN_EXERCISES: readonly DesignExerciseDefinition[] = [
     },
     referenceSolutionId: 'twitter',
     referenceTerms: { functional_requirements: TWITTER_USE_CASE_TERMS }
+  },
+  {
+    slug: 'query_cache',
+    orderIndex: 3,
+    title: 'Design a key-value cache for recent web server queries',
+    problemStatements: {
+      fr: "Tu conçois le cache d'un moteur de recherche web : il garde à portée de main les résultats des requêtes récentes, pour que le moteur n'ait pas à les recalculer à chaque fois. Aucun chiffre ne t'est donné : cadre le périmètre, pose tes propres hypothèses et estime les ordres de grandeur. Ensuite, définis l'API du cache et son modèle de données, puis dessine l'ensemble.",
+      en: 'You are designing the cache of a web search engine: it keeps the results of recent queries close at hand, so the engine does not have to compute them again each time. No figure is given: frame the scope, make your own assumptions and estimate the orders of magnitude. Then define the API of the cache and its data model, and draw the whole thing.'
+    },
+    referenceSolutionId: 'query_cache',
+    referenceTerms: { functional_requirements: QUERY_CACHE_TERMS }
+  },
+  {
+    slug: 'web_crawler',
+    orderIndex: 4,
+    title: 'Design a web crawler',
+    problemStatements: {
+      fr: "Tu conçois un robot d'exploration du web (web crawler) : un programme qui parcourt le web de page en page en suivant les liens qu'il y trouve. Ce que le service fait des pages collectées, c'est à toi de le décider. Cadre le périmètre, précise les exigences non fonctionnelles, pose tes hypothèses et estime les ordres de grandeur, puis définis l'API et le modèle de données, et dessine l'architecture.",
+      en: 'You are designing a web crawler: a program that explores the web by going from page to page through the links it finds. What the service does with the pages it collects is for you to decide. Frame the scope, state the non-functional requirements, make your assumptions and estimate the orders of magnitude, then define the API and the data model, and draw the architecture.'
+    },
+    referenceSolutionId: 'web_crawler',
+    referenceTerms: { functional_requirements: WEB_CRAWLER_TERMS }
+  },
+  {
+    slug: 'social_graph',
+    orderIndex: 5,
+    title: 'Design the data structures of a social network',
+    problemStatements: {
+      fr: "Tu conçois les structures de données qui se cachent derrière un réseau social, où des personnes sont reliées les unes aux autres. À toi de décider ce que le service fait de ces liens. Cadre le périmètre, précise les exigences non fonctionnelles et estime les ordres de grandeur, puis définis l'API et le modèle de données, dessine l'architecture et cherche ses goulots d'étranglement.",
+      en: 'You are designing the data structures behind a social network, where people are connected to one another. It is up to you to decide what the service does with these connections. Frame the scope, state the non-functional requirements and estimate the orders of magnitude, then define the API and the data model, draw the architecture and look for its bottlenecks.'
+    },
+    referenceSolutionId: 'social_graph',
+    referenceTerms: { functional_requirements: SOCIAL_GRAPH_TERMS }
+  },
+  {
+    slug: 'sales_rank',
+    orderIndex: 6,
+    title: "Design Amazon's sales rank by category",
+    problemStatements: {
+      fr: "Tu conçois la fonctionnalité de classement des ventes d'un grand site de vente en ligne comme Amazon : les produits y sont classés selon leur succès dans leur catégorie. À toi de décider ce que cette fonctionnalité doit faire, et ce qu'elle laisse de côté. Estime les ordres de grandeur et précise les exigences non fonctionnelles, puis définis l'API et le modèle de données, dessine l'architecture et cherche ses goulots d'étranglement.",
+      en: 'You are designing the sales rank feature of a large online store like Amazon: products are ranked by how well they sell within their category. It is up to you to decide what this feature must do, and what it leaves aside. Estimate the orders of magnitude and state the non-functional requirements, then define the API and the data model, draw the architecture and look for its bottlenecks.'
+    },
+    referenceSolutionId: 'sales_rank',
+    referenceTerms: { functional_requirements: SALES_RANK_TERMS }
+  },
+  {
+    slug: 'mint',
+    orderIndex: 7,
+    title: 'Design Mint.com',
+    problemStatements: {
+      fr: "Tu conçois Mint.com, un service de gestion de finances personnelles : il aide chacun à mieux maîtriser son argent. À toi de décider ce que le service fait pour ses utilisateurs, et ce qu'il ne fait pas. Estime les ordres de grandeur et précise les exigences non fonctionnelles, puis définis l'API et le modèle de données, dessine l'architecture et cherche ses goulots d'étranglement.",
+      en: 'You are designing Mint.com, a personal finance service that helps people keep better control of their money. It is up to you to decide what the service does for its users, and what it does not. Estimate the orders of magnitude and state the non-functional requirements, then define the API and the data model, draw the architecture and look for its bottlenecks.'
+    },
+    referenceSolutionId: 'mint',
+    referenceTerms: { functional_requirements: MINT_TERMS }
+  },
+  {
+    slug: 'scaling_aws',
+    orderIndex: 8,
+    title: 'Design a system that scales to millions of users on AWS',
+    problemStatements: {
+      fr: "Tu conçois une application web hébergée sur AWS, le cloud d'Amazon, dont le public doit passer de quelques personnes à une foule immense sans que le service s'effondre. Savoir utiliser AWS n'est pas indispensable : les idées valent partout. Cadre le périmètre, estime les ordres de grandeur et précise les exigences non fonctionnelles, puis définis l'API et le modèle de données, dessine l'architecture et cherche ses goulots d'étranglement.",
+      en: "You are designing a web application hosted on AWS, Amazon's cloud, whose audience must grow from a handful of people to a very large crowd without the service collapsing. Knowing AWS is not required: the ideas apply anywhere. Frame the scope, estimate the orders of magnitude and state the non-functional requirements, then define the API and the data model, draw the architecture and look for its bottlenecks."
+    },
+    referenceSolutionId: 'scaling_aws',
+    referenceTerms: { functional_requirements: SCALING_AWS_TERMS }
   }
 ]
 

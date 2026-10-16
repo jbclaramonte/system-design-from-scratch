@@ -50,7 +50,7 @@ Rationale:
 
 ### Exercise index
 
-`exerciseIndexOf` (`src/main/protocol/exercises.ts`): the order index of a catalogued exercise (`DESIGN_EXERCISES`, see [[Design Exercises]]: Pastebin 1, Twitter 2); for any other exercise, its 1-based rank among the Design Exercises in Learning Path order (`listDesignExercises`: `position`, then `id`). Dev exercises (slug `dev-...`) are not ranked; a `dev-protocol-<n>` fixture plays exercise n.
+`exerciseIndexOf` (`src/main/protocol/exercises.ts`): the order index of a catalogued exercise (`DESIGN_EXERCISES`, see [[Design Exercises]]: Pastebin 1, Twitter 2, query cache 3, web crawler 4, social network 5, sales rank 6, Mint 7, scaling on AWS 8); for any other exercise, its 1-based rank among the Design Exercises in Learning Path order (`listDesignExercises`: `position`, then `id`). Dev exercises (slug `dev-...`) are not ranked; a `dev-protocol-<n>` fixture plays exercise n.
 
 ## Flow
 
@@ -108,13 +108,13 @@ Prompts in `src/main/generation/prompts/designFeedback.ts` and `protocolStepLess
 
 Step feedback must not give away the [[Reference Solution]] items the learner did not think of. The prompt alone did not hold (a real run named 6 of 10 Pastebin items and 9 of 11 Twitter items, paraphrased in French), so the service checks the output (`src/main/protocol/leakGuard.ts`, called in `submitStep`):
 
-1. Each catalogued [[Design Exercises|Design Exercise]] lists the distinctive items of its reference per step (`referenceTerms`, curated by hand from the primer's Step 1: use cases and out-of-scope entries), each as a regex over French and English stems (`expir|durée de vie|pour toujours|périmé`).
+1. Each catalogued [[Design Exercises|Design Exercise]] lists the distinctive items of its reference per step (`referenceTerms`, curated by hand from the primer's Step 1: use cases, out-of-scope entries and, for the solutions with few of them such as the query cache, the qualitative constraints), each as a regex over French and English stems (`expir|durée de vie|pour toujours|périmé`).
 2. `findLeakedTerms`: the terms matched by any field of the feedback (summary, checklist comments, gaps, errors, forgotten trade-offs, next step) and not by the allowed text: the exercise title, the problem statement, the learner's earlier steps and the submission. An item the learner wrote can be discussed.
 3. On a leak, the Generation runs once more with the prompt plus a note naming the leaked items and asking for categories only (`leakRetryNote`).
 4. If the retry still leaks, the list entries (gaps, errors, forgotten trade-offs) naming a leaked term are dropped (`redactLeakedEntries`). Summary, checklist comments and next step are kept, so a verdict never loses its reason.
 5. The `design_feedback` record keeps `leakCheck: { firstLeaked, retried, remaining }` for steps with terms.
 
-Only the functional requirements step of Pastebin and Twitter has terms for now; the Twitter estimations (its numbers) and the later steps are not checked. Dev fixtures use the terms of their Reference Solution. Hints and final reviews are not checked (Hints follow their level rules; the final review may compare openly).
+Only the functional requirements step of the eight exercises has terms (7 to 12 each; the six added by #46 to #51 were written from the primer's text and never run against a real model); the Twitter estimations (its numbers) and the later steps are not checked. Dev fixtures use the terms of their Reference Solution. Hints and final reviews are not checked (Hints follow their level rules; the final review may compare openly).
 
 **Metric** (`scripts/design-exercises-check.ts`): the leaked terms of a feedback over the number of terms, on every CLI output and on the stored feedback. Limits: the term lists are hand-made and incomplete, so a paraphrase outside them passes ("sont-elles gardées toujours" for expiration slipped through in the v4 run) and a generic use of a stem can be flagged ("accueil", "profil", "disponibilité"); it counts items, not how much they give away; one run per exercise, no statistics.
 

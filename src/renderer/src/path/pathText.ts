@@ -179,7 +179,12 @@ export const topicStepBySlug = (path: LearningPath, slug: string): TopicStep | u
 export function noNextStepText(path: LearningPath): string {
   if (path.progress.totalTopics === 0) return 'No topics yet.'
   if (path.progress.masteredTopics === path.progress.totalTopics) {
-    return 'Every topic is mastered and every available Design Exercise completed. More Design Exercises are coming soon.'
+    const comingSoon = path.steps.some(
+      (step) => step.kind === 'design_exercise' && step.status === 'coming_soon'
+    )
+    return comingSoon
+      ? 'Every topic is mastered and every available Design Exercise completed. More Design Exercises are coming soon.'
+      : 'Every topic is mastered and every Design Exercise completed.'
   }
   return 'Nothing to start right now.'
 }

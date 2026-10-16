@@ -33,7 +33,9 @@ describe('reference terms', () => {
       for (const { pattern } of terms) expect(pattern.flags).toBe('i')
     }
     expect(referenceTermsFor('pastebin', 'high_level_design')).toEqual([])
-    expect(referenceTermsFor('mint', 'functional_requirements')).toEqual([])
+    expect(referenceTermsFor('mint', 'high_level_design')).toEqual([])
+    expect(referenceTermsFor('no-such-solution', 'functional_requirements')).toEqual([])
+    expect(referenceTermsFor(null, 'functional_requirements')).toEqual([])
   })
 
   it('do not flag the categories the feedback is told to use, nor the problem statements', () => {

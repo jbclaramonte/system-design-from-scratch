@@ -59,9 +59,8 @@ describe('getLearningPath', () => {
     const exercises = path.steps.filter((step) => step.kind === 'design_exercise')
     expect(exercises).toHaveLength(corpus.listReferenceSolutions().length)
     expect(exercises.map((step) => [step.slug, step.status])).toEqual([
-      ['pastebin', 'locked'],
-      ['twitter', 'locked'],
-      ...exercises.slice(2).map((step) => [step.slug, 'coming_soon'])
+      ...DESIGN_EXERCISES.map((exercise) => [exercise.slug, 'locked']),
+      ...exercises.slice(DESIGN_EXERCISES.length).map((step) => [step.slug, 'coming_soon'])
     ])
     expect(path.nextStepKey).toBe('topic:client-server')
     expect(statusOf(path, 'http')).toBe('locked')
@@ -311,6 +310,24 @@ describe('Design Exercises on the path', () => {
     expect(twitter.status).toBe('locked')
     expect(twitter.lockedByExercise).toBeNull()
     expect(twitter.missingPrerequisites.length).toBeGreaterThan(0)
+  })
+
+  it('chains the catalogue: each exercise opens once the previous one is completed', () => {
+    for (const { slug } of DESIGN_EXERCISES) masterPrerequisitesOf(slug)
+    for (const [index, { slug, title }] of DESIGN_EXERCISES.slice(1).entries()) {
+      const previous = DESIGN_EXERCISES[index]!
+      expect(exerciseStep(getLearningPath({ db, corpus }), slug), slug).toMatchObject({
+        status: 'locked',
+        missingPrerequisites: [],
+        lockedByExercise: { slug: previous.slug, title: previous.title }
+      })
+      finalReview(previous.slug)
+      expect(exerciseStep(getLearningPath({ db, corpus }), slug), title).toMatchObject({
+        status: 'available',
+        designExerciseId: idOf(slug),
+        lockedByExercise: null
+      })
+    }
   })
 
   it('recommends an exercise once every topic is mastered', () => {

@@ -1,7 +1,11 @@
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { DesignExport } from '../../shared/designGraph'
-import type { ProtocolStepView } from '../../shared/protocol'
+import {
+  activeStepsFor,
+  PROTOCOL_STEP_DEFINITIONS,
+  type ProtocolStepView
+} from '../../shared/protocol'
 import { corpusPath, loadCorpus } from '../corpus'
 import { openDatabase, type Database } from '../db/driver'
 import { migrate } from '../db/migrate'
@@ -89,7 +93,7 @@ describe('exercise index', () => {
     expect(exerciseIndexOf(list, list[3]!)).toBe(2)
     expect(exerciseIndexOf(list, list[0]!)).toBe(1)
     expect(exerciseIndexOf(list, list[2]!)).toBe(4)
-    expect(() => exerciseIndexOf(list, { id: 9, slug: 'mint' })).toThrow()
+    expect(() => exerciseIndexOf(list, { id: 9, slug: 'unknown-exercise' })).toThrow()
   })
 
   it('creates the dev fixture once, grounded on the Pastebin Reference Solution', () => {
@@ -577,6 +581,47 @@ describe('Generation Language', () => {
     // The English feedback already given stays: one more submission, not a rewrite.
     expect(listProtocolStepSubmissions(db, id)).toHaveLength(2)
   })
+
+  it.each(DESIGN_EXERCISES.map((exercise) => [exercise.slug, exercise] as const))(
+    'plays every active step of %s to the final review in the language of the setting',
+    async (_slug, exercise) => {
+      setLanguage('en')
+      const id = idOf(exercise.slug)
+      const active = activeStepsFor(exercise.orderIndex)
+      expect(protocol.getExercise(id).problemStatement).toBe(exercise.problemStatements.en)
+      await protocol.requestHint(id, 'functional_requirements', {
+        type: 'text',
+        text: 'scenario:design'
+      })
+      for (const step of active) {
+        const outcome = await protocol.submitStep(
+          id,
+          step,
+          PROTOCOL_STEP_DEFINITIONS[step].input === 'canvas'
+            ? { type: 'canvas', designExport: designExport(id, 'DB', false), notes: '' }
+            : { type: 'text', text: `${step} scenario:design` }
+        )
+        expect(outcome.status, step).toBe('done')
+      }
+      expect((await protocol.requestFinalReview(id)).status).toBe('done')
+
+      const calls = fake.calls()
+      const prompts = calls.map((call) => call.stdin)
+      expect(prompts).toHaveLength(active.length + 2)
+      for (const { argv } of calls) {
+        expect(argv.join('\n')).toContain('Write everything the learner reads in English')
+      }
+      if (active.includes('deep_dive')) expect(prompts.at(-1)).toContain('Scaling the design')
+      for (const prompt of prompts) {
+        expect(prompt).toContain(exercise.problemStatements.en)
+        expect(prompt).not.toContain(exercise.problemStatements.fr)
+        expect(prompt).toContain(
+          `Protocol Steps of this exercise: ${active.map((step) => PROTOCOL_STEP_DEFINITIONS[step].title).join(', ')}.`
+        )
+        if (!active.includes('deep_dive')) expect(prompt).not.toContain('Scaling the design')
+      }
+    }
+  )
 
   it('keeps a Protocol Step Lesson per language in the Content Cache', async () => {
     const french = await generation.generate(protocol.prepareStepLesson('api').request).result

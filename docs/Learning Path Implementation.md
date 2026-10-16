@@ -22,11 +22,12 @@ flowchart LR
   end
   subgraph D[Design Exercises]
     D1[pastebin] -- completed --> D2[twitter]
-    D3[6 more, coming soon]
+    D2 -- completed --> D3[query_cache ... scaling_aws<br/>each after the previous one]
   end
   Fn --> P1
   Pn -. prerequisites mastered .-> D1
   Pn -. prerequisites mastered .-> D2
+  Pn -. prerequisites mastered .-> D3
 ```
 
 Order:
@@ -84,14 +85,14 @@ Data file `src/main/path/designExercisePrerequisites.ts`, checked by a test agai
 |---|---|---|
 | `pastebin` | performance-vs-scalability, load-balancer, database, cache | A read-heavy store behind web servers: SQL database and its scaling, a cache for hot pastes, load balancing. |
 | `twitter` | performance-vs-scalability, content-delivery-network, load-balancer, application-layer, database, cache, asynchronism | Timeline fan-out and search at scale. |
-| `query_cache` | latency-vs-throughput, load-balancer, cache | A sharded in-memory LRU cache in front of a search service. |
-| `web_crawler` | domain-name-system, database, cache, asynchronism | Queues of pages to crawl, NoSQL storage, duplicate detection, DNS lookups as a bottleneck. |
-| `social_graph` | load-balancer, application-layer, database, cache | Person and lookup services over a sharded user graph. |
-| `sales_rank` | database, cache, asynchronism | A batch (MapReduce) job writing a ranking table read through a cache. |
-| `mint` | load-balancer, application-layer, database, cache, asynchronism, security | Account sync and categorization with queues and workers, and the security of financial data. |
-| `scaling_aws` | performance-vs-scalability, availability-patterns, domain-name-system, content-delivery-network, load-balancer, reverse-proxy-web-server, application-layer, database, cache, asynchronism | From one box to millions of users: every building block. |
+| `query_cache` | performance-vs-scalability, latency-vs-throughput, content-delivery-network, load-balancer, application-layer, database, cache, asynchronism | An in-memory LRU cache, sharded across machines, in front of a search service: caching strategies, latency, load balancing. |
+| `web_crawler` | performance-vs-scalability, latency-vs-throughput, domain-name-system, content-delivery-network, load-balancer, application-layer, database, cache, asynchronism | Queues of pages to crawl, a NoSQL store of links and page signatures to avoid cycles, MapReduce for duplicates; DNS lookups and a cache for popular searches matter when scaling. |
+| `social_graph` | performance-vs-scalability, latency-vs-throughput, domain-name-system, content-delivery-network, load-balancer, application-layer, database, cache, asynchronism | A person and lookup service over a sharded user graph: services, database sharding, caching, load balancing. |
+| `sales_rank` | performance-vs-scalability, latency-vs-throughput, domain-name-system, content-delivery-network, load-balancer, application-layer, database, cache, asynchronism | A batch (MapReduce) job writing a ranking table read through a cache: asynchronous processing, SQL, caching. |
+| `mint` | performance-vs-scalability, latency-vs-throughput, domain-name-system, content-delivery-network, load-balancer, application-layer, database, cache, asynchronism, security | Account sync and categorization with queues and workers, and the security of financial data. |
+| `scaling_aws` | performance-vs-scalability, latency-vs-throughput, availability-patterns, domain-name-system, content-delivery-network, load-balancer, reverse-proxy-web-server, application-layer, database, cache, asynchronism, security | From one box to millions of users: every building block. |
 
-`IMPLEMENTED_DESIGN_EXERCISES` is the catalogue of `src/main/protocol/designExercises.ts` (`pastebin`, `twitter`, #15); Twitter's prerequisites include Pastebin's (tested).
+`IMPLEMENTED_DESIGN_EXERCISES` is the catalogue of `src/main/protocol/designExercises.ts`: all eight exercises (`pastebin`, `twitter` (#15), then #46 to #51 in the order of the table). Each exercise's prerequisites include the previous one's (tested), so the lists grow along the catalogue; the lock message shows what is still missing. Checked against the solutions in [[Design Exercises#Prerequisites and completion]].
 
 ## Service and IPC
 
@@ -148,6 +149,11 @@ Design Exercises (#15, 2026-10-09): built app, fake CLI, scratch `--user-data-di
 
 - Tests: `model.test.ts` (topic, exercise, exercise whose previous exercise is not completed, a started step, coming soon, counters and recommended step unchanged), `forcedUnlock.test.ts` (migrated database: guards refuse then allow, stored and read by a new instance, lock again then refused with progress, validation, a packaged-style exercise guard with the fake CLI: a forced Twitter plays its estimations step), `pathText.test.ts`.
 - Packaged build (`electron-builder --mac dir`, so locks are enforced), scratch `--user-data-dir`, fake CLI: "Unlock anyway" on Twitter (confirmation, then "Forced unlock" and "Ready to start", Pastebin still locked, progress still 0 of 21), the exercise opened with its three active steps, the estimations step submitted and reviewed; app restarted: still "Forced unlock" and "In progress", "Lock again" gone. On a topic: Enter on "Unlock anyway", Enter on the confirmation, focus on "Lock again", Enter, back to "Locked" with focus on "Unlock anyway".
+
+## Verification of Design Exercises 3 to 8 (2026-10-16, #46 to #51)
+
+- Tests: `pathIpc.test.ts` (every catalogued exercise after the first is `locked` by the previous one until it is completed, then `available`; the unseeded path lists the whole catalogue as `locked`), `forcedUnlock.test.ts` (the coming soon case injects a smaller implemented list: the catalogue has no slot left), `pathText.test.ts` (the end-of-path text only says "more exercises are coming soon" while a slot is `coming_soon`).
+- Packaged build, scratch user data, fake CLI: the six new exercises `Locked` with 8 to 12 missing prerequisites (and Twitter for the first), opened with "Unlock anyway", played to `Completed`; see [[Design Exercises#Verification of exercises 3 to 8 (#46 to #51, 2026-10-16)]].
 
 ## Related
 

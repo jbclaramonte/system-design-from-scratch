@@ -120,7 +120,8 @@ describe('Forced Unlock: topics', () => {
   })
 
   it('validates the request, and refuses an unknown step or an exercise coming soon', () => {
-    const ipc = createLearningPathIpc(deps())
+    // Only Pastebin implemented: the other exercises are coming soon.
+    const ipc = createLearningPathIpc({ ...deps(), implementedExercises: ['pastebin'] })
     expect(() => ipc.forceUnlock({ stepKey: 'nonsense' })).toThrow()
     expect(() => ipc.forceUnlock({ stepKey: 'topic:' })).toThrow()
     expect(() => ipc.forceUnlock({ stepKey: 'topic:a b' })).toThrow()

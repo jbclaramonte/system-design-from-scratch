@@ -87,12 +87,12 @@ gantt
     #45 macOS signature, install script       :done, m4, after m3, 1d
 
     section Design exercises 3 to 8
-    #46 Exercise 3, query cache               :e3, 2026-10-15, 2d
-    #47 Exercise 4, web crawler               :e4, after e3, 2d
-    #48 Exercise 5, social graph              :e5, after e4, 2d
-    #49 Exercise 6, sales rank                :e6, after e5, 2d
-    #50 Exercise 7, Mint                      :e7, after e6, 2d
-    #51 Exercise 8, scaling on AWS            :e8, after e7, 2d
+    #46 Exercise 3, query cache               :done, e3, 2026-10-16, 1d
+    #47 Exercise 4, web crawler               :done, e4, after e3, 1d
+    #48 Exercise 5, social graph              :done, e5, after e4, 1d
+    #49 Exercise 6, sales rank                :done, e6, after e5, 1d
+    #50 Exercise 7, Mint                      :done, e7, after e6, 1d
+    #51 Exercise 8, scaling on AWS            :done, e8, after e7, 1d
 
     section Learning aids
     #52 Ask about a selected Lesson passage   :done, a1, 2026-10-14, 1d

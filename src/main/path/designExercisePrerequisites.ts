@@ -14,7 +14,8 @@ export interface DesignExercisePrerequisites {
 /**
  * In Learning Path order: the implemented Design Exercises first, in their order index
  * (`DESIGN_EXERCISES`), then the others from the smallest design to the broadest. An implemented
- * exercise also needs the previous implemented one completed (`previousDesignExercise`).
+ * exercise also needs the previous implemented one completed (`previousDesignExercise`), and lists
+ * at least that one's topics (tested): the topics the solution itself relies on come with the rest.
  */
 export const DESIGN_EXERCISE_PREREQUISITES: readonly DesignExercisePrerequisites[] = [
   {
@@ -39,31 +40,74 @@ export const DESIGN_EXERCISE_PREREQUISITES: readonly DesignExercisePrerequisites
   },
   {
     referenceSolutionId: 'query_cache',
-    prerequisites: ['latency-vs-throughput', 'load-balancer', 'cache'],
+    prerequisites: [
+      'performance-vs-scalability',
+      'latency-vs-throughput',
+      'content-delivery-network',
+      'load-balancer',
+      'application-layer',
+      'database',
+      'cache',
+      'asynchronism'
+    ],
     rationale:
-      'A sharded in-memory LRU cache in front of a search service: caching strategies, latency, load balancing.'
+      'An in-memory LRU cache, sharded across machines, in front of a search service: caching strategies, latency, load balancing.'
   },
   {
     referenceSolutionId: 'web_crawler',
-    prerequisites: ['domain-name-system', 'database', 'cache', 'asynchronism'],
+    prerequisites: [
+      'performance-vs-scalability',
+      'latency-vs-throughput',
+      'domain-name-system',
+      'content-delivery-network',
+      'load-balancer',
+      'application-layer',
+      'database',
+      'cache',
+      'asynchronism'
+    ],
     rationale:
-      'Queues of pages to crawl, NoSQL storage, duplicate detection with a cache, and DNS lookups as a bottleneck.'
+      'Queues of pages to crawl, a NoSQL store of links and page signatures to avoid cycles, MapReduce for duplicates; DNS lookups and a cache for popular searches matter when scaling.'
   },
   {
     referenceSolutionId: 'social_graph',
-    prerequisites: ['load-balancer', 'application-layer', 'database', 'cache'],
+    prerequisites: [
+      'performance-vs-scalability',
+      'latency-vs-throughput',
+      'domain-name-system',
+      'content-delivery-network',
+      'load-balancer',
+      'application-layer',
+      'database',
+      'cache',
+      'asynchronism'
+    ],
     rationale:
       'A person and lookup service over a sharded user graph: services, database sharding, caching, load balancing.'
   },
   {
     referenceSolutionId: 'sales_rank',
-    prerequisites: ['database', 'cache', 'asynchronism'],
+    prerequisites: [
+      'performance-vs-scalability',
+      'latency-vs-throughput',
+      'domain-name-system',
+      'content-delivery-network',
+      'load-balancer',
+      'application-layer',
+      'database',
+      'cache',
+      'asynchronism'
+    ],
     rationale:
       'A batch (MapReduce) job over sales logs writing a ranking table read through a cache: asynchronous processing, SQL, caching.'
   },
   {
     referenceSolutionId: 'mint',
     prerequisites: [
+      'performance-vs-scalability',
+      'latency-vs-throughput',
+      'domain-name-system',
+      'content-delivery-network',
       'load-balancer',
       'application-layer',
       'database',
@@ -78,6 +122,7 @@ export const DESIGN_EXERCISE_PREREQUISITES: readonly DesignExercisePrerequisites
     referenceSolutionId: 'scaling_aws',
     prerequisites: [
       'performance-vs-scalability',
+      'latency-vs-throughput',
       'availability-patterns',
       'domain-name-system',
       'content-delivery-network',
@@ -86,7 +131,8 @@ export const DESIGN_EXERCISE_PREREQUISITES: readonly DesignExercisePrerequisites
       'application-layer',
       'database',
       'cache',
-      'asynchronism'
+      'asynchronism',
+      'security'
     ],
     rationale:
       'Iterates from one box to millions of users: DNS, CDN, load balancers, web and application tiers, replication, caching, queues, failover.'

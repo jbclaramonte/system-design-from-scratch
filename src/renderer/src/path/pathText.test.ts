@@ -152,6 +152,11 @@ describe('progress texts', () => {
       '2 of 3 topics mastered (66%)'
     )
     expect(noNextStepText(path(3, 3))).toBe(
+      'Every topic is mastered and every Design Exercise completed.'
+    )
+    expect(
+      noNextStepText({ ...path(3, 3), steps: [exerciseStep([], { status: 'coming_soon' })] })
+    ).toBe(
       'Every topic is mastered and every available Design Exercise completed. More Design Exercises are coming soon.'
     )
     expect(noNextStepText(path(0, 0))).toBe('No topics yet.')
