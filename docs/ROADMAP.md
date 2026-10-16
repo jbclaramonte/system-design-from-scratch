@@ -8,7 +8,7 @@ status: live
 
 Gantt chart of the GitHub issues of `jbclaramonte/system-design-from-scratch`. Dependencies in the chart mirror the "Depends on" section of each issue. Dates and durations are estimates (solo, part-time pace not accounted for).
 
-Last updated: 2026-10-15.
+Last updated: 2026-10-16.
 
 ```mermaid
 gantt
@@ -99,6 +99,9 @@ gantt
     #53 Reformulate a Quiz question           :done, a2, after a1, 1d
     #54 Forced Unlock of Learning Path steps  :done, a3, 2026-10-15, 2d
     #55 Declared Mastery, mark a topic known  :done, a4, after a3, 2d
+
+    section Website
+    #56 GitHub Pages homepage                 :w1, 2026-10-16, 2d
 ```
 
 ## Dependency table
@@ -160,6 +163,7 @@ gantt
 | #53 | #7, #9, #33 |
 | #54 | #17, #34 |
 | #55 | #11, #17, #18, #54 |
+| #56 | #41, #55 |
 
 ## Conventions
 
