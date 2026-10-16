@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useHoldUpdateBanner } from '../../update/UpdateProvider'
 import {
   PROTOCOL_STEP_DEFINITIONS,
   protocolSteps,
@@ -271,6 +272,8 @@ export function ProtocolExerciseScreen({
   designExerciseId: number
   onClose: () => void
 }) {
+  // An install prompt never interrupts a Design Exercise (submissions, feedback, the canvas).
+  useHoldUpdateBanner()
   const [view, setView] = useState<ProtocolExerciseView | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [selected, setSelected] = useState<ProtocolStep | 'final_review' | null>(null)

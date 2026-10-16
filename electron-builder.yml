@@ -41,7 +41,8 @@ mac:
       to: LICENSE.electron
     - from: node_modules/electron/dist/LICENSES.chromium.html
       to: LICENSES.chromium.html
-# Linux x64, built on a Linux host (CI, .github/workflows/package.yml). Unsigned, no auto-update.
+# Linux x64, built on a Linux host (CI, .github/workflows/package.yml). Unsigned; the app announces
+# updates but does not install them.
 # The Electron in node_modules (electronDist above) is the Linux one on a Linux host: never build
 # this target from macOS. The same licenses as on macOS are copied into resources/ (the Electron
 # distribution also leaves a copy next to the executable).
@@ -71,7 +72,8 @@ linux:
 dmg:
   sign: false
   writeUpdateInfo: false
-# No auto-update: no publish provider, no latest-mac.yml.
+# No publish provider, no latest-mac.yml: electron-updater is not used (Squirrel.Mac refuses a build
+# signed ad hoc). The app updates itself from the GitHub Releases: docs/Packaging.md, Updates.
 publish: null
 # File names carry no space: GitHub rewrites spaces in release asset names.
 artifactName: ${name}-${version}-${arch}.${ext}

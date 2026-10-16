@@ -1,3 +1,4 @@
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { app, BrowserWindow, ipcMain, session, shell } from 'electron'
 import { createAboutIpc, licensesPath } from './about'
@@ -14,6 +15,12 @@ import { createExerciseLockGuard, createLearningPathIpc, createTopicLockGuard } 
 import { createProtocolIpc, createProtocolService, seedDesignExercises } from './protocol'
 import { createSettingsIpc } from './settings/settingsIpc'
 import { getSettings } from './db/repositories/settings'
+import {
+  getDismissedUpdateVersion,
+  getLastUpdateCheck,
+  saveDismissedUpdateVersion,
+  saveLastUpdateCheck
+} from './db/repositories/updateState'
 import { resolveCliPath } from './generation/resolveCli'
 import { createQuizIpc } from './ipc/quiz'
 import { createFreeAnswerGrader } from './quiz/freeAnswerGrader'
@@ -21,6 +28,16 @@ import { createQuestionClarifier } from './quiz/questionClarifier'
 import { localGraders } from './quiz/grading'
 import { createQuizService } from './quiz/service'
 import { registerHandlers } from './ipc/registerHandlers'
+import { sendEvent } from './ipc/sendEvent'
+import {
+  checkInstallable,
+  createHttpClient,
+  createUpdateIpc,
+  createUpdateService,
+  endpointsFromEnv,
+  installUpdate,
+  lookupLatestRelease
+} from './update'
 import { isAllowedPermission, isExternalWebUrl } from './security'
 
 // The userData folder (database, caches) is named after the package name, never the productName of
@@ -116,6 +133,47 @@ void app.whenReady().then(() => {
     { db, corpus },
     { allowLockedTopics: !app.isPackaged }
   )
+  // App Update: the only network access of the app besides the Claude CLI; the renderer CSP stays
+  // `connect-src 'self'`. A development build never checks on its own (see launchCheckAllowed).
+  const updateEndpoints = endpointsFromEnv(process.env)
+  const updateHttp = createHttpClient()
+  const updates = createUpdateService({
+    currentVersion: app.getVersion(),
+    store: {
+      lastCheck: () => getLastUpdateCheck(appDb),
+      saveLastCheck: (check) => saveLastUpdateCheck(appDb, check),
+      dismissedVersion: () => getDismissedUpdateVersion(appDb),
+      saveDismissedVersion: (version) => saveDismissedUpdateVersion(appDb, version)
+    },
+    checkAtLaunchEnabled: () => getSettings(appDb).checkForUpdatesAtLaunch,
+    launchCheckAllowed: app.isPackaged || updateEndpoints.overridden,
+    lookup: () => lookupLatestRelease(updateHttp, updateEndpoints),
+    checkInstallable: () =>
+      checkInstallable({
+        platform: process.platform,
+        arch: process.arch,
+        isPackaged: app.isPackaged,
+        execPath: app.getPath('exe')
+      }),
+    install: (plan, onProgress) =>
+      installUpdate(plan, {
+        http: updateHttp,
+        onProgress,
+        tmpRoot: tmpdir(),
+        appPid: process.pid,
+        // The relaunched app keeps its switches, such as a custom --user-data-dir.
+        relaunchArgs: process.argv.slice(1)
+      }),
+    notify: (update) => {
+      for (const window of BrowserWindow.getAllWindows()) {
+        sendEvent(window.webContents, 'update:available', update)
+      }
+    },
+    scheduleQuit: () => {
+      setTimeout(() => app.quit(), 500)
+    },
+    log: (message) => console.log(message)
+  })
   registerHandlers(
     ipcMain,
     createHandlers({
@@ -152,10 +210,12 @@ void app.whenReady().then(() => {
       settings: createSettingsIpc(db, {
         onCliPathChange: () => generationService.resetCliPath(),
         fallbackCliPath: envCliPath
-      })
+      }),
+      update: createUpdateIpc(updates)
     })
   )
   createMainWindow()
+  void updates.checkAtLaunch()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

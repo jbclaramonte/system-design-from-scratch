@@ -69,3 +69,9 @@ Single source of truth for domain terms. Use these exact terms in code, schema, 
 | [[Generation]] | One LLM call (via the Claude Code CLI) that produces content or grades a free answer. | completion, request |
 | [[Generation Language]] | The language the course content is written in, French or English, chosen in Settings (default French). Applies to every Generation that produces text the learner reads (Lessons, Remediation Lessons, Protocol Step Lessons, quizzes and their feedback, Design Feedback, Lesson Questions, Question Clarifications) and to the Design Exercise statements; it is part of the Content Cache key. Switching it never deletes or overwrites content of the other language and never affects mastery; a Round in progress finishes in the language of its quiz. The app UI is English whatever it is. | course language (the Settings label only), locale, i18n |
 | [[Pre-generation]] | A Generation started in the background before its result is needed (for example the quiz while the lesson is read); waits behind foreground Generations, cancellable, stored in the Content Cache. | prefetch, warm-up |
+
+## Application
+
+| Term | Definition | Avoid |
+|---|---|---|
+| [[App Update]] | The app finding a newer release on GitHub and, on macOS (Apple Silicon, packaged app), replacing itself with it when the learner clicks "Install and restart"; on Linux, a banner linking to the release page. Checked at launch (once a day at most, can be turned off) and from "Check for updates" in Settings. The learner can dismiss a version ("Not now"), which is remembered. Never installs without a click, never touches the data folder or the progress. | auto-update, upgrade, self-update, patch |

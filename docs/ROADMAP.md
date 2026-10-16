@@ -107,7 +107,7 @@ gantt
     #56 GitHub Pages homepage                 :done, w1, after l1, 2d
 
     section Updates
-    #58 In-app update check and install       :u1, 2026-10-17, 3d
+    #58 In-app update check and install       :done, u1, 2026-10-16, 1d
 ```
 
 ## Dependency table

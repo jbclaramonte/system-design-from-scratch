@@ -14,14 +14,15 @@ const settingKeys = {
   questionsPerQuiz: 'questions_per_quiz',
   claudeCliPath: 'claude_cli_path',
   claudeConfigDir: 'claude_config_dir',
-  generationLanguage: 'generation_language'
+  generationLanguage: 'generation_language',
+  checkForUpdatesAtLaunch: 'check_for_updates_at_launch'
 } as const satisfies Record<keyof Settings, string>
 
 /**
  * Defaults of settings added without a migration (the table is key/value): read until the first
  * save writes the row.
  */
-const unseededDefaults: Partial<Settings> = { claudeConfigDir: null }
+const unseededDefaults: Partial<Settings> = { claudeConfigDir: null, checkForUpdatesAtLaunch: true }
 
 export function getSettings(db: Database): Settings {
   const rows = db.prepare('SELECT key, value FROM settings').all<{ key: string; value: string }>()

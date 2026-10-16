@@ -21,7 +21,8 @@ const updateRequest = z
     questionsPerQuiz: z.number().nullable(),
     claudeCliPath: z.string().nullable(),
     claudeConfigDir: z.string().nullable(),
-    generationLanguage: z.enum(generationLanguages)
+    generationLanguage: z.enum(generationLanguages),
+    checkForUpdatesAtLaunch: z.boolean()
   })
   .partial()
   .strict()

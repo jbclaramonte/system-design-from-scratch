@@ -41,6 +41,7 @@ export function AppShell({
   layout,
   version,
   scrollKey,
+  banner,
   onNavigate,
   children
 }: {
@@ -48,6 +49,8 @@ export function AppShell({
   layout: ShellLayout
   version: string | null
   scrollKey: string
+  /** Shown between the header and the content (the App Update banner). */
+  banner?: ReactNode
   onNavigate: (item: NavItemId) => void
   children: ReactNode
 }) {
@@ -82,6 +85,7 @@ export function AppShell({
           </nav>
         </div>
       </header>
+      {banner}
       <div className="shell-content" ref={content}>
         <div className="shell-container">{children}</div>
       </div>

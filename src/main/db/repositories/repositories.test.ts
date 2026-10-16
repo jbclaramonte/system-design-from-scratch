@@ -384,7 +384,8 @@ describe('settings', () => {
       questionsPerQuiz: null,
       claudeCliPath: null,
       claudeConfigDir: null,
-      generationLanguage: 'fr'
+      generationLanguage: 'fr',
+      checkForUpdatesAtLaunch: true
     }
     expect(getSettings(db)).toEqual(defaults)
     expect(updateSettings(db, { roundLimit: 5 })).toEqual({ ...defaults, roundLimit: 5 })
@@ -402,5 +403,18 @@ describe('settings', () => {
       '/Users/me/.claude-perso'
     )
     expect(updateSettings(db, { claudeConfigDir: null }).claudeConfigDir).toBeNull()
+  })
+
+  it('checks for updates at launch by default, until the setting is saved (no migration)', () => {
+    expect(
+      db
+        .prepare("SELECT COUNT(*) AS n FROM settings WHERE key = 'check_for_updates_at_launch'")
+        .get()
+    ).toEqual({ n: 0 })
+    expect(getSettings(db).checkForUpdatesAtLaunch).toBe(true)
+    expect(updateSettings(db, { checkForUpdatesAtLaunch: false }).checkForUpdatesAtLaunch).toBe(
+      false
+    )
+    expect(getSettings(db).checkForUpdatesAtLaunch).toBe(false)
   })
 })

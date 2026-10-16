@@ -8,6 +8,7 @@ import type { MasteryIpc } from '../mastery/masteryIpc'
 import type { LearningPathIpc } from '../path/pathIpc'
 import type { ProtocolIpc } from '../protocol/protocolIpc'
 import type { SettingsIpc } from '../settings/settingsIpc'
+import type { UpdateIpc } from '../update'
 import type { DesignIpc } from './design'
 import type { QuizIpc } from './quiz'
 import type { IpcHandlers } from './registerHandlers'
@@ -24,6 +25,7 @@ export interface HandlerDependencies {
   dashboard: DashboardIpc
   protocol: ProtocolIpc
   settings: SettingsIpc
+  update: UpdateIpc
 }
 
 export function createHandlers({
@@ -37,7 +39,8 @@ export function createHandlers({
   path,
   dashboard,
   protocol,
-  settings
+  settings,
+  update
 }: HandlerDependencies): IpcHandlers {
   return {
     'app:getVersion': () => app.getVersion(),
@@ -94,6 +97,10 @@ export function createHandlers({
     'settings:get': () => settings.get(),
     'settings:update': (request) => settings.update(request),
     'settings:testCli': (request) => settings.testCli(request),
+    'update:check': () => update.check(),
+    'update:pending': () => update.pending(),
+    'update:install': (request, event) => update.install(request, event.sender),
+    'update:dismiss': (request) => update.dismiss(request),
     'quiz:listTopics': () => quiz.listTopics(),
     'quiz:listQuizzes': (request) => quiz.listQuizzes(request),
     'quiz:load': (request) => quiz.loadQuiz(request),

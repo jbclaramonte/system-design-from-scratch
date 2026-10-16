@@ -43,6 +43,18 @@
   width: 100%;
 }
 
+.settings-field input[type='checkbox'] {
+  flex: none;
+  width: 1rem;
+  margin: 0;
+}
+
+.settings-field label.settings-checkbox {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
 .settings-field input.settings-short {
   width: 10rem;
 }

@@ -80,7 +80,8 @@ describe('settings IPC', () => {
       questionsPerQuiz: null,
       claudeCliPath: null,
       claudeConfigDir: null,
-      generationLanguage: 'fr'
+      generationLanguage: 'fr',
+      checkForUpdatesAtLaunch: true
     })
     expect(() => ipc.update({ masteryThreshold: 20 })).toThrow(/between 50 and 100/)
     expect(() => ipc.update({ roundLimit: 3, unknown: 1 } as never)).toThrow()
@@ -101,6 +102,15 @@ describe('settings IPC', () => {
     expect(onCliPathChange).toHaveBeenCalledTimes(2)
     expect(ipc.update({ questionsPerQuiz: 8 }).questionsPerQuiz).toBe(8)
     expect(ipc.update({ questionsPerQuiz: null }).questionsPerQuiz).toBeNull()
+  })
+
+  it('persists "Check for updates at launch" and refuses anything but a boolean', () => {
+    const ipc = createSettingsIpc(db)
+    expect(ipc.get().checkForUpdatesAtLaunch).toBe(true)
+    expect(() => ipc.update({ checkForUpdatesAtLaunch: 'no' } as never)).toThrow()
+    expect(ipc.update({ checkForUpdatesAtLaunch: false }).checkForUpdatesAtLaunch).toBe(false)
+    expect(ipc.get().checkForUpdatesAtLaunch).toBe(false)
+    expect(ipc.update({ checkForUpdatesAtLaunch: true }).checkForUpdatesAtLaunch).toBe(true)
   })
 
   it('validates, persists and applies the Generation Language without touching stored content', () => {

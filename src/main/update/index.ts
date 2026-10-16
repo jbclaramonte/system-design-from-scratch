@@ -1,0 +1,6 @@
+export { createUpdateIpc, type UpdateIpc } from './updateIpc'
+export { createUpdateService, type UpdateService } from './service'
+export { checkInstallable } from './installable'
+export { installUpdate } from './installer'
+export { createHttpClient } from './http'
+export { endpointsFromEnv, lookupLatestRelease } from './release'

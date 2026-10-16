@@ -12,7 +12,7 @@ screenshots, and the download; its source is in [`site/`](site/), see [docs/Webs
 
 ## Download
 
-Packaged apps are attached to each [GitHub Release](https://github.com/jbclaramonte/system-design-from-scratch/releases/latest). Personal use: not notarized (macOS signature is ad hoc, no Developer ID), no auto-update. Each release also has a `SHA256SUMS` file.
+Packaged apps are attached to each [GitHub Release](https://github.com/jbclaramonte/system-design-from-scratch/releases/latest). Personal use: not notarized (macOS signature is ad hoc, no Developer ID). Each release also has a `SHA256SUMS` file.
 
 **macOS (Apple Silicon)**, one command, no Gatekeeper dialog:
 
@@ -34,6 +34,10 @@ without asking. Read [install.sh](install.sh) before piping it to a shell.
 The [Claude Code CLI](#claude-code-cli) must be installed and logged in: the app drives it for every
 generation. There is no Windows build. Releases are cut by pushing a `v*` tag, see
 [docs/Packaging.md](docs/Packaging.md#releases).
+
+**Updates**: the app checks for a newer release at launch (once a day, can be turned off in
+Settings) and, on macOS, installs it in one click; on Linux it links to the release page. Details,
+and why it is not `electron-updater`: [docs/Packaging.md](docs/Packaging.md#updates).
 
 ## Prerequisites
 
@@ -184,12 +188,14 @@ fixtures. See [docs/Mermaid Diagrams.md](docs/Mermaid%20Diagrams.md).
 
 The window runs with `contextIsolation`, `sandbox` and no `nodeIntegration`. The renderer has a
 restrictive Content Security Policy, navigation away from the app is blocked, links that open a new
-window go to the OS browser (http and https only), and permission requests are denied.
+window go to the OS browser (http and https only), and permission requests are denied. The renderer
+makes no request (`connect-src 'self'`); the only network access of the app itself is the update
+check, made by the main process.
 
 ## Packaging
 
 To build it yourself, `npm run package` builds an installable macOS app (Apple Silicon only, personal use: not signed, not
-notarized, no auto-update). Prerequisites: macOS on arm64, `npm ci`, and Electron installed
+notarized). Prerequisites: macOS on arm64, `npm ci`, and Electron installed
 (`npx install-electron`, done by `npm run dev`). It runs `electron-vite build`, then electron-builder
 (`electron-builder.yml`, packaging the Electron already in `node_modules`, so no Electron
 download), then `scripts/check-package.mjs`, which fails if the Chromium licenses
@@ -221,7 +227,7 @@ similar ended up in the app. The first `.dmg` build downloads electron-builder's
 
 The Linux app is built by GitHub Actions on an Ubuntu runner, not from macOS: the workflow
 `.github/workflows/package.yml` (**Actions > Package > Run workflow**, or a `v*` tag) runs
-`npm run package:linux` (AppImage and `.deb`, unsigned, no auto-update), the guard script
+`npm run package:linux` (AppImage and `.deb`, unsigned, updates announced but not installed by the app), the guard script
 (`scripts/check-package.mjs --platform linux`), the smoke test under `xvfb-run`, and uploads the
 two files as the artifact `linux-x64` (kept 14 days).
 

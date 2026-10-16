@@ -1,0 +1,56 @@
+/* App Update banner: a strip under the header, same width as the content. Tokens only. */
+
+.update-banner {
+  flex: none;
+  border-bottom: 1px solid var(--color-progress-border);
+  background: var(--color-progress-fill);
+  color: var(--color-text-primary);
+}
+
+.update-banner-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm) var(--space-md);
+  width: 100%;
+  max-width: var(--layout-max-width);
+  margin: 0 auto;
+  min-height: 2.75rem;
+  padding: var(--space-sm) var(--gutter);
+}
+
+.update-banner-text {
+  flex: 1 1 18rem;
+  margin: 0;
+}
+
+.update-banner-reason {
+  color: var(--color-text-secondary);
+}
+
+.update-banner-actions {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+/* The progress strip sits flat inside the banner. */
+.update-banner .status-strip {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.update-banner-error {
+  flex: 1 1 100%;
+}
+
+/* Settings: the "Updates" card. */
+.update-check-result {
+  margin: 0;
+}
+
+.update-check-result:empty {
+  display: none;
+}

@@ -13,6 +13,7 @@ import {
   type CliCheck
 } from '../../../shared/settings'
 import { errorMessage } from '../quiz/errorMessage'
+import { UpdatesSection } from '../update/UpdatesSection'
 import './settings.css'
 
 /** Form values: text inputs, parsed on save. */
@@ -26,6 +27,7 @@ interface Draft {
   /** Empty = inherit the environment. */
   claudeConfigDir: string
   generationLanguage: GenerationLanguage
+  checkForUpdatesAtLaunch: boolean
 }
 
 const toDraft = (settings: AppSettings): Draft => ({
@@ -34,7 +36,8 @@ const toDraft = (settings: AppSettings): Draft => ({
   questionsPerQuiz: settings.questionsPerQuiz === null ? '' : String(settings.questionsPerQuiz),
   claudeCliPath: settings.claudeCliPath ?? '',
   claudeConfigDir: settings.claudeConfigDir ?? '',
-  generationLanguage: settings.generationLanguage
+  generationLanguage: settings.generationLanguage,
+  checkForUpdatesAtLaunch: settings.checkForUpdatesAtLaunch
 })
 
 const fromDraft = (draft: Draft): AppSettings => ({
@@ -43,7 +46,8 @@ const fromDraft = (draft: Draft): AppSettings => ({
   questionsPerQuiz: draft.questionsPerQuiz.trim() ? Number(draft.questionsPerQuiz) : null,
   claudeCliPath: draft.claudeCliPath.trim() || null,
   claudeConfigDir: draft.claudeConfigDir.trim() || null,
-  generationLanguage: draft.generationLanguage
+  generationLanguage: draft.generationLanguage,
+  checkForUpdatesAtLaunch: draft.checkForUpdatesAtLaunch
 })
 
 /**
@@ -74,10 +78,12 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
   const values = fromDraft(draft)
   const errors = settingsErrors(values)
   const valid = Object.keys(errors).length === 0
-  const edit = (field: Exclude<keyof Draft, 'generationLanguage'>) => (value: string) => {
-    setStatus(null)
-    setDraft({ ...draft, [field]: value })
-  }
+  const edit =
+    (field: Exclude<keyof Draft, 'generationLanguage' | 'checkForUpdatesAtLaunch'>) =>
+    (value: string) => {
+      setStatus(null)
+      setDraft({ ...draft, [field]: value })
+    }
 
   const save = (event: FormEvent) => {
     event.preventDefault()
@@ -279,6 +285,14 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
                 short
               />
             </section>
+
+            <UpdatesSection
+              checkAtLaunch={draft.checkForUpdatesAtLaunch}
+              onCheckAtLaunchChange={(checked) => {
+                setStatus(null)
+                setDraft({ ...draft, checkForUpdatesAtLaunch: checked })
+              }}
+            />
           </div>
         </div>
         {error && (

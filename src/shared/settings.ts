@@ -24,6 +24,11 @@ export interface AppSettings {
    * (default French). Never changes content already generated, a Round in progress or mastery.
    */
   generationLanguage: GenerationLanguage
+  /**
+   * App Update: look for a newer release at launch, once a day at most (default on). The
+   * "Check for updates" button works whatever its value.
+   */
+  checkForUpdatesAtLaunch: boolean
 }
 
 export const settingsLimits = {

@@ -1,0 +1,26 @@
+---
+title: App Update
+tags: [concept, packaging]
+issue: 58
+---
+
+# App Update
+
+The app finds a newer release on GitHub and, on macOS (Apple Silicon, packaged app), installs it when the learner clicks "Install and restart". On Linux the banner only links to the release page. Before, a new version meant quitting the app and running `install.sh` by hand.
+
+- **Check**: at launch (once a day at most, unless "Check for updates at launch" is off in Settings) and from the "Check for updates" button of Settings, which works whatever the setting is and shows a dismissed version again. The main process reads the latest release from the GitHub API and compares versions (semver; a pre-release is never offered). The only request is to that API: nothing identifies the learner.
+- **Banner**: "Version X is available" with "Install and restart" (or a link to the release page when the app cannot install itself), "Not now" and the release notes. "Not now" remembers the version: it is not announced again, a newer one is. The banner stays away from a [[Round]] and a [[Design Exercise]]; it returns when the learner leaves them.
+- **Install**: the same steps as `install.sh` (download the `.dmg` and `SHA256SUMS`, check the checksum, mount read-only, copy next to the running app, verify the signature and the identity of the copy), then a small detached helper waits for the app to quit, swaps the bundle, clears quarantine, relaunches and removes its temporary files. Any failed step leaves the installed app untouched and shows the reason with the manual download link.
+- **Refused** when the app is not packaged, not at an app bundle path, not in a writable folder, or not macOS arm64.
+- It never touches the data folder: the [[Learning Path]], mastery and the [[Content Cache]] are the same after an update.
+
+Why not `electron-updater`, and what the checksum protects: see [[Packaging#Updates]].
+
+## Related
+
+- Settings: "Check for updates at launch" (default on), see [[Mastery Loop Implementation]] for the other settings
+- Same trust level as `install.sh`: the checksum comes from the same release as the image
+
+## In code
+
+`src/main/update/` (`version.ts`, `release.ts`, `http.ts`, `checksum.ts`, `installable.ts`, `installer.ts`, `helper.ts`, `service.ts`, `updateIpc.ts`), shared types in `src/shared/update.ts`, channels `update:check`, `update:pending`, `update:install`, `update:dismiss` and events `update:available`, `update:progress` in `src/shared/ipc.ts`. State (last check, dismissed version) in the `settings` table, `src/main/db/repositories/updateState.ts`; the setting `checkForUpdatesAtLaunch` (key `check_for_updates_at_launch`, no migration) in `src/shared/settings.ts`. UI: `src/renderer/src/update/` (`UpdateProvider`, `UpdateBanner`, `UpdatesSection` in Settings); `useHoldUpdateBanner` keeps the banner away from `QuizPlayer` and `ProtocolExerciseScreen`.

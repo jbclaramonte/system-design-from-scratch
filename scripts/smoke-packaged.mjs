@@ -22,6 +22,9 @@
 //      CLI), About (licenses, fonts), first lesson (fake CLI, Mermaid diagram);
 //   2. after every topic is marked mastered in the scratch database: an exercise canvas (React
 //      Flow) where a typed component can be added, and no console error.
+// The App Update check runs against a local fake release server started by this script (the app
+// gets its address through SDFS_UPDATE_API_URL and SDFS_UPDATE_DOWNLOAD_BASE_URL): the real GitHub
+// API is never called and no update is installed.
 // It never touches the real userData folder or ~/.claude*, always passes --user-data-dir, kills the
 // whole process tree it started (also on failure or Ctrl+C), prints one PASS/FAIL line per check
 // and exits 1 when a check fails. What it does not cover is listed in docs/Packaging.md
@@ -39,6 +42,7 @@ import {
   statSync,
   writeFileSync
 } from 'node:fs'
+import { createServer as createHttpServer } from 'node:http'
 import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
@@ -126,6 +130,50 @@ const cliPath = join(cliDir, 'claude')
 const callsLog = join(scratch, 'cli-calls.log')
 mkdirSync(userData, { recursive: true })
 mkdirSync(cliDir, { recursive: true })
+
+// ---------------------------------------------------------------------------------------------
+// Fake release: the GitHub "latest release" answer of a version newer than any real one. The
+// update check of the packaged app is pointed at it (launchApp), so it never reaches GitHub.
+// ---------------------------------------------------------------------------------------------
+
+const FAKE_RELEASE_VERSION = '99.0.0'
+const fakeReleaseRequests = []
+/** Requests made during the first launch: the second one must make none (once a day at most). */
+let requestsAfterFirstLaunch = 0
+let fakeReleaseServer
+let fakeReleaseUrl
+
+function startFakeRelease() {
+  return new Promise((done, fail) => {
+    const server = createHttpServer((request, response) => {
+      fakeReleaseRequests.push(request.url)
+      if (request.url !== '/latest') {
+        response.writeHead(404).end()
+        return
+      }
+      const base = `http://127.0.0.1:${server.address().port}/files`
+      response.writeHead(200, { 'content-type': 'application/json' })
+      response.end(
+        JSON.stringify({
+          tag_name: `v${FAKE_RELEASE_VERSION}`,
+          html_url: `https://example.invalid/releases/tag/v${FAKE_RELEASE_VERSION}`,
+          draft: false,
+          prerelease: false,
+          assets: [
+            `system-design-from-scratch-${FAKE_RELEASE_VERSION}-arm64.dmg`,
+            'SHA256SUMS'
+          ].map((name) => ({ name, browser_download_url: `${base}/${name}` }))
+        })
+      )
+    })
+    server.once('error', fail)
+    server.listen(0, '127.0.0.1', () => {
+      fakeReleaseServer = server
+      fakeReleaseUrl = `http://127.0.0.1:${server.address().port}`
+      done()
+    })
+  })
+}
 
 // ---------------------------------------------------------------------------------------------
 // Fake Claude Code CLI: speaks the stream-json protocol the app expects and logs every call.
@@ -252,7 +300,12 @@ async function launchApp() {
   // What a desktop launch gives, minus the things only the system adds: a minimal PATH, no SHELL,
   // a HOME that holds nothing but the fake CLI. On Linux the display (xvfb-run sets DISPLAY and
   // XAUTHORITY) is the only variable passed through: Chromium cannot start without one.
-  const env = { PATH: '/usr/bin:/bin', HOME: home }
+  const env = {
+    PATH: '/usr/bin:/bin',
+    HOME: home,
+    SDFS_UPDATE_API_URL: `${fakeReleaseUrl}/latest`,
+    SDFS_UPDATE_DOWNLOAD_BASE_URL: `${fakeReleaseUrl}/files`
+  }
   if (platform === 'linux') {
     for (const name of ['DISPLAY', 'XAUTHORITY']) {
       if (process.env[name]) env[name] = process.env[name]
@@ -468,6 +521,43 @@ async function phaseOne() {
     }
   })
 
+  await check('the launch check finds the fake release and the banner offers it', async () => {
+    await c.waitFor(`!!${c.testId('update-banner')}`, 'the update banner', 30000)
+    const text = await c.evaluate(`${c.testId('update-banner')}.textContent`)
+    assert(
+      text.includes(`Version ${FAKE_RELEASE_VERSION} is available`),
+      `banner text: ${text.slice(0, 160)}`
+    )
+    // macOS arm64 (a writable folder): install in one click; Linux: a link to the release page.
+    const action = platform === 'darwin' ? 'update-install' : 'update-download'
+    assert(await c.evaluate(`!!${c.testId(action)}`), `no ${action} control in the banner`)
+    assert(
+      fakeReleaseRequests.includes('/latest'),
+      'the fake release server was never asked: the check did not use SDFS_UPDATE_API_URL'
+    )
+    await c.shot('00-update-banner')
+    return `${fakeReleaseRequests.length} request to the fake release`
+  })
+
+  await check('Settings: "Check for updates" reports the fake release', async () => {
+    await c.click('open-settings')
+    await c.waitFor(`!!${c.testId('settings-screen')}`, 'Settings')
+    await c.click('settings-check-updates')
+    await c.waitFor(
+      `/available/.test(${c.testId('settings-update-result')}?.textContent ?? '')`,
+      'the update check result'
+    )
+    assert(
+      await c.evaluate(`${c.testId('settings-check-updates-at-launch')}.checked`),
+      '"Check for updates at launch" is not on by default'
+    )
+  })
+
+  await check('"Not now" hides the banner', async () => {
+    await c.click('update-dismiss')
+    await c.waitFor(`!${c.testId('update-banner')}`, 'the banner to disappear')
+  })
+
   await check('Settings renders and its Test button finds the CLI without PATH', async () => {
     await c.click('open-settings')
     await c.waitFor(`!!${c.testId('settings-screen')}`, 'Settings')
@@ -556,6 +646,7 @@ async function phaseOne() {
     assert(consoleProblems.length === 0, consoleProblems.join(' | '))
   })
 
+  requestsAfterFirstLaunch = fakeReleaseRequests.length
   c.close()
   await stopApp()
 }
@@ -603,6 +694,16 @@ async function phaseTwo() {
     )
   })
   if (!opened) return
+
+  await check('the dismissed update is not announced again, without a second request', async () => {
+    // The Learning Path is on screen: a banner would be visible by now.
+    await sleep(1500)
+    assert(!(await c.evaluate(`!!${c.testId('update-banner')}`)), 'the banner is back')
+    assert(
+      fakeReleaseRequests.length === requestsAfterFirstLaunch,
+      `${fakeReleaseRequests.length - requestsAfterFirstLaunch} new request(s) to the release API`
+    )
+  })
 
   const canvasOpened = await check('exercise opens on the Design Canvas', async () => {
     await c.click('path-continue')
@@ -658,6 +759,7 @@ console.log(
 )
 installFakeCli()
 try {
+  await startFakeRelease()
   await phaseOne()
   if (results.every((result) => result.ok)) {
     await phaseTwo()
@@ -669,6 +771,7 @@ try {
   console.log(`FAIL  smoke test run: ${redact(error instanceof Error ? error.stack : error)}`)
 } finally {
   await stopApp()
+  fakeReleaseServer?.close()
   const failed = results.filter((result) => !result.ok)
   console.log(
     failed.length === 0

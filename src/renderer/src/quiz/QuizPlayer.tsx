@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { QuestionFeedback, RoundResult, RoundStart } from '../../../shared/quiz'
+import { useHoldUpdateBanner } from '../update/UpdateProvider'
 import { ClarifyQuestion } from './ClarifyQuestion'
 import { ContestForm } from './ContestForm'
 import { errorMessage } from './errorMessage'
@@ -71,6 +72,8 @@ export function QuizPlayer({
   onCompleted: (result: RoundResult) => void
 }) {
   const { round, quiz } = start
+  // An install prompt never interrupts a Round.
+  useHoldUpdateBanner()
   const [feedback, setFeedback] = useState(
     () => new Map(start.answered.map((answered) => [answered.questionId, answered]))
   )

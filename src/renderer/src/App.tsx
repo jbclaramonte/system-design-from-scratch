@@ -16,6 +16,8 @@ import { QuizScreen } from './quiz/QuizScreen'
 import { OpenSettingsContext } from './settings/openSettings'
 import { SettingsScreen } from './settings/SettingsScreen'
 import { AppShell } from './shell/AppShell'
+import { UpdateBanner } from './update/UpdateBanner'
+import { UpdateProvider } from './update/UpdateProvider'
 import { activeNavItem, screenLayout, type NavItemId, type Screen } from './shell/navigation'
 
 /** Dev-only tools, in a compact section under the Learning Path. */
@@ -114,15 +116,18 @@ export function App() {
 
   return (
     <OpenSettingsContext.Provider value={openSettings}>
-      <AppShell
-        activeItem={activeNavItem(screen)}
-        layout={screenLayout(screen)}
-        version={version}
-        scrollKey={screen.name === 'topic' ? `topic-${screen.topic.id}` : screen.name}
-        onNavigate={navigate}
-      >
-        <AppScreen screen={screen} setScreen={setScreen} devInfo={{ version, ping, error }} />
-      </AppShell>
+      <UpdateProvider>
+        <AppShell
+          activeItem={activeNavItem(screen)}
+          layout={screenLayout(screen)}
+          version={version}
+          scrollKey={screen.name === 'topic' ? `topic-${screen.topic.id}` : screen.name}
+          banner={<UpdateBanner />}
+          onNavigate={navigate}
+        >
+          <AppScreen screen={screen} setScreen={setScreen} devInfo={{ version, ping, error }} />
+        </AppShell>
+      </UpdateProvider>
     </OpenSettingsContext.Provider>
   )
 }

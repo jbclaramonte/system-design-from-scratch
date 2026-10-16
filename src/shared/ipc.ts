@@ -44,6 +44,13 @@ import type {
   SubmissionView
 } from './protocol'
 import type { AboutInfo } from './about'
+import type {
+  UpdateCheckResult,
+  UpdateInfo,
+  UpdateInstallResult,
+  UpdateProgress,
+  UpdateVersionRequest
+} from './update'
 import type { LearningPath, LearningPathStepRequest } from './learningPath'
 import type { Dashboard, DashboardRequest } from './dashboard'
 import type {
@@ -163,6 +170,21 @@ export interface IpcChannels {
   'settings:update': { request: Partial<AppSettings>; response: AppSettings }
   /** Resolves the Claude Code CLI (the given path, or the automatic lookup) and runs `--version`. */
   'settings:testCli': { request: CliCheckRequest; response: CliCheck }
+  /**
+   * App Update: asks the GitHub release API (from the main process) whether a newer version
+   * exists. A dismissed version is shown again. A network failure is a result, never a rejection.
+   */
+  'update:check': { request: void; response: UpdateCheckResult }
+  /** The update to announce (found, newer, not dismissed), or null. Read when the banner mounts. */
+  'update:pending': { request: void; response: UpdateInfo | null }
+  /**
+   * Installs the version (macOS arm64, packaged app only): download, checksum, copy, signature
+   * check, then the app quits and a helper swaps the bundle and relaunches. Progress on
+   * `update:progress`. A failure leaves the installed app untouched.
+   */
+  'update:install': { request: UpdateVersionRequest; response: UpdateInstallResult }
+  /** "Not now": the version is remembered and not announced again. */
+  'update:dismiss': { request: UpdateVersionRequest; response: void }
   /** Topics in Learning Path order. */
   'topic:list': { request: void; response: TopicSummary[] }
   /** A topic with its Notion Outline status. */
@@ -259,6 +281,10 @@ export interface IpcEvents {
   'protocol:event': LessonStreamEvent
   /** The recomputed Learning Path, after a completed round, a Round Limit choice, a Forced Unlock or a Declared Mastery. */
   'path:changed': LearningPath
+  /** A release newer than the running version was found and is not dismissed. */
+  'update:available': UpdateInfo
+  /** Progress of an App Update install. */
+  'update:progress': UpdateProgress
 }
 
 export type IpcEventChannel = keyof IpcEvents
@@ -300,6 +326,10 @@ export const apiChannels = {
   getSettings: 'settings:get',
   updateSettings: 'settings:update',
   testCli: 'settings:testCli',
+  checkForUpdate: 'update:check',
+  getPendingUpdate: 'update:pending',
+  installUpdate: 'update:install',
+  dismissUpdate: 'update:dismiss',
   listQuizTopics: 'quiz:listTopics',
   listQuizzes: 'quiz:listQuizzes',
   loadQuiz: 'quiz:load',
@@ -331,7 +361,9 @@ export const apiEvents = {
   onLessonQuestionEvent: 'lessonQuestion:event',
   onMasteryEvent: 'mastery:event',
   onProtocolEvent: 'protocol:event',
-  onLearningPathChanged: 'path:changed'
+  onLearningPathChanged: 'path:changed',
+  onUpdateAvailable: 'update:available',
+  onUpdateProgress: 'update:progress'
 } as const satisfies Record<string, IpcEventChannel>
 
 type ApiChannels = typeof apiChannels

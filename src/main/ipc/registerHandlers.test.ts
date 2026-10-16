@@ -85,11 +85,20 @@ const handlers: IpcHandlers = {
     questionsPerQuiz: null,
     claudeCliPath: null,
     claudeConfigDir: null,
-    generationLanguage: 'fr'
+    generationLanguage: 'fr',
+    checkForUpdatesAtLaunch: true
   }),
   'settings:update': () => {
     throw new Error('invalid')
   },
+  'update:check': async () => ({ status: 'upToDate', currentVersion: '0.3.0' }),
+  'update:pending': () => null,
+  'update:install': async () => ({
+    ok: false,
+    error: { code: 'not_installable', message: 'no' },
+    manualUrl: 'https://example.test'
+  }),
+  'update:dismiss': () => undefined,
   'settings:testCli': async () => ({
     ok: true,
     path: '/x/claude',
@@ -210,7 +219,11 @@ describe('registerHandlers', () => {
       'settings:update',
       'system:ping',
       'topic:get',
-      'topic:list'
+      'topic:list',
+      'update:check',
+      'update:dismiss',
+      'update:install',
+      'update:pending'
     ])
   })
 

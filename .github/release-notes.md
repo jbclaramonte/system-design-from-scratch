@@ -1,4 +1,4 @@
-Personal-use builds: signed ad hoc, **not notarized**, no auto-update. The Claude Code CLI must be installed and logged in (the app drives it for every generation).
+Personal-use builds: signed ad hoc, **not notarized**. An installed app tells you about a newer release and, on macOS, updates itself in one click (Linux: a link to this page). The Claude Code CLI must be installed and logged in (the app drives it for every generation).
 
 **macOS, no dialog at all** (the script downloads with `curl`, which leaves no quarantine attribute):
 
