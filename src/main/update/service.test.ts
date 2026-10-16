@@ -3,14 +3,18 @@ import type { UpdateInfo, UpdateProgress } from '../../shared/update'
 import type { LastUpdateCheck } from '../db/repositories/updateState'
 import { UpdateError } from './errors'
 import type { InstallCheck } from './installable'
-import type { InstallPlan } from './installer'
 import type { LatestRelease } from './release'
-import { createUpdateService, type UpdateServiceDeps, type UpdateStore } from './service'
+import {
+  createUpdateService,
+  type UpdatePlan,
+  type UpdateServiceDeps,
+  type UpdateStore
+} from './service'
 
 const NOW = Date.parse('2026-10-16T12:00:00Z')
 const HOUR = 60 * 60 * 1000
 
-const release = (version = '0.3.1', macBuild = true): LatestRelease => ({
+const release = (version = '0.3.1', macBuild = true, linuxBuild = true): LatestRelease => ({
   version,
   tag: `v${version}`,
   releaseUrl: `https://github.com/o/r/releases/tag/v${version}`,
@@ -18,6 +22,13 @@ const release = (version = '0.3.1', macBuild = true): LatestRelease => ({
     ? {
         dmgName: `app-${version}.dmg`,
         dmgUrl: `http://127.0.0.1:9/app-${version}.dmg`,
+        checksumsUrl: 'http://127.0.0.1:9/SHA256SUMS'
+      }
+    : null,
+  linuxBuild: linuxBuild
+    ? {
+        appImageName: `app-${version}.AppImage`,
+        appImageUrl: `http://127.0.0.1:9/app-${version}.AppImage`,
         checksumsUrl: 'http://127.0.0.1:9/SHA256SUMS'
       }
     : null
@@ -36,6 +47,7 @@ function memoryStore(initial: { last?: LastUpdateCheck; dismissed?: string } = {
 
 const installable: InstallCheck = {
   canInstall: true,
+  kind: 'mac',
   bundlePath: '/Applications/App.app',
   executable: 'Contents/MacOS/App'
 }
@@ -54,7 +66,7 @@ function setup(
 ) {
   const { state, store } = memoryStore({ last: options.last, dismissed: options.dismissed })
   const notified: UpdateInfo[] = []
-  const installed: InstallPlan[] = []
+  const installed: UpdatePlan[] = []
   const lookup = vi.fn(async () => {
     const latest = options.latest === undefined ? release() : options.latest
     if (latest instanceof Error) throw latest
@@ -104,7 +116,12 @@ describe('check (the button)', () => {
     expect(service.pending()).toEqual(update)
     expect(state.last).toEqual({
       checkedAt: new Date(NOW).toISOString(),
-      latest: { version: '0.3.1', releaseUrl: update.releaseUrl, hasMacBuild: true }
+      latest: {
+        version: '0.3.1',
+        releaseUrl: update.releaseUrl,
+        hasMacBuild: true,
+        hasAppImage: true
+      }
     })
   })
 
@@ -208,7 +225,12 @@ describe('checkAtLaunch', () => {
   })
 
   it('asks GitHub once a day at most', async () => {
-    const found = { version: '0.3.1', releaseUrl: 'https://example.test/r', hasMacBuild: true }
+    const found = {
+      version: '0.3.1',
+      releaseUrl: 'https://example.test/r',
+      hasMacBuild: true,
+      hasAppImage: true
+    }
     const recent: LastUpdateCheck = {
       checkedAt: new Date(NOW - 23 * HOUR).toISOString(),
       latest: found
@@ -228,7 +250,12 @@ describe('checkAtLaunch', () => {
   it('does not announce a cached version the app has since been updated to', async () => {
     const last: LastUpdateCheck = {
       checkedAt: new Date(NOW - HOUR).toISOString(),
-      latest: { version: '0.3.1', releaseUrl: 'https://example.test/r', hasMacBuild: true }
+      latest: {
+        version: '0.3.1',
+        releaseUrl: 'https://example.test/r',
+        hasMacBuild: true,
+        hasAppImage: true
+      }
     }
     const { service, notified } = setup({ last, currentVersion: '0.3.1' })
     await service.checkAtLaunch()
@@ -252,6 +279,7 @@ describe('install', () => {
     expect(await service.install('0.3.1', noProgress)).toEqual({ ok: true })
     expect(installed).toEqual([
       {
+        kind: 'mac',
         version: '0.3.1',
         build: release().macBuild,
         bundlePath: '/Applications/App.app',
@@ -259,6 +287,74 @@ describe('install', () => {
       }
     ])
     expect(scheduleQuit).toHaveBeenCalledTimes(1)
+  })
+
+  describe('on an AppImage', () => {
+    const appImage: InstallCheck = {
+      canInstall: true,
+      kind: 'appimage',
+      appImagePath: '/home/me/app.AppImage'
+    }
+
+    it('installs the AppImage build of the release, then schedules the quit', async () => {
+      const { service, installed, scheduleQuit } = setup({
+        installCheck: appImage,
+        latest: release('0.3.1', false, true)
+      })
+      await service.check()
+      expect(await service.install('0.3.1', noProgress)).toEqual({ ok: true })
+      expect(installed).toEqual([
+        {
+          kind: 'appimage',
+          version: '0.3.1',
+          build: release().linuxBuild,
+          appImagePath: '/home/me/app.AppImage'
+        }
+      ])
+      expect(scheduleQuit).toHaveBeenCalledTimes(1)
+    })
+
+    it('offers the install only when the release carries the AppImage', async () => {
+      const withImage = setup({ installCheck: appImage, latest: release('0.3.1', false, true) })
+      expect(await withImage.service.check()).toMatchObject({
+        update: { install: { canInstall: true } }
+      })
+      const withoutImage = setup({ installCheck: appImage, latest: release('0.3.1', true, false) })
+      expect(await withoutImage.service.check()).toMatchObject({
+        update: { install: { canInstall: false, reason: expect.stringContaining('AppImage') } }
+      })
+    })
+
+    it('refuses a release without the AppImage, whatever the macOS build', async () => {
+      const { service, installed } = setup({
+        installCheck: appImage,
+        latest: release('0.3.1', true, false)
+      })
+      expect(await service.install('0.3.1', noProgress)).toMatchObject({
+        ok: false,
+        error: { code: 'no_asset', message: expect.stringContaining('AppImage') },
+        manualUrl: expect.stringContaining('v0.3.1')
+      })
+      expect(installed).toEqual([])
+    })
+
+    it('falls back to the notification for a run that is not an AppImage (deb)', async () => {
+      const { service, installed } = setup({
+        installCheck: {
+          canInstall: false,
+          reason: 'The app does not run as an AppImage (a .deb install is updated with apt).'
+        }
+      })
+      expect(await service.check()).toMatchObject({
+        status: 'available',
+        update: { install: { canInstall: false, reason: expect.stringContaining('.deb') } }
+      })
+      expect(await service.install('0.3.1', noProgress)).toMatchObject({
+        ok: false,
+        error: { code: 'not_installable' }
+      })
+      expect(installed).toEqual([])
+    })
   })
 
   it('refuses a second install while one is under way or done', async () => {

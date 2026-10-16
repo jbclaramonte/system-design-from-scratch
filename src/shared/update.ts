@@ -9,17 +9,18 @@ export type UpdateErrorCode =
   | 'network'
   /** The release answer is not usable (no valid version, not a release). */
   | 'invalid_release'
-  /** The app cannot install itself here (not macOS arm64, not packaged, not writable...). */
+  /** The app cannot install itself here (not macOS arm64 or an x64 AppImage, not packaged, not writable...). */
   | 'not_installable'
-  /** The release holds no macOS build (.dmg or SHA256SUMS missing). */
+  /** The release holds no build for this platform (.dmg or .AppImage, or SHA256SUMS, missing). */
   | 'no_asset'
   /** The release changed since the banner was shown. */
   | 'stale'
-  /** The downloaded image does not match SHA256SUMS. */
+  /** The downloaded file does not match SHA256SUMS. */
   | 'checksum'
   | 'mount'
   /** The image does not hold this app, or at the announced version. */
   | 'wrong_app'
+  /** The new file could not be written or moved into place (disk full, folder not writable). */
   | 'copy'
   | 'signature'
   | 'helper'

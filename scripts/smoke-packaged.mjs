@@ -24,11 +24,14 @@
 //      Flow) where a typed component can be added, and no console error.
 // The App Update check runs against a local fake release server started by this script (the app
 // gets its address through SDFS_UPDATE_API_URL and SDFS_UPDATE_DOWNLOAD_BASE_URL): the real GitHub
-// API is never called and no update is installed.
+// API is never called. On macOS no update is installed. On Linux a third launch runs the whole
+// AppImage update: APPIMAGE points at a scratch file standing for the installed AppImage, and
+// "Install and restart" replaces it with the fake release's file and relaunches it.
 // It never touches the real userData folder or ~/.claude*, always passes --user-data-dir, kills the
 // whole process tree it started (also on failure or Ctrl+C), prints one PASS/FAIL line per check
 // and exits 1 when a check fails. What it does not cover is listed in docs/Packaging.md
 // ("Smoke test").
+import { createHash } from 'node:crypto'
 import { execFileSync, spawn } from 'node:child_process'
 import {
   chmodSync,
@@ -128,6 +131,8 @@ const home = join(scratch, 'home')
 const cliDir = join(home, '.local', 'bin')
 const cliPath = join(cliDir, 'claude')
 const callsLog = join(scratch, 'cli-calls.log')
+const scratchTmp = join(scratch, 'tmp')
+mkdirSync(scratchTmp, { recursive: true })
 mkdirSync(userData, { recursive: true })
 mkdirSync(cliDir, { recursive: true })
 
@@ -137,6 +142,12 @@ mkdirSync(cliDir, { recursive: true })
 // ---------------------------------------------------------------------------------------------
 
 const FAKE_RELEASE_VERSION = '99.0.0'
+const FAKE_APPIMAGE_NAME = `system-design-from-scratch-${FAKE_RELEASE_VERSION}-x86_64.AppImage`
+const fakeAppImageLog = join(scratch, 'fake-appimage-launches.log')
+/** The "new AppImage" of the fake release: a script that logs how it was started. */
+const FAKE_APPIMAGE_CONTENT = `#!/bin/sh\necho "new $* mark=$SDFS_SMOKE_MARK" >> ${JSON.stringify(fakeAppImageLog)}\n`
+const fakeSums = () =>
+  `${createHash('sha256').update(FAKE_APPIMAGE_CONTENT).digest('hex')}  ${FAKE_APPIMAGE_NAME}\n`
 const fakeReleaseRequests = []
 /** Requests made during the first launch: the second one must make none (once a day at most). */
 let requestsAfterFirstLaunch = 0
@@ -147,6 +158,16 @@ function startFakeRelease() {
   return new Promise((done, fail) => {
     const server = createHttpServer((request, response) => {
       fakeReleaseRequests.push(request.url)
+      if (request.url === `/files/${FAKE_APPIMAGE_NAME}`) {
+        response.writeHead(200, { 'content-type': 'application/octet-stream' })
+        response.end(FAKE_APPIMAGE_CONTENT)
+        return
+      }
+      if (request.url === '/files/SHA256SUMS') {
+        response.writeHead(200, { 'content-type': 'text/plain' })
+        response.end(fakeSums())
+        return
+      }
       if (request.url !== '/latest') {
         response.writeHead(404).end()
         return
@@ -161,6 +182,7 @@ function startFakeRelease() {
           prerelease: false,
           assets: [
             `system-design-from-scratch-${FAKE_RELEASE_VERSION}-arm64.dmg`,
+            FAKE_APPIMAGE_NAME,
             'SHA256SUMS'
           ].map((name) => ({ name, browser_download_url: `${base}/${name}` }))
         })
@@ -289,7 +311,7 @@ async function freePort() {
   })
 }
 
-async function launchApp() {
+async function launchApp(extraEnv = {}) {
   const port = await freePort()
   childExited = false
   appOutput = ''
@@ -303,6 +325,9 @@ async function launchApp() {
   const env = {
     PATH: '/usr/bin:/bin',
     HOME: home,
+    // The app's temporary files (an update's helper script and log) stay in the scratch folder.
+    TMPDIR: scratchTmp,
+    ...extraEnv,
     SDFS_UPDATE_API_URL: `${fakeReleaseUrl}/latest`,
     SDFS_UPDATE_DOWNLOAD_BASE_URL: `${fakeReleaseUrl}/files`
   }
@@ -584,7 +609,16 @@ async function phaseOne() {
     )
     const primer = await c.evaluate(`${c.testId('about-attribution')}?.textContent ?? ''`)
     assert(primer.length > 20, 'the primer attribution is missing')
-    return `${entries} license entries`
+    // The packaged app reports its own version (the one in package.json for the default build).
+    const text = await c.evaluate(`${c.testId('about-screen')}.textContent`)
+    const expected = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version
+    if (!argValue('--app')) {
+      assert(
+        new RegExp(`version\\s*${expected.replaceAll('.', '\\.')}(?![\\d.])`).test(text),
+        `About does not show version ${expected}: ${text.slice(0, 120)}`
+      )
+    }
+    return `${entries} license entries, version ${expected}`
   })
 
   await check('fonts are loaded (Geist, JetBrains Mono)', async () => {
@@ -739,6 +773,86 @@ async function phaseTwo() {
   await stopApp()
 }
 
+/**
+ * Linux only: the whole AppImage update, in the packaged app. APPIMAGE (what the AppImage runtime
+ * sets) names a scratch file standing for the installed AppImage; "Install and restart" downloads
+ * the fake release's file from the local server, checks it, replaces the scratch file, quits, and
+ * a helper relaunches the new file with the arguments and the environment of the app.
+ */
+async function phaseThree() {
+  const folder = join(scratch, 'appimage')
+  const installed = join(folder, 'system-design-from-scratch.AppImage')
+  mkdirSync(folder, { recursive: true })
+  writeFileSync(installed, '#!/bin/sh\necho old\n', { mode: 0o755 })
+
+  const port = await launchApp({ APPIMAGE: installed, SDFS_SMOKE_MARK: 'kept' })
+  let c
+  const opened = await check(
+    'third launch with APPIMAGE set: the Learning Path renders',
+    async () => {
+      c = await connect(port)
+      await c.waitFor(`!!${c.testId('path-continue')}`, 'the Learning Path', 60000)
+    }
+  )
+  if (!opened) return
+
+  const offered = await check(
+    'the banner offers "Install and restart" on an AppImage',
+    async () => {
+      // The version was dismissed in the first launch: the Settings button shows it again.
+      await c.click('open-settings')
+      await c.waitFor(`!!${c.testId('settings-screen')}`, 'Settings')
+      await c.click('settings-check-updates')
+      await c.waitFor(`!!${c.testId('update-install')}`, 'the Install and restart button', 30000)
+      assert(
+        !(await c.evaluate(`!!${c.testId('update-download')}`)),
+        'the release link is shown too'
+      )
+    }
+  )
+  if (!offered) return
+
+  await check('Install and restart replaces the AppImage and relaunches the new file', async () => {
+    await c.click('update-install')
+    const fresh = FAKE_APPIMAGE_CONTENT
+    for (let i = 0; i < 300 && readFileSync(installed, 'utf8') !== fresh; i++) await sleep(100)
+    assert(
+      readFileSync(installed, 'utf8') === fresh,
+      `the AppImage was not replaced${await bannerError(c)}`
+    )
+    assert((statSync(installed).mode & 0o111) !== 0, 'the new AppImage is not executable')
+    for (let i = 0; i < 300 && !childExited; i++) await sleep(100)
+    assert(childExited, 'the app did not quit after the install')
+    for (let i = 0; i < 100 && !existsSync(fakeAppImageLog); i++) await sleep(100)
+    assert(existsSync(fakeAppImageLog), 'the new AppImage was not relaunched')
+    const launches = readFileSync(fakeAppImageLog, 'utf8')
+    assert(
+      launches.includes(`--user-data-dir=${userData}`) && launches.includes('mark=kept'),
+      `the relaunch lost the arguments or the environment: ${launches.trim()}`
+    )
+    assert(
+      readdirSync(folder).join() === 'system-design-from-scratch.AppImage',
+      `leftovers next to the AppImage: ${readdirSync(folder).join(', ')}`
+    )
+    assert(
+      !readdirSync(scratchTmp).some(
+        (name) => name.startsWith('sdfs-update-') && name !== 'sdfs-update.log'
+      ),
+      'the update left its temporary folder behind'
+    )
+    return 'file replaced, app quit, new file relaunched with --user-data-dir and the environment'
+  })
+
+  c.close()
+  await stopApp()
+}
+
+/** The banner's error text, for a failure message. */
+async function bannerError(c) {
+  const text = await c.evaluate(`${c.testId('update-error')}?.textContent ?? ''`).catch(() => '')
+  return text ? `: ${text}` : ''
+}
+
 // ---------------------------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------------------------
@@ -763,6 +877,7 @@ try {
   await phaseOne()
   if (results.every((result) => result.ok)) {
     await phaseTwo()
+    if (platform === 'linux' && results.every((result) => result.ok)) await phaseThree()
   } else {
     console.log('SKIP  second launch (exercise canvas): the first launch failed')
   }

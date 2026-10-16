@@ -1,8 +1,9 @@
 name: Package
 
 # Builds the Linux x64 app (AppImage and deb) on an Ubuntu runner and the macOS arm64 app (dmg) on a
-# macOS runner, checks each package, smoke-tests it and uploads the artifacts. Manual, or on a
-# version tag; a version tag also creates a DRAFT GitHub Release with the packages attached, to be
+# macOS runner, checks each package, smoke-tests it and uploads the artifacts. A second Linux job
+# starts the built AppImage on Ubuntu 22.04, the oldest supported release. Manual, or on a version
+# tag; a version tag also creates a DRAFT GitHub Release with the packages attached, to be
 # published by hand. Docs: docs/Packaging.md.
 on:
   workflow_dispatch:
@@ -69,6 +70,24 @@ jobs:
       - name: Smoke test the packaged app
         run: xvfb-run -a npm run smoke:packaged -- --shots smoke-shots
 
+      # The glibc the Electron binary and its libraries need must stay at or below Ubuntu 22.04's
+      # (2.35): the build runs on a newer Ubuntu, but the Electron binary is Chromium's own and
+      # does not link against the runner's libc by itself. Fails when a new Electron raises it.
+      - name: Check the glibc the package needs
+        run: |
+          ldd --version | sed -n 1p
+          bash scripts/check-glibc.sh dist/linux-unpacked 2.35
+
+      # install.sh on Linux, for real: install, launcher content, executable bit, a second run that
+      # replaces the first, a running instance refused, the checksum. Against a local release
+      # folder made of the AppImage just built (no network); the icon is taken out of the real image.
+      - name: Test install.sh on Linux
+        run: |
+          shopt -s nullglob
+          images=(dist/*.AppImage)
+          [ "${#images[@]}" -eq 1 ] || { echo "::error::expected one AppImage, found ${#images[@]}"; exit 1; }
+          SDFS_TEST_APPIMAGE="$PWD/${images[0]}" bash scripts/test-install.sh
+
       - name: Upload the Linux packages
         uses: actions/upload-artifact@v7
         with:
@@ -84,6 +103,75 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: smoke-shots
+          path: smoke-shots/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  # The AppImage built above, started on Ubuntu 22.04 (the oldest supported release; the build job
+  # runs on a newer Ubuntu). Through FUSE as a user would, then extracted and smoke-tested, which
+  # also runs the in-app AppImage update against a local fake release. Docs: docs/Packaging.md.
+  linux-ubuntu-2204:
+    needs: linux
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - uses: actions/download-artifact@v8
+        with:
+          name: linux-x64
+          path: packages
+
+      # Ubuntu 22.04 package names (no t64 suffix). libfuse2 lets the AppImage mount itself.
+      - name: Install system libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            xvfb xauth libfuse2 xdg-utils curl \
+            libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libgtk-3-0 \
+            libgbm1 libasound2 libxss1 libxtst6 libxkbcommon0 libxcomposite1 libxdamage1 \
+            libxfixes3 libxrandr2 libpango-1.0-0 libcairo2
+
+      - name: Show the system
+        run: |
+          lsb_release -d
+          ldd --version | sed -n 1p
+
+      # The AppImage mounts itself (FUSE) and starts: its DevTools port answers.
+      - name: Start the AppImage
+        run: |
+          images=(packages/*.AppImage)
+          chmod +x "${images[0]}"
+          profile="$(mktemp -d)"
+          xvfb-run -a bash -c '
+            "$0" --user-data-dir="$1" --remote-debugging-port=9333 &
+            app=$!
+            ok=1
+            for _ in $(seq 1 60); do
+              if curl -fsS http://127.0.0.1:9333/json/version; then ok=0; break; fi
+              sleep 1
+            done
+            kill "$app" 2>/dev/null || true
+            exit "$ok"
+          ' "${images[0]}" "$profile"
+
+      # The same file, extracted (no FUSE needed) and smoke-tested like the unpacked build; user
+      # namespaces are allowed on 22.04, so the default Chromium sandbox works without the setuid helper.
+      - name: Smoke test the extracted AppImage
+        run: |
+          images=(packages/*.AppImage)
+          mkdir extracted
+          (cd extracted && "$PWD/../${images[0]}" --appimage-extract >/dev/null)
+          ls extracted/squashfs-root
+          xvfb-run -a node scripts/smoke-packaged.mjs --app "$PWD/extracted/squashfs-root/system-design-from-scratch" --shots smoke-shots
+
+      - name: Upload the smoke test screenshots
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: smoke-shots-ubuntu-2204
           path: smoke-shots/
           if-no-files-found: ignore
           retention-days: 14
@@ -137,7 +225,7 @@ jobs:
   # Tags only. A DRAFT release: nothing is public until it is published from the Releases page.
   release:
     if: github.ref_type == 'tag'
-    needs: [linux, macos]
+    needs: [linux, linux-ubuntu-2204, macos]
     runs-on: ubuntu-latest
     permissions:
       contents: write

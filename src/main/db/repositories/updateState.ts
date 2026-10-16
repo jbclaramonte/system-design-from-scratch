@@ -12,6 +12,8 @@ export interface CachedLatestRelease {
   version: string
   releaseUrl: string
   hasMacBuild: boolean
+  /** Whether the release carries the Linux x64 AppImage. */
+  hasAppImage: boolean
 }
 
 export interface LastUpdateCheck {
@@ -43,7 +45,10 @@ function writeJson(db: Database, key: string, value: unknown): void {
 export function getLastUpdateCheck(db: Database): LastUpdateCheck | null {
   const value = readJson<Partial<LastUpdateCheck>>(db, LAST_CHECK_KEY)
   if (!value || typeof value.checkedAt !== 'string') return null
-  return { checkedAt: value.checkedAt, latest: value.latest ?? null }
+  // A check saved before the Linux AppImage install existed has no `hasAppImage`: assume the
+  // release carries it (the install looks the release up again and says so when it does not).
+  const latest = value.latest && { ...value.latest, hasAppImage: value.latest.hasAppImage ?? true }
+  return { checkedAt: value.checkedAt, latest: latest ?? null }
 }
 
 export function saveLastUpdateCheck(db: Database, check: LastUpdateCheck): void {

@@ -25,18 +25,41 @@ It downloads the latest `.dmg` with `curl`, checks its checksum, and copies the 
 another folder). `curl` leaves no quarantine attribute on the file, which is why macOS opens the app
 without asking. Read [install.sh](install.sh) before piping it to a shell.
 
+**Linux (x64)**, the same command (it detects the platform), no `sudo`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/jbclaramonte/system-design-from-scratch/main/install.sh | bash
+```
+
+It downloads the latest AppImage, checks its checksum, installs it in
+`~/.local/share/system-design-from-scratch/` and adds a launcher, so **System Design from Scratch**
+appears in the application menu (run it again to update; `VERSION` and `INSTALL_DIR` work as on
+macOS). It refuses to replace a running instance, never touches your data folder
+(`~/.config/system-design-from-scratch/`) and, when FUSE 2 is missing, prints the fix and writes a
+launcher that extracts the app on each start. By hand instead of the script: download the AppImage
+from the release page, `chmod +x system-design-from-scratch-<version>-x86_64.AppImage`, and run it
+(it needs FUSE 2: `sudo apt install libfuse2` on Ubuntu 22.04, `libfuse2t64` on 24.04; or start it
+with `APPIMAGE_EXTRACT_AND_RUN=1`). The AppImage does not add a menu entry by itself, which is what
+the script does.
+
+> **Ubuntu 22.04 (x64, GNOME) is the oldest supported release.** The Electron binary needs glibc 2.25
+> or later (Ubuntu 22.04 has 2.35) and the package is checked in CI on an Ubuntu 22.04 runner. Ubuntu
+> 24.04 restricts unprivileged user namespaces, which an AppImage needs for Chromium's sandbox: use
+> the `.deb` there (see [Linux](#linux-x64)).
+
 | Platform                    | File                                                   | Manual install                                                                                                                                                                                                                                                                     |
 | --------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | macOS (Apple Silicon)       | `system-design-from-scratch-<version>-arm64.dmg`       | Open the dmg, drag the app onto Applications. A browser download is quarantined and macOS blocks it once: open **System Settings > Privacy & Security**, **Open Anyway**. Or `/usr/bin/xattr -dr com.apple.quarantine "/Applications/System Design from Scratch.app"` (full path). |
 | Linux x64, Debian or Ubuntu | `system-design-from-scratch-<version>-amd64.deb`       | `sudo apt install ./system-design-from-scratch-<version>-amd64.deb`                                                                                                                                                                                                                |
-| Linux x64, any distribution | `system-design-from-scratch-<version>-x86_64.AppImage` | `chmod +x` the file and run it. Needs FUSE 2 (see [Linux](#linux-x64)).                                                                                                                                                                                                            |
+| Linux x64, any distribution | `system-design-from-scratch-<version>-x86_64.AppImage` | The install command above, or `chmod +x` the file and run it. Needs FUSE 2 (see [Linux](#linux-x64)).                                                                                                                                                                              |
 
 The [Claude Code CLI](#claude-code-cli) must be installed and logged in: the app drives it for every
 generation. There is no Windows build. Releases are cut by pushing a `v*` tag, see
 [docs/Packaging.md](docs/Packaging.md#releases).
 
 **Updates**: the app checks for a newer release at launch (once a day, can be turned off in
-Settings) and, on macOS, installs it in one click; on Linux it links to the release page. Details,
+Settings) and installs it in one click on macOS and on a Linux AppImage; a `.deb` install only links to
+the release page (update it with `apt`). Details,
 and why it is not `electron-updater`: [docs/Packaging.md](docs/Packaging.md#updates).
 
 ## Prerequisites
@@ -68,6 +91,7 @@ Electron no longer downloads its binary at install time. `npm run dev` and `npm 
 | `npm run package:dir`      | Same, only the `.app` (faster).                                                       |
 | `npm run package:linux`    | Builds the Linux app (x64 AppImage and deb), meant for CI, see Packaging.             |
 | `npm run smoke:packaged`   | Smoke-tests the packaged app over CDP, see Packaging.                                 |
+| `npm run test:install`     | Tests `install.sh` (Linux branch, macOS branch on a Mac) against a local release.     |
 | `npm run site:screenshots` | Rewrites the website screenshots from the packaged app (real CLI calls), see Website. |
 | `npm run site:check`       | Checks the website in `site/` (links, images, attribution), see Website.              |
 | `npm run typecheck`        | Type-checks the Node side (main, preload) and the web side (renderer).                |
@@ -227,11 +251,12 @@ similar ended up in the app. The first `.dmg` build downloads electron-builder's
 
 The Linux app is built by GitHub Actions on an Ubuntu runner, not from macOS: the workflow
 `.github/workflows/package.yml` (**Actions > Package > Run workflow**, or a `v*` tag) runs
-`npm run package:linux` (AppImage and `.deb`, unsigned, updates announced but not installed by the app), the guard script
-(`scripts/check-package.mjs --platform linux`), the smoke test under `xvfb-run`, and uploads the
-two files as the artifact `linux-x64` (kept 14 days).
+`npm run package:linux` (AppImage and `.deb`, unsigned; the AppImage updates itself, the `.deb` only announces updates), the guard
+script (`scripts/check-package.mjs --platform linux`), the smoke test under `xvfb-run`, the glibc
+check, the test of `install.sh`, and uploads the two files as the artifact `linux-x64` (kept 14
+days). A second job starts the AppImage on Ubuntu 22.04.
 
-- AppImage: `chmod +x system-design-from-scratch-<version>-x86_64.AppImage`, then run it. It needs
+- AppImage: the install command in [Download](#download), or `chmod +x system-design-from-scratch-<version>-x86_64.AppImage` and run it. It needs
   FUSE 2 (`sudo apt install libfuse2t64` on Ubuntu 24.04, `libfuse2` before) or start it with
   `APPIMAGE_EXTRACT_AND_RUN=1 ./<file>.AppImage` (no FUSE needed). On Ubuntu 24.04 and other systems that restrict unprivileged user
   namespaces an AppImage may refuse to start (Chromium sandbox); see

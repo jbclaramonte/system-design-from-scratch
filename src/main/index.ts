@@ -35,8 +35,10 @@ import {
   createUpdateIpc,
   createUpdateService,
   endpointsFromEnv,
+  installAppImageUpdate,
   installUpdate,
-  lookupLatestRelease
+  lookupLatestRelease,
+  relaunchEnvironment
 } from './update'
 import { isAllowedPermission, isExternalWebUrl } from './security'
 
@@ -153,17 +155,31 @@ void app.whenReady().then(() => {
         platform: process.platform,
         arch: process.arch,
         isPackaged: app.isPackaged,
-        execPath: app.getPath('exe')
+        execPath: app.getPath('exe'),
+        // Set by the AppImage runtime to the running .AppImage file; unset for a deb install.
+        appImage: process.env.APPIMAGE
       }),
     install: (plan, onProgress) =>
-      installUpdate(plan, {
-        http: updateHttp,
-        onProgress,
-        tmpRoot: tmpdir(),
-        appPid: process.pid,
-        // The relaunched app keeps its switches, such as a custom --user-data-dir.
-        relaunchArgs: process.argv.slice(1)
-      }),
+      plan.kind === 'appimage'
+        ? installAppImageUpdate(plan, {
+            http: updateHttp,
+            onProgress,
+            tmpRoot: tmpdir(),
+            appPid: process.pid,
+            // The relaunched app keeps its switches (such as a custom --user-data-dir) and its
+            // environment (such as APPIMAGE_EXTRACT_AND_RUN), and starts where it was started.
+            relaunchArgs: process.argv.slice(1),
+            relaunchEnv: relaunchEnvironment(process.env),
+            startDir: process.env.OWD || process.cwd()
+          })
+        : installUpdate(plan, {
+            http: updateHttp,
+            onProgress,
+            tmpRoot: tmpdir(),
+            appPid: process.pid,
+            // The relaunched app keeps its switches, such as a custom --user-data-dir.
+            relaunchArgs: process.argv.slice(1)
+          }),
     notify: (update) => {
       for (const window of BrowserWindow.getAllWindows()) {
         sendEvent(window.webContents, 'update:available', update)

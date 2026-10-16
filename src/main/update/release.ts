@@ -1,4 +1,4 @@
-// The latest GitHub release: its version, its page and the macOS build it carries.
+// The latest GitHub release: its version, its page and the macOS and Linux builds it carries.
 import { z } from 'zod'
 import { UpdateError } from './errors'
 import { isAllowedUrl, type HttpClient } from './http'
@@ -16,7 +16,7 @@ export const CHECKSUMS_NAME = 'SHA256SUMS'
 export interface UpdateEndpoints {
   /** Returns the latest release as JSON, in the shape of the GitHub API. */
   apiUrl: string
-  /** When set, the .dmg and SHA256SUMS are downloaded from this folder URL, not from the assets. */
+  /** When set, the .dmg, .AppImage and SHA256SUMS are downloaded from this folder URL, not from the assets. */
   downloadBaseUrl?: string
   /** True when an environment variable changed the endpoints. */
   overridden: boolean
@@ -33,10 +33,18 @@ export function endpointsFromEnv(env: NodeJS.ProcessEnv): UpdateEndpoints {
 }
 
 export const dmgName = (version: string) => `system-design-from-scratch-${version}-arm64.dmg`
+export const appImageName = (version: string) =>
+  `system-design-from-scratch-${version}-x86_64.AppImage`
 
 export interface MacBuild {
   dmgName: string
   dmgUrl: string
+  checksumsUrl: string
+}
+
+export interface LinuxBuild {
+  appImageName: string
+  appImageUrl: string
   checksumsUrl: string
 }
 
@@ -48,6 +56,8 @@ export interface LatestRelease {
   releaseUrl: string
   /** Null when the release does not (yet) carry the macOS .dmg and SHA256SUMS. */
   macBuild: MacBuild | null
+  /** Null when the release does not (yet) carry the x64 .AppImage and SHA256SUMS. */
+  linuxBuild: LinuxBuild | null
 }
 
 const releaseSchema = z.object({
@@ -102,11 +112,15 @@ export async function lookupLatestRelease(
   }
   const name = dmgName(text)
   const dmgUrl = urlOf(name)
+  const imageName = appImageName(text)
+  const appImageUrl = urlOf(imageName)
   const checksumsUrl = urlOf(CHECKSUMS_NAME)
   return {
     version: text,
     tag,
     releaseUrl,
-    macBuild: dmgUrl && checksumsUrl ? { dmgName: name, dmgUrl, checksumsUrl } : null
+    macBuild: dmgUrl && checksumsUrl ? { dmgName: name, dmgUrl, checksumsUrl } : null,
+    linuxBuild:
+      appImageUrl && checksumsUrl ? { appImageName: imageName, appImageUrl, checksumsUrl } : null
   }
 }

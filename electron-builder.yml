@@ -41,8 +41,8 @@ mac:
       to: LICENSE.electron
     - from: node_modules/electron/dist/LICENSES.chromium.html
       to: LICENSES.chromium.html
-# Linux x64, built on a Linux host (CI, .github/workflows/package.yml). Unsigned; the app announces
-# updates but does not install them.
+# Linux x64, built on a Linux host (CI, .github/workflows/package.yml). Unsigned; an AppImage updates
+# itself from the GitHub Releases (APPIMAGE variable, docs/Packaging.md), a .deb only announces updates.
 # The Electron in node_modules (electronDist above) is the Linux one on a Linux host: never build
 # this target from macOS. The same licenses as on macOS are copied into resources/ (the Electron
 # distribution also leaves a copy next to the executable).

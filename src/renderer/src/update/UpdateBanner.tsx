@@ -4,7 +4,7 @@ import './update.css'
 
 /**
  * The App Update banner, between the header and the content: "Version X is available" with
- * "Install and restart" (macOS arm64, packaged app) or a link to the release page, "Not now"
+ * "Install and restart" (macOS arm64 packaged app, Linux x64 AppImage) or a link to the release page, "Not now"
  * (the version is remembered) and the release notes. It stays away from a Quiz round and a Design
  * Exercise (see `useHoldUpdateBanner`).
  */

@@ -1,7 +1,7 @@
 ---
 title: Packaging
 tags: [packaging, product]
-issue: [37, 38, 39, 40, 41, 44, 45, 58]
+issue: [37, 38, 39, 40, 41, 44, 45, 58, 59]
 ---
 
 # Packaging
@@ -65,7 +65,7 @@ Cut a release:
 1. Bump `version` in `package.json` and `package-lock.json`, commit and push to `main`. The version must be a valid semver (`1.2.3`, no pre-release suffix on a published release) **greater than the previous release**: the app offers an update only when the latest release is a stable version strictly newer than the running one ([[#Updates]]).
 2. Tag and push: `git tag v<version> && git push origin v<version>`. The tag must equal `v` plus the `package.json` version, or the workflow stops.
 3. `.github/workflows/package.yml` builds both packages (Linux on `ubuntu-latest`, macOS arm64 on `macos-14`), runs the guard script and the smoke test on each, then the `release` job creates a **draft** release named after the tag with the dmg, AppImage, deb and `SHA256SUMS` attached. The notes start from `.github/release-notes.md` (install steps), followed by GitHub's generated change list.
-4. Open the draft on the Releases page, read it, then **Publish**. Nothing is public before that. Publish only when the macOS `.dmg` and `SHA256SUMS` are attached: a published release without them is announced by the app, but cannot be installed in one click.
+4. Open the draft on the Releases page, read it, then **Publish**. Nothing is public before that. Publish only when the macOS `.dmg`, the Linux `.AppImage` and `SHA256SUMS` are attached: a published release without them is announced by the app, but cannot be installed in one click on that platform. The workflow also runs the AppImage on Ubuntu 22.04 (`linux-ubuntu-2204` job) before the draft is created.
 
 A manual run (**Actions > Package > Run workflow**) only uploads workflow artifacts (`linux-x64`, `macos-arm64`, 14 days), no release. No repository secret is needed: the build reads no environment variable.
 
@@ -75,7 +75,7 @@ Not verified by CI: a release downloaded on a Mac carries the quarantine attribu
 
 ## Updates
 
-Issue #58. The app checks whether a newer release exists, and on macOS (Apple Silicon, packaged app) installs it in one click; on Linux it shows a banner with a link to the release page (no automatic install). Vocabulary: [[App Update]].
+Issues #58 (macOS) and #59 (Linux). The app checks whether a newer release exists, and installs it in one click on macOS (Apple Silicon, packaged app) and on Linux x64 when it runs as an AppImage; a `.deb` install, or any other run, shows a banner with a link to the release page (no automatic install). Vocabulary: [[App Update]]. The Linux install is described in [[#Linux updates (AppImage)]].
 
 ### How it works
 
@@ -85,7 +85,19 @@ Issue #58. The app checks whether a newer release exists, and on macOS (Apple Si
 4. **Swap** (`src/main/update/helper.ts`). The running app cannot replace itself, so the main process starts a small detached `bash` script and quits. The script waits for the app process to exit (two minutes at most), renames the old bundle to a backup next to it, renames the staged copy to the app's path (two renames in one folder: the old app is deleted only after the new one is in place, and put back if the second rename fails), clears the quarantine attribute if present, relaunches the app with the arguments and environment it had (a custom `--user-data-dir` survives) and removes the backup and its temporary folder. Its steps are logged in `$TMPDIR/sdfs-update.log` (one small file, overwritten at each update).
 5. **Failure.** Any step before the quit (download, checksum, mount, copy, signature, identity) leaves the installed app untouched, removes what it created and shows the reason with the manual download link. A failure in the helper puts the old app back and relaunches it.
 
-The install is **refused**, with the reason and the manual download link, when the app is not packaged, does not run from an `.app` bundle path, its folder is not writable for the learner (for example an app in `/Applications` owned by another user: move it to `~/Applications`), or the machine is not macOS arm64. The app data folder is never touched by an update.
+The install is **refused**, with the reason and the manual download link, when the app is not packaged, does not run from an `.app` bundle path, its folder is not writable for the learner (for example an app in `/Applications` owned by another user: move it to `~/Applications`), or the machine is neither macOS arm64 nor Linux x64 (below). The app data folder is never touched by an update.
+
+### Linux updates (AppImage)
+
+Issue #59. The same flow (check, banner, **Install and restart**, quit, relaunch), with the steps of `install.sh` on Linux, in `src/main/update/appImageInstaller.ts` and `appImageHelper.ts`, built from the same injectable pieces as the macOS one (release lookup, HTTP download, checksum) plus a few Linux ones.
+
+1. **Which file to replace: the `APPIMAGE` variable.** The AppImage runtime sets `APPIMAGE` in the environment of the app to the path of the `.AppImage` file that runs (also when it extracts and runs). The app uses that path, with symbolic links resolved (the file behind a link is replaced, not the link), and requires a regular file in a folder the learner can write. Without `APPIMAGE` (a `.deb` install, `dist/linux-unpacked`, `npm run dev`) the banner only links to the release page: a `.deb` is updated with `apt`, which needs administrator rights, so the app never tries.
+2. **Install** (the steps of `install.sh`): download the `system-design-from-scratch-<version>-x86_64.AppImage` and `SHA256SUMS` of the release, the AppImage into a hidden file **next to the running one** (same folder, hence one volume), check its checksum, `chmod 755`.
+3. **Replace.** The detached relaunch helper (a small `bash` script, logged in `$TMPDIR/sdfs-update.log`) is started first, so that a failure to start it replaces nothing. Then one `rename(2)` puts the new file at the path of the running one. It is atomic, and safe under a running instance: the AppImage runtime keeps the old file open (its mount and its inode), the running app is not affected. If the rename fails, the helper is stopped and the staged file removed.
+4. **Relaunch.** The app quits (half a second later). The helper waits for it to exit (two minutes at most; after that it gives up without relaunching, the update stays installed for the next start), then starts the new AppImage detached, in the folder the app was started in (`OWD`, set by the runtime), with the **arguments** of the running app (a custom `--user-data-dir` survives) and its **environment**, minus `APPIMAGE`, `APPDIR`, `ARGV0` and `OWD`, which the runtime of the new file sets again (`APPIMAGE_EXTRACT_AND_RUN` and the rest are kept).
+5. **Failure.** Any step before the rename (download, checksum, `chmod`, helper) leaves the installed file untouched, removes what it created and shows the reason with the manual download link. A release without the AppImage or `SHA256SUMS` is announced, with the release page link instead of the install button.
+
+Trust level: **the same as on macOS and as `install.sh`**: TLS to GitHub and a checksum from the same release as the file (it protects against a corrupt download, not against a compromised release or account), and no signature of the author (the AppImage is not signed). `APPIMAGE` is read from the environment of the app; anyone who can set it can already run code as the user. The renderer is unchanged (CSP `connect-src 'self'`).
 
 ### Why not electron-updater
 
@@ -103,9 +115,9 @@ On macOS `electron-updater` relies on Squirrel.Mac, which only installs a build 
 | Variable | Meaning |
 |---|---|
 | `SDFS_UPDATE_API_URL` | Replaces the release lookup address: a URL that answers the GitHub "latest release" JSON (`tag_name`, `html_url`, `assets`). |
-| `SDFS_UPDATE_DOWNLOAD_BASE_URL` | Folder URL that holds the `.dmg` and `SHA256SUMS`, instead of the asset addresses of the release (like `BASE_URL` in `install.sh`). |
+| `SDFS_UPDATE_DOWNLOAD_BASE_URL` | Folder URL that holds the `.dmg`, the `.AppImage` and `SHA256SUMS`, instead of the asset addresses of the release (like `BASE_URL` in `install.sh`). |
 
-Setting either one also turns the check at launch on for a development build. Unit tests never use the network: the HTTP client, the commands (`hdiutil`, `ditto`, `codesign`, `plutil`), the helper launch and the quit are injected. The smoke test starts a local fake release server and points the packaged app at it ([[#Smoke test]]).
+Setting either one also turns the check at launch on for a development build. Unit tests never use the network: the HTTP client, the commands (`hdiutil`, `ditto`, `codesign`, `plutil`), the file operations of the Linux install (`chmod`, `rename`), the helper launches and the quit are injected. The two helper scripts are run for real (`bash`, scratch folders) by their tests, and the AppImage installer is also run once against the real relaunch helper. The smoke test starts a local fake release server and points the packaged app at it ([[#Smoke test]]).
 
 ### Checked by hand (#58)
 
@@ -114,7 +126,25 @@ Two packaged builds were made in a scratch folder (`electron-builder -c.director
 - install: the banner offered 0.3.1, **Install and restart** quit the app, the helper swapped the bundle, the relaunched app reported 0.3.1 (same `--user-data-dir`), its signature was valid, there was no quarantine attribute, and the temporary folder and the hidden folders next to the app were gone;
 - bad checksum: the install stopped with the corruption message, the app kept running at 0.3.0, the installed bundle was unchanged and nothing was left behind.
 
-Not exercised: a real release on GitHub, an app in `/Applications`, a quarantined (browser-downloaded) first install, a learner on another user account, a full disk, and the Linux banner on a real desktop (only the link variant is covered by the smoke test).
+Not exercised: a real release on GitHub, an app in `/Applications`, a quarantined (browser-downloaded) first install, a learner on another user account, a full disk, and the Linux banner on a real desktop.
+
+### Checked for Linux (#59)
+
+On macOS, against local fake releases only (scratch `HOME`, scratch install folders, no GitHub):
+
+- `install.sh`, Linux branch, through `SDFS_TEST_PLATFORM`: `scripts/test-install.sh` (install, executable bit, launcher content, icon, second run replaces the first, running instance refused, checksum mismatch, FUSE 2 missing, `INSTALL_DIR` with a space, `XDG_DATA_HOME`, unsupported platforms), and the macOS branch for real with an ad hoc signed fake app in a `.dmg` (no regression);
+- the same script for real on Ubuntu 24.04 and Ubuntu 22.04 containers (x64, emulated, non-root, scratch `HOME`): the `/proc` check of a running instance and `libfuse` detection ran there, not on macOS;
+- the updater: unit tests with fakes (see the issue for the list), the relaunch helper and the installer run for real, and the packaged app's whole AppImage update in the smoke test ([[#Smoke test]]), run against the packaged `app.asar` on the Linux Electron binary in an Ubuntu 22.04 container.
+
+Not exercised: a real AppImage replaced while it runs (the real runtime and FUSE mount; the smoke test replaces a scratch file standing for it), a launcher on a real desktop (GNOME, Wayland, icon rendering, the application menu entry), a real release on GitHub, and the first CI run of the new jobs.
+
+Hand-check list for the first Linux user (Ubuntu 22.04, x64, GNOME), not covered by any test:
+
+1. Run the install one-liner on the machine: the AppImage and the launcher are installed, and **System Design from Scratch** is in the application menu with its icon (look at the icon in the menu and in the window switcher; on Wayland the window should group under the launcher).
+2. Start it from the menu. If it does not start, run the AppImage from a terminal and read the error (FUSE 2? sandbox?).
+3. Set the Claude Code CLI path in **Settings** if needed, then generate the first lesson.
+4. With a newer release published: **Settings > Updates > Check for updates**, then **Install and restart**. The app must quit and come back on the new version (About shows it), from the same launcher.
+5. Run the install command a second time while the app is open: it must refuse and ask to quit the app.
 
 ## User data
 
@@ -173,14 +203,16 @@ Covered:
 | Fonts | Geist is loaded (`document.fonts`), the fonts inlined in the bundle work from `file://`. |
 | First lesson | Generated by the fake CLI through the packaged main process, displayed, the CLI got the request. |
 | Mermaid diagram | The lesson's flowchart is rendered as SVG (no fallback to the source). |
-| Update check | Against a local fake release (never GitHub): the launch check shows the banner with **Install and restart** (macOS) or the release page link (Linux), Settings **Check for updates** reports it, **Not now** hides it, and the second launch announces nothing and makes no request (once a day). |
+| Update check | Against a local fake release (never GitHub): the launch check shows the banner with **Install and restart** (macOS) or the release page link (Linux, no `APPIMAGE`), Settings **Check for updates** reports it, **Not now** hides it, and the second launch announces nothing and makes no request (once a day). |
+| Version | About shows the version of `package.json` (the packaged app reports its own version). |
+| AppImage update (Linux only, third launch) | With `APPIMAGE` pointing at a scratch file: the banner offers **Install and restart**, the install downloads the fake release's AppImage, checks its checksum, replaces the scratch file (executable, no leftover next to it), the app quits and the new file is started with `--user-data-dir` and the environment of the app. |
 | Exercise canvas | After the topics are mastered, the first exercise opens on its Design Canvas (React Flow), a typed component can be added, and the fonts are loaded. |
 | Console | No console error, on the first launch and on the canvas screen (since #43 there is no tracking request to tolerate). |
 
 Not covered, to check by hand ([[#First launch checklist]]):
 
 - **The real Claude Code CLI**: login, models, real latency and output, the Claude config directory. The fake CLI proves the plumbing, not the content.
-- **The real network**: the renderer fetches nothing (the CSP forbids it) and the update check only talks to a local fake release; GitHub is never called, and no update is installed (that is done by hand, [[#Checked by hand (#58)]]).
+- **The real network**: the renderer fetches nothing (the CSP forbids it) and the update check only talks to a local fake release; GitHub is never called. On macOS no update is installed (that is done by hand, [[#Checked by hand (#58)]]); on Linux the AppImage update runs against a scratch file, not a real AppImage.
 - **Gatekeeper and quarantine on a downloaded copy**: the locally built `.app` has no quarantine attribute, and the browser download path (**Open Anyway**) is not exercised by CI or by the script ([[#Open an unsigned build]]).
 - **A launch through LaunchServices** (Finder, Dock, `open`): the script starts the binary directly, with an environment that imitates it. launchd's own environment, the app icon, the window state and the single-instance behavior are not exercised.
 - The `.dmg` itself (never mounted), the copy in `/Applications`, Intel Macs, light mode, and the quality of the generated French content.
@@ -202,18 +234,20 @@ For the first run of a new package on your Mac (after `npm run package` and a pa
 
 ## Linux (x64)
 
-The Linux app is an AppImage and a `.deb` for x64, built by GitHub Actions on an Ubuntu runner (`.github/workflows/package.yml`), never cross-built from macOS: the Electron binary packaged is the one in `node_modules`, which is the Linux one only on a Linux host. Unsigned, no automatic install of updates (the app only announces a new release, [[#Updates]]), personal use (issue #40).
+The Linux app is an AppImage and a `.deb` for x64, built by GitHub Actions on an Ubuntu runner (`.github/workflows/package.yml`), never cross-built from macOS: the Electron binary packaged is the one in `node_modules`, which is the Linux one only on a Linux host. Unsigned, personal use (issue #40). The AppImage updates itself in one click and `install.sh` installs it ([[#Linux updates (AppImage)]], [[#Install]], issue #59); the `.deb` only announces a new release ([[#Updates]]). Oldest supported release: **Ubuntu 22.04** ([[#glibc and Ubuntu 22.04]]).
 
 ### Build in CI
 
-Run **Actions > Package > Run workflow** on GitHub (or `gh workflow run package.yml`), or push a `v*` tag. The workflow has read-only permissions and one job, `linux`, on `ubuntu-latest`:
+Run **Actions > Package > Run workflow** on GitHub (or `gh workflow run package.yml`), or push a `v*` tag. The workflow has read-only permissions and, for Linux, two jobs: `linux` on `ubuntu-latest`, and `linux-ubuntu-2204` on `ubuntu-22.04` ([[#glibc and Ubuntu 22.04]]). The `linux` job:
 
 1. `actions/checkout`, `actions/setup-node` (Node 24, npm cache) and `npm ci`, the same pinned versions as `ci.yml`.
 2. System libraries (`apt-get`): `xvfb` and `xauth` (virtual display), `libfuse2t64` (runs an AppImage without extracting it), `binutils` (`ar`, needed by the deb builder), and what the Electron binary links against: `libnss3`, `libgtk-3-0t64`, `libatk1.0-0t64`, `libatk-bridge2.0-0t64`, `libcups2t64`, `libgbm1`, `libasound2t64`, `libdrm2`, `libxss1`, `libxtst6`, `libxkbcommon0`, `libxcomposite1`, `libxdamage1`, `libxfixes3`, `libxrandr2`, `libpango-1.0-0`, `libcairo2`, `xdg-utils`. Most are already on the runner image; the names are the Ubuntu 24.04 ones (`t64` suffix).
 3. `npm run package:linux`: `install-electron` (downloads the Electron binary, `npm ci` does not), `electron-vite build`, `electron-builder --linux --x64`, the guard script (`node scripts/check-package.mjs --platform linux`). The guard script runs once more as its own step.
 4. The sandbox helper step ([[#Chromium sandbox]]).
 5. `xvfb-run -a npm run smoke:packaged -- --shots smoke-shots` ([[#Smoke test]]): the app launched from `dist/linux-unpacked` on a virtual display, with the minimal environment and the fake CLI.
-6. `actions/upload-artifact`: the artifact `linux-x64` holds `dist/*.AppImage` and `dist/*.deb`, kept 14 days. If the smoke test fails, the screenshots go up as the artifact `smoke-shots` and the packages are not uploaded.
+6. `scripts/check-glibc.sh dist/linux-unpacked 2.35`: lists the glibc symbol version each ELF file of the package needs (`objdump -T`) and fails when one is above Ubuntu 22.04's.
+7. `scripts/test-install.sh` with `SDFS_TEST_APPIMAGE` set to the AppImage just built: `install.sh` on Linux **for real** (no platform switch), against a local release folder made of that AppImage and a `SHA256SUMS`, in a scratch `HOME`: install, executable bit, launcher content, the icon taken out of the real image, a second run replacing the first, a running instance refused, checksum mismatch, FUSE 2 missing.
+8. `actions/upload-artifact`: the artifact `linux-x64` holds `dist/*.AppImage` and `dist/*.deb`, kept 14 days. If the smoke test fails, the screenshots go up as the artifact `smoke-shots` and the packages are not uploaded.
 
 Download the files from the run page (**Artifacts**), or `gh run download <run id> -n linux-x64`.
 
@@ -240,7 +274,17 @@ Output in `dist/`:
 
 ### Install
 
-AppImage:
+The one-liner (the same `install.sh` as macOS; it detects Linux x64):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/jbclaramonte/system-design-from-scratch/main/install.sh | bash
+```
+
+`install.sh` on Linux (issue #59), with `VERSION`, `INSTALL_DIR` and `BASE_URL` as on macOS: downloads `system-design-from-scratch-<version>-x86_64.AppImage` and `SHA256SUMS`, checks the checksum, installs the file as `~/.local/share/system-design-from-scratch/system-design-from-scratch.AppImage` (or in `INSTALL_DIR`; `XDG_DATA_HOME` is honored), executable, takes the icon out of the image (`--appimage-extract`, no FUSE needed) next to it, and writes `~/.local/share/applications/system-design-from-scratch.desktop` (`Exec` with the quoted path, `Icon`, `Categories=Education;`, `StartupWMClass=system-design-from-scratch`) so the app is in the application menu. Replacing is a rename of a file written next to the target. It never needs `sudo`, never touches `~/.config/system-design-from-scratch/`, and refuses to replace a running instance (a process whose command line holds the path, or whose environment has `APPIMAGE=<path>`). When FUSE 2 is missing it prints the one-line fix and writes the launcher with `env APPIMAGE_EXTRACT_AND_RUN=1`, so the app starts anyway (slower); running the script again after installing `libfuse2` writes the normal launcher. The launcher path never changes, so the in-app update ([[#Linux updates (AppImage)]]) replaces the file under it. Uninstall: delete the install folder and the `.desktop` file.
+
+Tests: `scripts/test-install.sh` (Linux branch; on a Mac the platform is faked with the test-only `SDFS_TEST_PLATFORM="Linux x86_64"`, documented in the header of `install.sh`, and the macOS branch runs for real with a signed fake app in a scratch folder), `shellcheck` (CI image and the Ubuntu container; not installed on the maintainer's Mac).
+
+By hand, AppImage:
 
 ```bash
 chmod +x system-design-from-scratch-0.1.0-x86_64.AppImage
@@ -256,6 +300,30 @@ sudo apt install ./system-design-from-scratch-0.1.0-amd64.deb
 ```
 
 `apt` (not bare `dpkg -i`) pulls the dependencies. The app then starts from the application menu (Education) or with `system-design-from-scratch`. `sudo apt remove system-design-from-scratch` removes it; your data folder stays.
+
+### glibc and Ubuntu 22.04
+
+The oldest supported Linux release is **Ubuntu 22.04 LTS** (x64, glibc 2.35), the first real Linux user's machine. The CI runner (`ubuntu-latest`) is a newer Ubuntu (24.04, glibc 2.39), so what matters is what the *package* needs, not what it was built on.
+
+Measured with `objdump -T` (`scripts/check-glibc.sh`) on the Electron 44.7.0 `linux-x64` binary (the version in `package.json`; the zip from the Electron release, SHA-256 checked against its `SHASUMS256.txt`):
+
+| File | Highest glibc symbol version |
+|---|---|
+| `electron` (renamed `system-design-from-scratch`) | 2.25 |
+| `chrome_crashpad_handler`, `libffmpeg.so`, `libvk_swiftshader.so` | 2.17 |
+| `libvulkan.so.1` | 2.16 |
+| `chrome-sandbox` | 2.4 |
+
+So the package needs **glibc 2.25 or later** (Ubuntu 18.04 has 2.27, 20.04 has 2.31, 22.04 has 2.35, 24.04 has 2.39). There is no `GLIBCXX` or `CXXABI` requirement: Chromium bundles its own C++ library. The app has no native module (`node_modules` is not packaged), and the AppImage and deb builders run on the CI host without compiling anything, so the build host's glibc does not enter the package. The Electron binary links dynamically to GTK 3, NSS, ATK, CUPS, GBM, ALSA, D-Bus and X11 libraries (`libgtk-3.so.0`, `libnss3.so`, `libgbm.so.1`, `libasound.so.2`...), which Ubuntu 22.04 ships. A new Electron may raise the glibc requirement: the `linux` job runs `scripts/check-glibc.sh dist/linux-unpacked 2.35` and fails when it does.
+
+What was checked (2026-10-16, a Docker container with Ubuntu 22.04.5, glibc 2.35, x64 emulated on an Apple Silicon machine, the libraries of the CI step installed with their 22.04 names, non-root user): `ldd` on the Electron binary finds every library; `electron --version` prints `v44.7.0`; the stock Electron app stays up for 25 seconds on `xvfb-run` (only D-Bus connection errors, the container has no bus); `scripts/test-install.sh` passes; and the packaged `app.asar` of this repository (built on macOS, it holds no native code) runs on that Linux binary through the smoke test with the default Chromium sandbox (setuid helper), including the AppImage update ([[#Smoke test]]).
+
+What was **not** verified:
+
+- **The AppImage file itself on Ubuntu 22.04**: it cannot be built from macOS, and the first CI run had not happened when this was written. The `linux-ubuntu-2204` job of the workflow does it on an `ubuntu-22.04` runner: it installs `libfuse2`, starts the downloaded AppImage (FUSE mount, DevTools port answers), then extracts it and runs the whole smoke test on the extracted app. electron-builder's AppImage runtime and `AppRun` script are not measured here (the runtime is a static binary).
+- **A real GNOME desktop** (Wayland or X11): the launcher entry, its icon, the window grouping.
+- Kernel and AppArmor settings of a real 22.04 desktop (user namespaces are unrestricted by default there, which the AppImage's Chromium sandbox needs; the restriction arrived with Ubuntu 24.04).
+- If the `ubuntu-22.04` runner label is retired by GitHub, the job fails to start: replace it with a container or a newer oldest-supported release, and update this page.
 
 ### Chromium sandbox
 
@@ -278,7 +346,7 @@ What was seen: in an Ubuntu 24.04 container without user namespaces, the unpacke
 
 ### What was checked, and what was not
 
-Checked on 2026-10-11 in a Docker container (Ubuntu 24.04, x64 emulated on an Apple Silicon machine, Node 24, non-root user, `xvfb-run`): `npm ci`, `npm run package:linux` (AppImage, deb, guard script), the smoke test against `dist/linux-unpacked` with the setuid sandbox helper (12 checks: window, Learning Path, database, Settings with the fake CLI found in `~/.local/bin` without PATH, About, fonts, a lesson with a Mermaid diagram, relaunch, exercise canvas), `sudo apt install ./<deb>` (accepted, files and `.desktop` entry in place), and the AppImage started with `APPIMAGE_EXTRACT_AND_RUN=1` (the window loaded and the DevTools port answered). The first CI run is the real check; its result is reported in issue #40.
+Checked on 2026-10-11 (#40) in a Docker container (Ubuntu 24.04, x64 emulated on an Apple Silicon machine, Node 24, non-root user, `xvfb-run`): `npm ci`, `npm run package:linux` (AppImage, deb, guard script), the smoke test against `dist/linux-unpacked` with the setuid sandbox helper (12 checks: window, Learning Path, database, Settings with the fake CLI found in `~/.local/bin` without PATH, About, fonts, a lesson with a Mermaid diagram, relaunch, exercise canvas), `sudo apt install ./<deb>` (accepted, files and `.desktop` entry in place), and the AppImage started with `APPIMAGE_EXTRACT_AND_RUN=1` (the window loaded and the DevTools port answered). The first CI run is the real check; its result is reported in issue #40.
 
 Not verified:
 

@@ -3,6 +3,7 @@ import { UpdateError } from './errors'
 import {
   API_URL_ENV,
   DOWNLOAD_BASE_URL_ENV,
+  appImageName,
   dmgName,
   endpointsFromEnv,
   lookupLatestRelease,
@@ -62,7 +63,61 @@ describe('lookupLatestRelease', () => {
         dmgName: 'system-design-from-scratch-0.3.1-arm64.dmg',
         dmgUrl: 'https://example.test/a.dmg',
         checksumsUrl: 'https://example.test/sums'
-      }
+      },
+      // The fixture's "-x64.AppImage" is not the name electron-builder gives (x86_64).
+      linuxBuild: null
+    })
+  })
+
+  it('reads the Linux AppImage build from the assets', async () => {
+    const body = release({
+      assets: [
+        { name: 'SHA256SUMS', browser_download_url: 'https://example.test/sums' },
+        { name: appImageName('0.3.1'), browser_download_url: 'https://example.test/a.AppImage' },
+        { name: 'system-design-from-scratch-0.3.1-amd64.deb', browser_download_url: 'https://x/d' }
+      ]
+    })
+    const latest = await lookupLatestRelease(fakeHttp({ [API]: JSON.stringify(body) }), endpoints)
+    expect(latest?.linuxBuild).toEqual({
+      appImageName: 'system-design-from-scratch-0.3.1-x86_64.AppImage',
+      appImageUrl: 'https://example.test/a.AppImage',
+      checksumsUrl: 'https://example.test/sums'
+    })
+    expect(latest?.macBuild).toBeNull()
+  })
+
+  it('reports a release without the AppImage or the checksums as having no Linux build', async () => {
+    const withoutImage = release({
+      assets: [{ name: 'SHA256SUMS', browser_download_url: 'https://example.test/sums' }]
+    })
+    const withoutSums = release({
+      assets: [{ name: appImageName('0.3.1'), browser_download_url: 'https://example.test/a' }]
+    })
+    const staleImage = release({
+      assets: [
+        { name: appImageName('0.3.0'), browser_download_url: 'https://example.test/old' },
+        { name: 'SHA256SUMS', browser_download_url: 'https://example.test/sums' }
+      ]
+    })
+    for (const body of [withoutImage, withoutSums, staleImage]) {
+      const latest = await lookupLatestRelease(fakeHttp({ [API]: JSON.stringify(body) }), endpoints)
+      expect(latest?.linuxBuild).toBeNull()
+    }
+  })
+
+  it('downloads the AppImage from the folder of the override when there is one', async () => {
+    const body = release({
+      assets: [{ name: appImageName('0.3.1') }, { name: 'SHA256SUMS' }]
+    })
+    const latest = await lookupLatestRelease(fakeHttp({ [API]: JSON.stringify(body) }), {
+      ...endpoints,
+      downloadBaseUrl: 'http://127.0.0.1:8080/files',
+      overridden: true
+    })
+    expect(latest?.linuxBuild).toEqual({
+      appImageName: 'system-design-from-scratch-0.3.1-x86_64.AppImage',
+      appImageUrl: 'http://127.0.0.1:8080/files/system-design-from-scratch-0.3.1-x86_64.AppImage',
+      checksumsUrl: 'http://127.0.0.1:8080/files/SHA256SUMS'
     })
   })
 
