@@ -105,6 +105,9 @@ gantt
 
     section Website
     #56 GitHub Pages homepage                 :done, w1, after l1, 2d
+
+    section Updates
+    #58 In-app update check and install       :u1, 2026-10-17, 3d
 ```
 
 ## Dependency table
@@ -168,6 +171,7 @@ gantt
 | #55 | #11, #17, #18, #54 |
 | #56 | #41, #55 |
 | #57 | #6, #7, #10, #14, #15, #52, #53 |
+| #58 | #41, #45 |
 
 ## Conventions
 
