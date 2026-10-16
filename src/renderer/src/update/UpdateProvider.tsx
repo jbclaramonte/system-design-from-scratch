@@ -14,7 +14,7 @@ import type {
   UpdateProgress
 } from '../../../shared/update'
 import { errorMessage } from '../quiz/errorMessage'
-import { isBannerVisible } from './updateText'
+import { isBannerVisible, menuCheckNotice, type CheckNotice } from './updateText'
 
 /** Where an install is: idle, running (with its progress), restarting, or failed. */
 export type InstallState =
@@ -33,6 +33,9 @@ interface Updates {
   dismiss: () => void
   /** The "Check for updates" button. */
   checkNow: () => Promise<UpdateCheckResult>
+  /** The answer to "Check for updates..." in the application menu, or null. */
+  checkNotice: CheckNotice | null
+  dismissCheckNotice: () => void
   /** Registers a screen that must not be interrupted; returns the release function. */
   holdBanner: () => () => void
 }
@@ -45,6 +48,8 @@ const UpdatesContext = createContext<Updates>({
   startInstall: () => {},
   dismiss: () => {},
   checkNow: () => Promise.resolve({ status: 'upToDate', currentVersion: '' }),
+  checkNotice: null,
+  dismissCheckNotice: () => {},
   holdBanner: noop
 })
 
@@ -65,6 +70,7 @@ export function UpdateProvider({ children }: { children: ReactNode }) {
   const [pending, setPending] = useState<UpdateInfo | null>(null)
   const [holds, setHolds] = useState(0)
   const [install, setInstall] = useState<InstallState>({ name: 'idle' })
+  const [menuCheck, setMenuCheck] = useState<UpdateCheckResult | null>(null)
 
   useEffect(() => {
     // The launch check may have finished before this mounted: ask, then listen.
@@ -84,6 +90,22 @@ export function UpdateProvider({ children }: { children: ReactNode }) {
       ),
     []
   )
+
+  // "Check for updates..." in the application menu: the main process ran the check (an update
+  // found was already announced on `update:available`); this shows what it found.
+  useEffect(
+    () =>
+      window.api.onUpdateChecked((result) => {
+        if (result.status === 'available') {
+          setPending(result.update)
+          setInstall({ name: 'idle' })
+        }
+        setMenuCheck(result)
+      }),
+    []
+  )
+
+  const dismissCheckNotice = useCallback(() => setMenuCheck(null), [])
 
   const holdBanner = useCallback(() => {
     setHolds((count) => count + 1)
@@ -139,9 +161,21 @@ export function UpdateProvider({ children }: { children: ReactNode }) {
       startInstall,
       dismiss,
       checkNow,
+      checkNotice: menuCheck && menuCheckNotice(menuCheck, holds > 0),
+      dismissCheckNotice,
       holdBanner
     }),
-    [pending, holds, install, startInstall, dismiss, checkNow, holdBanner]
+    [
+      pending,
+      holds,
+      install,
+      menuCheck,
+      startInstall,
+      dismiss,
+      checkNow,
+      dismissCheckNotice,
+      holdBanner
+    ]
   )
 
   return <UpdatesContext.Provider value={value}>{children}</UpdatesContext.Provider>

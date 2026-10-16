@@ -285,6 +285,8 @@ export interface IpcEvents {
   'update:available': UpdateInfo
   /** Progress of an App Update install. */
   'update:progress': UpdateProgress
+  /** The result of a check started from the application menu ("Check for updates..."). */
+  'update:checked': UpdateCheckResult
 }
 
 export type IpcEventChannel = keyof IpcEvents
@@ -363,7 +365,8 @@ export const apiEvents = {
   onProtocolEvent: 'protocol:event',
   onLearningPathChanged: 'path:changed',
   onUpdateAvailable: 'update:available',
-  onUpdateProgress: 'update:progress'
+  onUpdateProgress: 'update:progress',
+  onUpdateChecked: 'update:checked'
 } as const satisfies Record<string, IpcEventChannel>
 
 type ApiChannels = typeof apiChannels

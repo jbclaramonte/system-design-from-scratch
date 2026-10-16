@@ -17,6 +17,7 @@ import { OpenSettingsContext } from './settings/openSettings'
 import { SettingsScreen } from './settings/SettingsScreen'
 import { AppShell } from './shell/AppShell'
 import { UpdateBanner } from './update/UpdateBanner'
+import { UpdateCheckNotice } from './update/UpdateCheckNotice'
 import { UpdateProvider } from './update/UpdateProvider'
 import { activeNavItem, screenLayout, type NavItemId, type Screen } from './shell/navigation'
 
@@ -122,7 +123,12 @@ export function App() {
           layout={screenLayout(screen)}
           version={version}
           scrollKey={screen.name === 'topic' ? `topic-${screen.topic.id}` : screen.name}
-          banner={<UpdateBanner />}
+          banner={
+            <>
+              <UpdateBanner />
+              <UpdateCheckNotice />
+            </>
+          }
           onNavigate={navigate}
         >
           <AppScreen screen={screen} setScreen={setScreen} devInfo={{ version, ping, error }} />

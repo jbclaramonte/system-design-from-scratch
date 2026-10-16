@@ -72,7 +72,7 @@ generation. There is no Windows build. Releases are cut by pushing a `v*` tag, s
 [docs/Packaging.md](docs/Packaging.md#releases).
 
 **Updates**: the app checks for a newer release at launch (once a day, can be turned off in
-Settings) and installs it in one click on macOS and on a Linux AppImage; a `.deb` install only links to
+Settings; **Check for updates...** in the app menu, or in Help on Linux, checks at any time) and installs it in one click on macOS and on a Linux AppImage; a `.deb` install only links to
 the release page (update it with `apt`). Details,
 and why it is not `electron-updater`: [docs/Packaging.md](docs/Packaging.md#updates).
 

@@ -109,6 +109,7 @@ gantt
     section Updates
     #58 In-app update check and install       :done, u1, 2026-10-16, 1d
     #59 Linux AppImage update, install.sh     :done, u2, after u1, 1d
+    #60 Check for updates in the app menu     :done, u3, after u2, 1d
 ```
 
 ## Dependency table
@@ -174,6 +175,7 @@ gantt
 | #57 | #6, #7, #10, #14, #15, #52, #53 |
 | #58 | #41, #45 |
 | #59 | #40, #45, #58 |
+| #60 | #58 |
 
 ## Conventions
 

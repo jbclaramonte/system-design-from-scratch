@@ -41,6 +41,36 @@ export function checkResultMessage(result: UpdateCheckResult): string {
   }
 }
 
+/** What the app says after "Check for updates..." in the application menu. */
+export interface CheckNotice {
+  tone: 'info' | 'error'
+  message: string
+  /** Goes away by itself: nothing more to do about it. */
+  transient: boolean
+}
+
+/**
+ * The message for a check started from the application menu, or null when the banner already says
+ * it: an update found shows the banner, unless a Round or a Design Exercise is open (`held`), where
+ * the banner waits and this message says so.
+ */
+export function menuCheckNotice(result: UpdateCheckResult, held: boolean): CheckNotice | null {
+  switch (result.status) {
+    case 'available':
+      return held
+        ? {
+            tone: 'info',
+            transient: false,
+            message: `${availableMessage(result.update)} The banner will offer it when you leave this Round or Design Exercise.`
+          }
+        : null
+    case 'upToDate':
+      return { tone: 'info', transient: true, message: checkResultMessage(result) }
+    case 'error':
+      return { tone: 'error', transient: false, message: checkResultMessage(result) }
+  }
+}
+
 /**
  * Whether the update banner is shown: an update is pending, and no Quiz round or Design Exercise
  * holds it back (`holds` counts the open ones). An install in progress stays visible: the learner

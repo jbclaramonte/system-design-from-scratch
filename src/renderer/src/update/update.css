@@ -46,6 +46,19 @@
   flex: 1 1 100%;
 }
 
+/* The answer to "Check for updates..." in the application menu, under the banner slot. */
+.update-notice {
+  flex: none;
+  border-bottom: 1px solid var(--color-border-hairline);
+  background: var(--color-surface-elevated);
+  color: var(--color-text-primary);
+}
+
+.update-notice-text {
+  flex: 1 1 18rem;
+  margin: 0;
+}
+
 /* Settings: the "Updates" card. */
 .update-check-result {
   margin: 0;

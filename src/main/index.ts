@@ -1,6 +1,6 @@
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { app, BrowserWindow, ipcMain, session, shell } from 'electron'
+import { app, BrowserWindow, ipcMain, Menu, session, shell } from 'electron'
 import { createAboutIpc, licensesPath } from './about'
 import { createLessonIpc, FOUNDATIONS_TOPICS, seedTopics } from './content'
 import { corpusPath, loadCorpus } from './corpus'
@@ -10,6 +10,7 @@ import { createGenerationIpc, GenerationService } from './generation'
 import { createLessonQuestionIpc } from './lessonQuestion'
 import { createDesignIpc } from './ipc/design'
 import { createHandlers } from './ipc/handlers'
+import { buildApplicationMenuTemplate } from './menu'
 import { createMasteryIpc, createMasteryService } from './mastery'
 import { createExerciseLockGuard, createLearningPathIpc, createTopicLockGuard } from './path'
 import { createProtocolIpc, createProtocolService, seedDesignExercises } from './protocol'
@@ -32,6 +33,7 @@ import { sendEvent } from './ipc/sendEvent'
 import {
   checkInstallable,
   createHttpClient,
+  createMenuCheck,
   createUpdateIpc,
   createUpdateService,
   endpointsFromEnv,
@@ -49,6 +51,10 @@ const USER_DATA_DIR_NAME = 'system-design-from-scratch'
 if (!app.commandLine.hasSwitch('user-data-dir')) {
   app.setPath('userData', join(app.getPath('appData'), USER_DATA_DIR_NAME))
 }
+
+// The product name of electron-builder.yml, shown in the application menu: `app.name` is the
+// package name.
+const APP_DISPLAY_NAME = 'System Design from Scratch'
 
 function openExternally(url: string): void {
   if (isExternalWebUrl(url)) {
@@ -97,6 +103,8 @@ function createMainWindow(): BrowserWindow {
 app.on('web-contents-created', (_event, contents) => {
   contents.on('will-attach-webview', (event) => event.preventDefault())
 })
+
+const openWindows = () => BrowserWindow.getAllWindows().filter((window) => !window.isDestroyed())
 
 let db: Database | undefined
 let generation: GenerationService | undefined
@@ -230,6 +238,39 @@ void app.whenReady().then(() => {
       update: createUpdateIpc(updates)
     })
   )
+  // "Check for updates..." in the application menu: the service's check, then the result goes to
+  // the window, which shows the banner, "You are up to date" or the error.
+  const checkFromMenu = createMenuCheck({
+    check: () => updates.check(),
+    publish: (result) => {
+      const windows = openWindows()
+      const [front] = windows
+      if (front) {
+        if (front.isMinimized()) front.restore()
+        front.show()
+        front.focus()
+      }
+      for (const window of windows) sendEvent(window.webContents, 'update:checked', result)
+    }
+  })
+  const installApplicationMenu = () =>
+    Menu.setApplicationMenu(
+      Menu.buildFromTemplate(
+        buildApplicationMenuTemplate({
+          platform: process.platform,
+          isDev: !app.isPackaged,
+          appName: APP_DISPLAY_NAME,
+          // macOS keeps the menu with no window open: there would be nowhere to show the result.
+          canCheckForUpdates: openWindows().length > 0,
+          checkForUpdates: () => void checkFromMenu()
+        })
+      )
+    )
+  app.on('browser-window-created', (_event, window) => {
+    installApplicationMenu()
+    window.once('closed', installApplicationMenu)
+  })
+  installApplicationMenu()
   createMainWindow()
   void updates.checkAtLaunch()
 

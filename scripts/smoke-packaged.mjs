@@ -27,6 +27,9 @@
 // API is never called. On macOS no update is installed. On Linux a third launch runs the whole
 // AppImage update: APPIMAGE points at a scratch file standing for the installed AppImage, and
 // "Install and restart" replaces it with the fake release's file and relaunches it.
+// The application menu is checked through the main process (the app starts with --inspect on a free
+// port, and the script clicks the "Check for updates..." menu item with Menu.getMenuItemById): the
+// click must reach the fake release and show the banner, "You are up to date" or an error.
 // It never touches the real userData folder or ~/.claude*, always passes --user-data-dir, kills the
 // whole process tree it started (also on failure or Ctrl+C), prints one PASS/FAIL line per check
 // and exits 1 when a check fails. What it does not cover is listed in docs/Packaging.md
@@ -153,6 +156,8 @@ const fakeReleaseRequests = []
 let requestsAfterFirstLaunch = 0
 let fakeReleaseServer
 let fakeReleaseUrl
+/** What /latest answers: the new release, an older one (up to date), or a server error. */
+let fakeReleaseMode = 'newer'
 
 function startFakeRelease() {
   return new Promise((done, fail) => {
@@ -172,11 +177,15 @@ function startFakeRelease() {
         response.writeHead(404).end()
         return
       }
+      if (fakeReleaseMode === 'error') {
+        response.writeHead(500, { 'content-type': 'text/plain' }).end('fake release failure')
+        return
+      }
       const base = `http://127.0.0.1:${server.address().port}/files`
       response.writeHead(200, { 'content-type': 'application/json' })
       response.end(
         JSON.stringify({
-          tag_name: `v${FAKE_RELEASE_VERSION}`,
+          tag_name: fakeReleaseMode === 'old' ? 'v0.0.1' : `v${FAKE_RELEASE_VERSION}`,
           html_url: `https://example.invalid/releases/tag/v${FAKE_RELEASE_VERSION}`,
           draft: false,
           prerelease: false,
@@ -311,12 +320,19 @@ async function freePort() {
   })
 }
 
-async function launchApp(extraEnv = {}) {
+/** Port of the main process inspector of the running app, when launched with `inspect`. */
+let inspectPort
+
+async function launchApp(extraEnv = {}, { inspect = false } = {}) {
   const port = await freePort()
   childExited = false
   appOutput = ''
   // The scratch --user-data-dir is always passed, so the real userData folder is never opened.
   const args = [`--user-data-dir=${userData}`, `--remote-debugging-port=${port}`]
+  if (inspect) {
+    inspectPort = await freePort()
+    args.push(`--inspect=127.0.0.1:${inspectPort}`)
+  }
   if (noSandbox) args.push('--no-sandbox')
   args.push(...(process.env.SMOKE_APP_ARGS ?? '').split(/\s+/).filter(Boolean))
   // What a desktop launch gives, minus the things only the system adds: a minimal PATH, no SHELL,
@@ -469,6 +485,46 @@ async function connect(port) {
   return client
 }
 
+/**
+ * Evaluates an expression in the main process of the app, through its Node inspector (`--inspect`),
+ * and returns its value. `electron` is reached through the main module's require.
+ */
+async function evaluateInMain(expression) {
+  const targets = await (await fetch(`http://127.0.0.1:${inspectPort}/json/list`)).json()
+  const target = targets.find((entry) => entry.webSocketDebuggerUrl)
+  if (!target) throw new Error('no target on the main process inspector')
+  const socket = new WebSocket(target.webSocketDebuggerUrl)
+  await new Promise((done, fail) => {
+    socket.addEventListener('open', done, { once: true })
+    socket.addEventListener('error', () => fail(new Error('inspector WebSocket error')), {
+      once: true
+    })
+  })
+  try {
+    const answer = await new Promise((done) => {
+      socket.addEventListener('message', (event) => done(JSON.parse(event.data)), { once: true })
+      socket.send(
+        JSON.stringify({
+          id: 1,
+          method: 'Runtime.evaluate',
+          params: {
+            expression: `(() => { const { Menu } = process.mainModule.require('electron'); return (${expression})(Menu) })()`,
+            returnByValue: true
+          }
+        })
+      )
+    })
+    if (answer.result?.exceptionDetails) {
+      throw new Error(
+        `main process script failed: ${redact(JSON.stringify(answer.result.exceptionDetails))}`
+      )
+    }
+    return answer.result?.result?.value
+  } finally {
+    socket.close()
+  }
+}
+
 // ---------------------------------------------------------------------------------------------
 // Checks
 // ---------------------------------------------------------------------------------------------
@@ -500,7 +556,7 @@ function readOnlyDb() {
 const EXPECTED_TOPICS = 21
 
 async function phaseOne() {
-  const port = await launchApp()
+  const port = await launchApp({}, { inspect: true })
   let c
   const opened = await check('window loads and the Learning Path renders', async () => {
     c = await connect(port)
@@ -582,6 +638,90 @@ async function phaseOne() {
     await c.click('update-dismiss')
     await c.waitFor(`!${c.testId('update-banner')}`, 'the banner to disappear')
   })
+
+  const appVersion = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8')).version
+  const menuLabel = platform === 'darwin' ? 'System Design from Scratch' : 'Help'
+  const clickMenuEntry = () =>
+    evaluateInMain(
+      `(Menu) => { Menu.getApplicationMenu().getMenuItemById('check-for-updates').click(); return true }`
+    )
+
+  await check('the application menu has "Check for updates..." and no dev-only items', async () => {
+    const menu = await evaluateInMain(`(Menu) => Menu.getApplicationMenu().items.map((top) => ({
+      label: top.label,
+      items: top.submenu.items.map((item) => ({ id: item.id, label: item.label, role: item.role, enabled: item.enabled }))
+    }))`)
+    const owner = menu.find((top) => top.items.some((item) => item.id === 'check-for-updates'))
+    assert(
+      owner,
+      `no "Check for updates..." entry in the menu: ${JSON.stringify(menu.map((m) => m.label))}`
+    )
+    assert(owner.label === menuLabel, `the entry is in "${owner.label}", expected "${menuLabel}"`)
+    const entry = owner.items.find((item) => item.id === 'check-for-updates')
+    assert(entry.enabled && entry.label === 'Check for updates...', JSON.stringify(entry))
+    const all = menu.flatMap((top) => top.items.map((item) => String(item.role).toLowerCase()))
+    for (const role of ['reload', 'forcereload', 'toggledevtools']) {
+      assert(!all.includes(role), `the packaged menu has the development item "${role}"`)
+    }
+    for (const role of ['copy', 'paste', 'undo', 'quit']) {
+      assert(all.includes(role), `the menu lacks the standard "${role}" item`)
+    }
+    return menu.map((top) => top.label).join(', ')
+  })
+
+  await check(
+    'menu click: the banner returns for the fake release (a dismissed version too)',
+    async () => {
+      const before = fakeReleaseRequests.filter((url) => url === '/latest').length
+      await clickMenuEntry()
+      await c.waitFor(`!!${c.testId('update-banner')}`, 'the update banner', 30000)
+      const text = await c.evaluate(`${c.testId('update-banner')}.textContent`)
+      assert(
+        text.includes(`Version ${FAKE_RELEASE_VERSION} is available`),
+        `banner: ${text.slice(0, 160)}`
+      )
+      const after = fakeReleaseRequests.filter((url) => url === '/latest').length
+      assert(after === before + 1, `${after - before} release lookup(s) for one click, expected 1`)
+      await c.click('update-dismiss')
+      await c.waitFor(`!${c.testId('update-banner')}`, 'the banner to disappear')
+    }
+  )
+
+  await check('menu click: "You are up to date" when the release is not newer', async () => {
+    fakeReleaseMode = 'old'
+    await clickMenuEntry()
+    await c.waitFor(`!!${c.testId('update-check-notice-text')}`, 'the up to date message', 30000)
+    const text = await c.evaluate(`${c.testId('update-check-notice-text')}.textContent`)
+    assert(text === `You are up to date (version ${appVersion}).`, `message: ${text}`)
+    assert(!(await c.evaluate(`!!${c.testId('update-banner')}`)), 'a banner is shown')
+    await c.click('update-check-notice-close')
+    await c.waitFor(`!${c.testId('update-check-notice')}`, 'the message to close')
+  })
+
+  await check('menu click: a failed check shows a readable error', async () => {
+    fakeReleaseMode = 'error'
+    await clickMenuEntry()
+    await c.waitFor(`!!${c.testId('update-check-notice-text')}`, 'the error message', 30000)
+    const text = await c.evaluate(`${c.testId('update-check-notice-text')}.textContent`)
+    assert(text.startsWith('Could not check for updates.'), `message: ${text}`)
+    assert(
+      await c.evaluate(`${c.testId('update-check-notice-text')}.getAttribute('role') === 'alert'`),
+      'the error is not an alert'
+    )
+    await c.click('update-check-notice-close')
+    fakeReleaseMode = 'newer'
+  })
+
+  await check(
+    'menu click: after the error the next click works, and the update is dismissed again',
+    async () => {
+      // Leave the state of a dismissed update, as the second launch expects.
+      await clickMenuEntry()
+      await c.waitFor(`!!${c.testId('update-banner')}`, 'the update banner', 30000)
+      await c.click('update-dismiss')
+      await c.waitFor(`!${c.testId('update-banner')}`, 'the banner to disappear')
+    }
+  )
 
   await check('Settings renders and its Test button finds the CLI without PATH', async () => {
     await c.click('open-settings')
