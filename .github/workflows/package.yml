@@ -162,6 +162,7 @@ jobs:
       - name: Smoke test the extracted AppImage
         run: |
           images=(packages/*.AppImage)
+          chmod +x "${images[0]}"
           mkdir extracted
           (cd extracted && "$PWD/../${images[0]}" --appimage-extract >/dev/null)
           ls extracted/squashfs-root

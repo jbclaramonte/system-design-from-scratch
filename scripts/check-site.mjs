@@ -4,7 +4,7 @@
 //
 // Offline by default: every local link, image and anchor resolves, images carry dimensions and alt
 // text, headings do not skip a level, the page loads nothing from another site (no script, no
-// stylesheet, font or image URL), no version number is written in it, the install command is the
+// stylesheet, font or image URL), no version number is written in it, the install command and the Claude Code prompt are the
 // README's, the attribution matches the corpus metadata, and every screenshot is under the size
 // cap. `--external` also requests every external link of the page (only anchors point outside) and
 // fails on a 404, a server error or no answer.
@@ -100,6 +100,29 @@ for (const page of pages) {
   const command = /curl -fsSL \S+install\.sh \| bash/.exec(readme)?.[0]
   if (!command) fail('README.md has no install command')
   else if (!html.includes(command)) fail(where('the install command differs from the README'))
+
+  // The Claude Code prompt: a plain, selectable block that names install.sh by its raw URL and says
+  // the same as the README's (docs/Website.md: keep both in sync with install.sh).
+  const rawUrl =
+    'https://raw.githubusercontent.com/jbclaramonte/system-design-from-scratch/main/install.sh'
+  const decode = (text) =>
+    text
+      .replaceAll('&lt;', '<')
+      .replaceAll('&gt;', '>')
+      .replaceAll('&quot;', '"')
+      .replaceAll('&#39;', "'")
+      .replaceAll('&amp;', '&')
+  const squash = (text) => text.replace(/\s+/g, ' ').trim()
+  const sitePrompt = /<code id="claude-prompt">([\s\S]*?)<\/code>/.exec(html)?.[1]
+  const readmePrompt = /### Install with Claude Code[\s\S]*?```text\n([\s\S]*?)\n```/.exec(
+    readme
+  )?.[1]
+  if (!sitePrompt) fail(where('no Claude Code prompt (<code id="claude-prompt">)'))
+  else if (!decode(sitePrompt).includes(rawUrl))
+    fail(where('the Claude Code prompt does not contain the install.sh raw URL'))
+  else if (!readmePrompt) fail('README.md has no "Install with Claude Code" prompt')
+  else if (squash(decode(sitePrompt)) !== squash(readmePrompt))
+    fail(where('the Claude Code prompt differs from the README'))
 
   // Attribution: the pinned primer commit and its license, as in the corpus metadata.
   const { metadata } = JSON.parse(

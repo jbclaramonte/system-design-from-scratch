@@ -380,7 +380,9 @@
             <a href="https://github.com/jbclaramonte/system-design-from-scratch/releases/latest"
               >GitHub Release</a
             >; the latest one is always the page to start from. Personal use: the macOS app is not
-            notarized and there is no auto-update. Each release has a <code>SHA256SUMS</code> file.
+            notarized. The app checks for a newer release at launch and installs it in one click on
+            macOS and on a Linux AppImage (a <code>.deb</code> only announces it). Each release has
+            a <code>SHA256SUMS</code> file.
           </p>
 
           <h3>macOS (Apple Silicon)</h3>
@@ -399,23 +401,49 @@
           </p>
 
           <h3>Linux (x64)</h3>
+          <p>The same command, no <code>sudo</code>. It detects Linux and installs the AppImage:</p>
+          <pre><code>curl -fsSL https://raw.githubusercontent.com/jbclaramonte/system-design-from-scratch/main/install.sh | bash</code></pre>
+          <p>
+            It checks the checksum, installs the AppImage in
+            <code>~/.local/share/system-design-from-scratch/</code> and adds a launcher, so the app
+            appears in the application menu. Without FUSE 2 it prints the fix (<code
+              >sudo apt install libfuse2</code
+            >) and writes a launcher that extracts the app on each start. Ubuntu 22.04 is the oldest
+            supported release; on Ubuntu 24.04, which restricts the sandbox of an AppImage, use the
+            <code>.deb</code>.
+          </p>
+
+          <h3>Install with Claude Code</h3>
+          <p>
+            Already in Claude Code? Paste this prompt: it reads the script, tells you what it does,
+            then installs the app.
+          </p>
+          <pre><code id="claude-prompt">Install "System Design from Scratch" on this machine for me, step by step.
+1. Detect my OS and CPU architecture (uname -s, uname -m). Supported: macOS on Apple Silicon (arm64) and Linux x64 (x86_64). On anything else, stop and tell me plainly that it is not supported.
+2. Download https://raw.githubusercontent.com/jbclaramonte/system-design-from-scratch/main/install.sh, read all of it, and give me a short summary of what it does before you run it.
+3. Run it with bash, without sudo. On macOS it installs into /Applications; on Linux into ~/.local/share/system-design-from-scratch, with an application-menu launcher. Show me its output. If it fails, explain the error: do not retry blindly or work around it.
+4. Check that the Claude Code CLI (claude) is installed and logged in (for example claude --version and claude auth status). If not, tell me the exact step I must do myself: logging in is interactive, so I run it here with "! claude". Never ask for or handle my credentials.
+5. Tell me how to launch the app, that my data lives in ~/Library/Application Support/system-design-from-scratch (macOS) or ~/.config/system-design-from-scratch (Linux), and how updates work: the app checks at launch and updates itself in one click on macOS and on the Linux AppImage.
+Never touch my data folder or anything outside the install locations.</code></pre>
+
+          <h3>Manual download</h3>
           <div class="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th scope="col">Distribution</th>
+                  <th scope="col">Platform</th>
                   <th scope="col">File of the release</th>
                   <th scope="col">Install</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td>Debian, Ubuntu</td>
+                  <td>Linux, Debian or Ubuntu</td>
                   <td><code>.deb</code></td>
                   <td><code>sudo apt install ./&lt;file&gt;.deb</code></td>
                 </tr>
                 <tr>
-                  <td>Any distribution</td>
+                  <td>Linux, any distribution</td>
                   <td><code>.AppImage</code></td>
                   <td><code>chmod +x</code> the file and run it (needs FUSE 2)</td>
                 </tr>

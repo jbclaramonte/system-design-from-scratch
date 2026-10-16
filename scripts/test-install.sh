@@ -77,6 +77,13 @@ sha256_of() {
   if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | awk '{ print $1 }'; else shasum -a 256 "$1" | awk '{ print $1 }'; fi
 }
 
+# The identity of an installed file: its inode and its content. An install replaces the file with a
+# rename, so a replaced file has another inode even when the release holds the same bytes (the real
+# AppImage of CI is released twice under two version numbers).
+# ls -i is the portable way to read an inode (stat differs between macOS and Linux).
+# shellcheck disable=SC2012
+stamp() { echo "$(ls -i "$1" | awk '{ print $1 }') $(sha256_of "$1")"; }
+
 # make_release DIR VERSION: DIR holds the AppImage of VERSION (without v) and a SHA256SUMS in the
 # format of `sha256sum *` (two spaces), like the release job writes it.
 make_release() {
@@ -138,10 +145,12 @@ check "nothing is written outside ~/.local/share (and the untouched ~/.config)" 
 check "says where the launcher is and how to uninstall" bash -c "grep -q 'launcher:' '$log' && grep -q 'uninstall' '$log'"
 
 # A second run replaces the first one (a new version), and keeps working.
+first="$(stamp "$target")"
 make_release "$release" 0.0.2
 VERSION=v0.0.2 run_install "$log"
 status=$?
 check "a second run (next version) succeeds" test "$status" = 0
+check "the second run replaced the file (another inode)" test "$(stamp "$target")" != "$first"
 if [ -z "${SDFS_TEST_APPIMAGE:-}" ]; then
   check "the second run replaced the first file" test "$("$target" a)" = "version 0.0.2 a"
 fi
@@ -152,7 +161,7 @@ check "the second run left no temporary file" nothing_left_behind
 # A running instance is never replaced.
 new_sandbox
 run_install "$log"
-before="$(sha256_of "$target")"
+before="$(stamp "$target")"
 make_release "$release" 0.0.2
 cat >"$sandbox/running.sh" <<'EOF'
 #!/usr/bin/env bash
@@ -168,7 +177,7 @@ VERSION=v0.0.2 run_install "$log"
 status=$?
 check "refuses to replace a running instance (command line)" test "$status" != 0
 check "the running-instance message says to quit the app" contains "$log" "the app is running"
-check "the installed file is untouched after the refusal" test "$(sha256_of "$target")" = "$before"
+check "the installed file is untouched after the refusal" test "$(stamp "$target")" = "$before"
 kill "${background[@]}" 2>/dev/null || true
 background=()
 if [ -d /proc/self ]; then
@@ -183,31 +192,31 @@ if [ -d /proc/self ]; then
 fi
 sleep 0.3
 VERSION=v0.0.2 run_install "$log"
-check "replaces it once the instance has quit" test "$(sha256_of "$target")" != "$before"
+check "replaces it once the instance has quit" test "$(stamp "$target")" != "$before"
 
 # A corrupt or unlisted download is refused and leaves the installed app alone.
 new_sandbox
 run_install "$log"
-before="$(sha256_of "$target")"
+before="$(stamp "$target")"
 make_release "$release" 0.0.2
 echo "0000000000000000000000000000000000000000000000000000000000000000  system-design-from-scratch-0.0.2-x86_64.AppImage" >"$release/SHA256SUMS"
 VERSION=v0.0.2 run_install "$log"
 status=$?
 check "checksum mismatch: exit status is not 0" test "$status" != 0
 check "checksum mismatch: the message says so" contains "$log" "checksum mismatch"
-check "checksum mismatch: the installed file is untouched" test "$(sha256_of "$target")" = "$before"
+check "checksum mismatch: the installed file is untouched" test "$(stamp "$target")" = "$before"
 check "checksum mismatch: no temporary file is left behind" nothing_left_behind
 echo "0000000000000000000000000000000000000000000000000000000000000000  other.AppImage" >"$release/SHA256SUMS"
 VERSION=v0.0.2 run_install "$log"
 status=$?
 check "unlisted file: refused" test "$status" != 0
 check "unlisted file: the message says so" contains "$log" "is not listed in SHA256SUMS"
-check "unlisted file: the installed file is untouched" test "$(sha256_of "$target")" = "$before"
+check "unlisted file: the installed file is untouched" test "$(stamp "$target")" = "$before"
 rm "$release/system-design-from-scratch-0.0.2-x86_64.AppImage"
 VERSION=v0.0.2 run_install "$log"
 status=$?
 check "missing release file: refused, nothing left behind" bash -c "[ $status != 0 ]"
-check "missing release file: the installed file is untouched" test "$(sha256_of "$target")" = "$before"
+check "missing release file: the installed file is untouched" test "$(stamp "$target")" = "$before"
 
 # FUSE 2 missing: the launcher extracts on each start, and the fix is printed.
 new_sandbox
@@ -219,10 +228,13 @@ SDFS_TEST_FUSE2=present run_install "$log"
 check "FUSE 2 installed later: running the script again restores the plain launcher" contains "$desktop" "Exec=\"$target\""
 
 # Icons: found by the targeted extraction, by the full extraction, or absent.
+# These two need the fake image, which obeys FAKE_ICON_MODE (the real AppImage of CI does not).
 new_sandbox
+SDFS_TEST_APPIMAGE="" make_release "$release" 0.0.1
 FAKE_ICON_MODE=full-only run_install "$log"
 check "icon found by the full extraction when the targeted one finds nothing" bash -c "grep -q 'larger file' '$data/system-design-from-scratch/system-design-from-scratch.png'"
 new_sandbox
+SDFS_TEST_APPIMAGE="" make_release "$release" 0.0.1
 FAKE_ICON_MODE=none run_install "$log"
 status=$?
 check "no icon in the image: the install still succeeds" bash -c "[ -x '$target' ] && [ -f '$desktop' ]"

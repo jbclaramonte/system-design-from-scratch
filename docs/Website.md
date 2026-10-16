@@ -28,6 +28,8 @@ The screenshots show the course in French, the default [[Generation Language]], 
 
 No version number is written anywhere in the page (`site:check` fails on one): the links point at `releases/latest`, and the macOS command is the `install.sh` one-liner of the README, which installs the latest release. `site:check` also checks that the command is the README's.
 
+The section also carries the **Install with Claude Code** prompt (`<code id="claude-prompt">` in `site/index.html`, a plain selectable block, no script): a ready-to-paste instruction for Claude Code that reads `install.sh` from its raw URL, summarizes it, runs it and checks the Claude Code CLI. The same text is in the README ("Install with Claude Code"), and `site:check` fails when the site's prompt differs from the README's or does not contain the `install.sh` raw URL. Keep both in sync with `install.sh` (install folders, platforms, the update behavior it describes) and with [[Packaging#Install]].
+
 ### Attribution
 
 The primer's attribution, license, modification notice and the "not endorsed" sentence repeat what the About screen shows (`resources/corpus/primer.json` metadata, see [[Attribution and Licenses#What the About screen shows]]). The page pins the same primer commit; `site:check` fails when the commit, the license URL or the modification text differ from the corpus metadata, so a corpus refresh (`npm run corpus:build`) must be followed by an update of the page.

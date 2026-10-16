@@ -47,6 +47,20 @@ the script does.
 > 24.04 restricts unprivileged user namespaces, which an AppImage needs for Chromium's sandbox: use
 > the `.deb` there (see [Linux](#linux-x64)).
 
+### Install with Claude Code
+
+Already in Claude Code? Paste this prompt and let it do the install, after it has read the script and told you what it does:
+
+```text
+Install "System Design from Scratch" on this machine for me, step by step.
+1. Detect my OS and CPU architecture (uname -s, uname -m). Supported: macOS on Apple Silicon (arm64) and Linux x64 (x86_64). On anything else, stop and tell me plainly that it is not supported.
+2. Download https://raw.githubusercontent.com/jbclaramonte/system-design-from-scratch/main/install.sh, read all of it, and give me a short summary of what it does before you run it.
+3. Run it with bash, without sudo. On macOS it installs into /Applications; on Linux into ~/.local/share/system-design-from-scratch, with an application-menu launcher. Show me its output. If it fails, explain the error: do not retry blindly or work around it.
+4. Check that the Claude Code CLI (claude) is installed and logged in (for example claude --version and claude auth status). If not, tell me the exact step I must do myself: logging in is interactive, so I run it here with "! claude". Never ask for or handle my credentials.
+5. Tell me how to launch the app, that my data lives in ~/Library/Application Support/system-design-from-scratch (macOS) or ~/.config/system-design-from-scratch (Linux), and how updates work: the app checks at launch and updates itself in one click on macOS and on the Linux AppImage.
+Never touch my data folder or anything outside the install locations.
+```
+
 | Platform                    | File                                                   | Manual install                                                                                                                                                                                                                                                                     |
 | --------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | macOS (Apple Silicon)       | `system-design-from-scratch-<version>-arm64.dmg`       | Open the dmg, drag the app onto Applications. A browser download is quarantined and macOS blocks it once: open **System Settings > Privacy & Security**, **Open Anyway**. Or `/usr/bin/xattr -dr com.apple.quarantine "/Applications/System Design from Scratch.app"` (full path). |
