@@ -2,6 +2,8 @@ import { EventEmitter } from 'node:events'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { MasteryEvent, MasteryStreamEvent } from '../../shared/mastery'
 import type { RoundResult, RoundStart } from '../../shared/quiz'
+import { createHash } from 'node:crypto'
+import { generationLanguages, type GenerationLanguage } from '../../shared/generationLanguage'
 import { createLessonIpc } from '../content/lessonIpc'
 import { openDatabase, type Database } from '../db/driver'
 import { migrate } from '../db/migrate'
@@ -19,7 +21,12 @@ import type { Notion, Topic } from '../db/types'
 import type { CliCallOptions } from '../generation/cliRunner'
 import { cliFailure } from '../generation/errors'
 import type { GenerationClient } from '../generation/ipc'
-import { QUIZ_PROMPT_VERSION, type QuizContent, type QuizQuestion } from '../generation/prompts'
+import {
+  languageRules,
+  QUIZ_PROMPT_VERSION,
+  type QuizContent,
+  type QuizQuestion
+} from '../generation/prompts'
 import { GenerationService, type CliRunner } from '../generation/service'
 import { cacheOutline, fixtureCorpus } from '../generation/testing/contentFixtures'
 import { createTopicLockGuard } from '../path/lock'
@@ -195,7 +202,7 @@ describe('first round', () => {
       })
 
       const request = await mastery.nextQuizRequest(topic.id)
-      expect(contentCacheKey('quiz', request.input, QUIZ_PROMPT_VERSION)).toBe(pregenerated)
+      expect(contentCacheKey('quiz', request.input, QUIZ_PROMPT_VERSION, 'fr')).toBe(pregenerated)
 
       const start = await mastery.startRound(topic.id)
       expect(callsOf('quiz')).toHaveLength(1)
@@ -503,7 +510,7 @@ describe('mastery IPC', () => {
     const next = await mastery.nextQuizRequest(topic.id)
     await vi.waitFor(() =>
       expect(
-        getCachedContent(db, contentCacheKey('quiz', next.input, QUIZ_PROMPT_VERSION))
+        getCachedContent(db, contentCacheKey('quiz', next.input, QUIZ_PROMPT_VERSION, 'fr'))
       ).toBeDefined()
     )
     ipc.startRound({ requestId: 'r2', topicId: topic.id }, client)
@@ -661,5 +668,170 @@ describe('Declared Mastery', () => {
     // Declaring the previous topic unlocks `cache`, which can now be declared in turn.
     expect(ipc.declare({ topicId: topic.id })).toMatchObject({ declared: true })
     expect(ipc.undoDeclaration({ topicId: topic.id })).toMatchObject({ declared: false })
+  })
+})
+
+describe('Generation Language', () => {
+  const languageOf = (call: CliCallOptions): GenerationLanguage | undefined =>
+    generationLanguages.find((language) => call.systemPrompt.includes(languageRules(language)))
+  const languagesOf = (kind: ReturnType<typeof kindOf>) => callsOf(kind).map(languageOf)
+  const setLanguage = (generationLanguage: GenerationLanguage) =>
+    updateSettings(db, { generationLanguage })
+  const sha = (text: string) => createHash('sha256').update(text).digest('hex')
+
+  /** Runs `lesson:start` like the app does and resolves when its quiz Pre-generation was made. */
+  async function startLesson(requestId: string, quizEntries: number): Promise<string[]> {
+    const events: string[] = []
+    const client = Object.assign(new EventEmitter(), {
+      send: (_channel: string, payload: { event: { type: string } }) =>
+        events.push(payload.event.type),
+      isDestroyed: () => false
+    }) as unknown as GenerationClient
+    createLessonIpc({ db, corpus, service: generation }).start(
+      { requestId, topicId: topic.id },
+      client
+    )
+    await vi.waitFor(() => expect(events).toContain('done'))
+    // The quiz Pre-generation runs in the background: wait for its entry in the Content Cache.
+    await vi.waitFor(() => {
+      const quizzes = db
+        .prepare("SELECT COUNT(*) AS n FROM content_cache WHERE kind = 'quiz'")
+        .get<{ n: number }>()!
+      expect(quizzes.n).toBe(quizEntries)
+    })
+    return events
+  }
+
+  const lessons = () =>
+    db
+      .prepare('SELECT language, content_cache_key AS key FROM lessons ORDER BY id')
+      .all<{ language: string; key: string }>()
+
+  it('generates a lesson and its quiz in each language, and reuses the first ones when switching back', async () => {
+    await startLesson('fr-1', 1)
+    expect(languagesOf('lesson')).toEqual(['fr'])
+    expect(languagesOf('quiz')).toEqual(['fr'])
+
+    setLanguage('en')
+    await startLesson('en-1', 2)
+    expect(languagesOf('lesson')).toEqual(['fr', 'en'])
+    expect(languagesOf('quiz')).toEqual(['fr', 'en'])
+    expect(lessons().map((l) => l.language)).toEqual(['fr', 'en'])
+
+    setLanguage('fr')
+    const events = await startLesson('fr-2', 2)
+    expect(events).toContain('done')
+    // Both served from the Content Cache: nothing generated, nothing recorded twice.
+    expect(callsOf('lesson')).toHaveLength(2)
+    expect(callsOf('quiz')).toHaveLength(2)
+    expect(lessons().map((l) => l.language)).toEqual(['fr', 'en'])
+
+    const start = await mastery.startRound(topic.id)
+    expect(callsOf('quiz')).toHaveLength(2)
+    expect(getQuiz(db, start.quiz.id)).toMatchObject({ language: 'fr' })
+  })
+
+  it('writes the quiz of the first round from the lesson in the language selected', async () => {
+    await startLesson('fr-1', 1)
+    setLanguage('en')
+    // Only a French lesson was read: the English quiz is written from it.
+    expect((await mastery.nextQuizRequest(topic.id)).language).toBe('en')
+    expect((await mastery.nextQuizRequest(topic.id)).input).toMatchObject({ lesson: sha(LESSON) })
+
+    // Once an English lesson was read too, the English quiz is written from that one.
+    const english =
+      '# The cache\n\n## Cache-aside\n<!-- notion: cache-aside -->\nText [source: cache]'
+    createLesson(db, {
+      topicId: topic.id,
+      content: english,
+      language: 'en',
+      grounded: true,
+      sourceSections: ['cache']
+    })
+    expect((await mastery.nextQuizRequest(topic.id)).input).toMatchObject({ lesson: sha(english) })
+    setLanguage('fr')
+    expect((await mastery.nextQuizRequest(topic.id)).input).toMatchObject({ lesson: sha(LESSON) })
+  })
+
+  it('lets a Round in progress finish in the language of its quiz, then follows the setting', async () => {
+    readLesson()
+    const first = await mastery.startRound(topic.id)
+    expect(getQuiz(db, first.quiz.id)).toMatchObject({ language: 'fr' })
+
+    // The learner switches to English in the middle of the round.
+    setLanguage('en')
+    const resumed = await mastery.startRound(topic.id)
+    expect(resumed.quiz.id).toBe(first.quiz.id)
+    expect(resumed.round.id).toBe(first.round.id)
+    expect(callsOf('quiz')).toHaveLength(1) // nothing was generated
+
+    // The round ends as it started and mastery is computed as ever.
+    expect(play(resumed, ['cache-aside']).round.passed).toBe(false)
+    expect(mastery.getState(topic.id)).toMatchObject({ status: 'in_progress', roundNumber: 2 })
+
+    // What is generated next is English: the Remediation Lesson, then the next quiz.
+    await readRemediations()
+    expect(languagesOf('remediation')).toEqual(['en'])
+    const second = await mastery.startRound(topic.id)
+    expect(languagesOf('quiz')).toEqual(['fr', 'en'])
+    expect(getQuiz(db, second.quiz.id)).toMatchObject({ language: 'en' })
+    expect(play(second).round.passed).toBe(true)
+    expect(getTopicMastery(db, topic.id)).toBe('mastered')
+  })
+
+  it('records a Remediation Lesson once per round, notion and language, without changing the loop', async () => {
+    readLesson()
+    play(await mastery.startRound(topic.id), ['cache-aside'])
+    const state = () => mastery.getState(topic.id)
+    expect(state().step).toMatchObject({ name: 'remediation' })
+
+    const read = async (language: GenerationLanguage) => {
+      setLanguage(language)
+      const run = mastery.prepareRemediation(topic.id, slugOf('cache-aside').id)
+      const output = await generation.generate(run.request).result
+      mastery.recordRemediation(run, output)
+      mastery.recordRemediation(run, output) // once only
+    }
+    await read('fr')
+    const afterFrench = state()
+    await read('en')
+
+    expect(listRemediationLessonsByTopic(db, topic.id).map(({ language }) => language)).toEqual([
+      'fr',
+      'en'
+    ])
+    // The loop only knows that this notion was remediated in this round, not in which language.
+    expect(state()).toEqual(afterFrench)
+    expect(languagesOf('remediation')).toEqual(['fr', 'en'])
+  })
+
+  it('pre-generates the quiz in the language of the lesson being read, even if the setting changes meanwhile', async () => {
+    let release!: () => void
+    const gate = new Promise<void>((resolve) => (release = resolve))
+    const gated: CliRunner = async (options) => {
+      if (kindOf(options) === 'lesson') await gate
+      return runner(options)
+    }
+    const slow = new GenerationService({ db, runner: gated, resolveCli: async () => '/x/claude' })
+    const events: string[] = []
+    const client = Object.assign(new EventEmitter(), {
+      send: (_channel: string, payload: { event: { type: string } }) =>
+        events.push(payload.event.type),
+      isDestroyed: () => false
+    }) as unknown as GenerationClient
+    setLanguage('en')
+    createLessonIpc({ db, corpus, service: slow }).start(
+      { requestId: 'slow', topicId: topic.id },
+      client
+    )
+    await vi.waitFor(() => expect(events).toContain('prepared'))
+    setLanguage('fr') // changed while the English lesson is being written
+    release()
+    await vi.waitFor(() => expect(callsOf('quiz')).toHaveLength(1))
+
+    expect(languagesOf('lesson')).toEqual(['en'])
+    expect(languagesOf('quiz')).toEqual(['en'])
+    expect(lessons().map((l) => l.language)).toEqual(['en'])
+    slow.dispose()
   })
 })

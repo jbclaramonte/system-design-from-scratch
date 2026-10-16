@@ -1,0 +1,180 @@
+// Checks the website in site/ (docs/Website.md): `npm run site:check`.
+//
+//   node scripts/check-site.mjs [--external]
+//
+// Offline by default: every local link, image and anchor resolves, images carry dimensions and alt
+// text, headings do not skip a level, the page loads nothing from another site (no script, no
+// stylesheet, font or image URL), no version number is written in it, the install command is the
+// README's, the attribution matches the corpus metadata, and every screenshot is under the size
+// cap. `--external` also requests every external link of the page (only anchors point outside) and
+// fails on a 404, a server error or no answer.
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
+import { dirname, join, resolve } from 'node:path'
+
+const root = resolve(import.meta.dirname, '..')
+const site = join(root, 'site')
+const MAX_IMAGE_BYTES = 250_000
+const failures = []
+const fail = (message) => failures.push(message)
+
+const pages = readdirSync(site).filter((name) => name.endsWith('.html'))
+if (pages.length === 0) fail('site/ has no HTML page')
+
+/** Attribute values of every tag of a kind: [{ tag, attrs }]. */
+function tagsOf(html, name) {
+  return [...html.matchAll(new RegExp(`<${name}\\b([^>]*)>`, 'gi'))].map((match) => {
+    const attrs = {}
+    for (const attr of match[1].matchAll(
+      /([\w:-]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+)))?/g
+    )) {
+      attrs[attr[1].toLowerCase()] = attr[2] ?? attr[3] ?? attr[4] ?? ''
+    }
+    return attrs
+  })
+}
+
+const isExternal = (url) => /^[a-z][a-z0-9+.-]*:/i.test(url) || url.startsWith('//')
+const externalLinks = new Set()
+
+for (const page of pages) {
+  const html = readFileSync(join(site, page), 'utf8')
+  const ids = new Set([...html.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]))
+  const where = (message) => `${page}: ${message}`
+
+  // Local references resolve; external ones are only links.
+  const refs = [
+    ...tagsOf(html, 'a').map((attrs) => ({ tag: 'a', url: attrs.href })),
+    ...tagsOf(html, 'img').map((attrs) => ({ tag: 'img', url: attrs.src })),
+    ...tagsOf(html, 'link').map((attrs) => ({ tag: 'link', url: attrs.href, rel: attrs.rel })),
+    ...tagsOf(html, 'source').map((attrs) => ({ tag: 'source', url: attrs.src ?? attrs.srcset }))
+  ]
+  for (const { tag, url, rel } of refs) {
+    if (url === undefined) {
+      if (tag !== 'source') fail(where(`<${tag}> without its URL`))
+      continue
+    }
+    if (isExternal(url)) {
+      if (tag === 'a') externalLinks.add(url)
+      // The canonical URL is the page itself: it answers once the site is deployed.
+      else if (tag === 'link' && rel === 'canonical') continue
+      else fail(where(`<${tag}> loads ${url} from another site`))
+      continue
+    }
+    const [path, anchor] = url.split('#')
+    if (path === '') {
+      if (anchor && !ids.has(anchor)) fail(where(`anchor #${anchor} has no target`))
+      continue
+    }
+    const file = resolve(site, dirname(page), decodeURIComponent(path.split('?')[0]))
+    if (!existsSync(file)) fail(where(`${url} does not exist`))
+  }
+  if (/<script\b/i.test(html)) fail(where('the page has a <script>: it must stay free of scripts'))
+  if (/<(iframe|embed|object|video|audio)\b/i.test(html)) fail(where('embedded content'))
+
+  // Images: dimensions (no layout shift) and alt text (empty only when decorative).
+  for (const attrs of tagsOf(html, 'img')) {
+    if (!attrs.width || !attrs.height) fail(where(`${attrs.src} has no width and height`))
+    if (attrs.alt === undefined) fail(where(`${attrs.src} has no alt attribute`))
+    else if (attrs.alt !== '' && attrs.alt.length < 20)
+      fail(where(`${attrs.src}: alt is too short`))
+  }
+
+  // Headings: one h1, no skipped level.
+  const levels = [...html.matchAll(/<h([1-6])\b/gi)].map((match) => Number(match[1]))
+  if (levels.filter((level) => level === 1).length !== 1) fail(where('needs exactly one <h1>'))
+  levels.forEach((level, index) => {
+    if (index > 0 && level > levels[index - 1] + 1) fail(where(`heading level jumps to h${level}`))
+  })
+  if (!/<html[^>]*\blang="/i.test(html)) fail(where('<html> has no lang'))
+  if (!/<title>[^<]+<\/title>/i.test(html)) fail(where('no <title>'))
+
+  // No version number: the download links point at releases/latest.
+  const text = html.replace(/<[^>]+>/g, ' ')
+  const version = /\bv?\d+\.\d+\.\d+\b/.exec(text.replace(/\b[0-9a-f]{40}\b/g, ''))
+  if (version) fail(where(`writes a version number (${version[0]}): link releases/latest instead`))
+  if (!html.includes('/releases/latest'))
+    fail(where('the download section must link releases/latest'))
+
+  // The install command is the README's.
+  const readme = readFileSync(join(root, 'README.md'), 'utf8')
+  const command = /curl -fsSL \S+install\.sh \| bash/.exec(readme)?.[0]
+  if (!command) fail('README.md has no install command')
+  else if (!html.includes(command)) fail(where('the install command differs from the README'))
+
+  // Attribution: the pinned primer commit and its license, as in the corpus metadata.
+  const { metadata } = JSON.parse(
+    readFileSync(join(root, 'resources', 'corpus', 'primer.json'), 'utf8')
+  )
+  for (const needed of [
+    metadata.commitSha,
+    metadata.license.url,
+    metadata.repositoryUrl,
+    metadata.modifications,
+    'Copyright 2017 Donne Martin',
+    'not endorsed by the'
+  ]) {
+    const flat = (value) => value.replace(/\s+/g, ' ')
+    if (!flat(text).includes(flat(needed)) && !html.includes(needed)) {
+      fail(where(`attribution is out of date: ${needed.slice(0, 60)}...`))
+    }
+  }
+}
+
+// CSS: no remote URL or import.
+function cssFiles(dir) {
+  return readdirSync(dir).flatMap((name) => {
+    const path = join(dir, name)
+    if (statSync(path).isDirectory()) return cssFiles(path)
+    return name.endsWith('.css') ? [path] : []
+  })
+}
+for (const file of cssFiles(site)) {
+  const css = readFileSync(file, 'utf8')
+  if (/@import|url\(\s*['"]?(https?:)?\/\//i.test(css))
+    fail(`${file}: loads something from another site`)
+  for (const match of css.matchAll(/url\(\s*['"]?([^'")]+)/g)) {
+    if (!match[1].startsWith('data:') && !existsSync(resolve(dirname(file), match[1]))) {
+      fail(`${file}: ${match[1]} does not exist`)
+    }
+  }
+}
+
+// Screenshots are small and every one is used.
+const imgDir = join(site, 'assets', 'img')
+if (existsSync(imgDir)) {
+  const used = pages.map((page) => readFileSync(join(site, page), 'utf8')).join('\n')
+  for (const name of readdirSync(imgDir)) {
+    const size = statSync(join(imgDir, name)).size
+    if (size > MAX_IMAGE_BYTES) fail(`assets/img/${name} is ${size} bytes, over ${MAX_IMAGE_BYTES}`)
+    if (!used.includes(`assets/img/${name}`)) fail(`assets/img/${name} is not used by any page`)
+  }
+}
+
+if (process.argv.includes('--external')) {
+  const timeout = (ms) =>
+    new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))
+  for (const url of externalLinks) {
+    try {
+      let reply = await Promise.race([
+        fetch(url, { method: 'HEAD', redirect: 'follow' }),
+        timeout(20_000)
+      ])
+      // Some servers refuse HEAD.
+      if (reply.status === 405 || reply.status === 403) {
+        reply = await Promise.race([fetch(url, { redirect: 'follow' }), timeout(20_000)])
+      }
+      if (reply.status >= 400) fail(`${url} answers ${reply.status}`)
+      else console.log(`${reply.status} ${url}`)
+    } catch (error) {
+      fail(`${url}: ${error.message}`)
+    }
+  }
+}
+
+if (failures.length > 0) {
+  console.error(failures.map((message) => `FAIL ${message}`).join('\n'))
+  process.exit(1)
+}
+console.log(
+  `site-check: ${pages.length} page(s) ok, ${externalLinks.size} external link(s)${process.argv.includes('--external') ? ' answered' : ' (not requested, use --external)'}`
+)

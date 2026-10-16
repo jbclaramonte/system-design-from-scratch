@@ -4,20 +4,22 @@
 // supporting sections. One lesson per step, the same in every exercise: stored in the Content
 // Cache.
 import type { Excerpt } from '../../corpus/lookup'
+import type { GenerationLanguage } from '../../../shared/generationLanguage'
 import { PROTOCOL_STEP_DEFINITIONS, type ProtocolStep } from '../../../shared/protocol'
+import { languageProfile } from '../languageProfile'
 import {
   assembleExcerpts,
   AUDIENCE_RULES,
-  DIAGRAM_RULES,
   diagramPlacementRules,
+  diagramRules,
   excerptSection,
   groundingRules,
   joinParts,
-  LANGUAGE_RULES,
+  languageRules,
   type GroundingInput,
   type PromptBuild
 } from './common'
-import { repairDiagrams } from '../diagrams'
+import { repairDiagramsFor } from '../diagrams'
 
 /** Bump with any change to the prompt below. */
 export const PROTOCOL_STEP_LESSON_PROMPT_VERSION = 'protocol-step-lesson-3'
@@ -57,21 +59,25 @@ export const PROTOCOL_STEP_LESSON_SECTIONS: Record<ProtocolStep, string[]> = {
   deep_dive: [`${INTERVIEW}/step-4-scale-the-design`, `${INTERVIEW}/step-3-design-core-components`]
 }
 
-const SYSTEM = `You write short "why it matters" lessons that introduce one step of the system design interview method to a beginner, right before they practise it on a design exercise.
+const system = (
+  language: GenerationLanguage
+) => `You write short "why it matters" lessons that introduce one step of the system design interview method to a beginner, right before they practise it on a design exercise.
 
-${LANGUAGE_RULES}
+${languageRules(language)}
 
 ${AUDIENCE_RULES}
 
-${DIAGRAM_RULES}
+${diagramRules(language)}
 
 Output: Markdown only, no preamble, no closing remark.`
 
-/** The French title of the lesson is left to the model; the step is named in English here. */
+/** The title of the lesson is left to the model; the step is named in English here. */
 export function buildProtocolStepLessonGeneration(
   step: ProtocolStep,
-  grounding: GroundingInput
+  grounding: GroundingInput,
+  language: GenerationLanguage
 ): PromptBuild<string> {
+  const profile = languageProfile(language)
   const definition = PROTOCOL_STEP_DEFINITIONS[step]
   const block = assembleExcerpts(grounding.excerpts, PROTOCOL_STEP_LESSON_EXCERPT_TOKENS)
   const checklist = definition.checklist.map((item) => `- ${item.item}`).join('\n')
@@ -83,30 +89,31 @@ export function buildProtocolStepLessonGeneration(
       ? 'The learner will draw this step on a diagram canvas with typed components (client, CDN, load balancer, service, cache, database, queue) and arrows.'
       : 'The learner will write this step as a short list in a text editor.',
     `Structure:
-1. \`## <French title of the step>\`, then 2 or 3 sentences: what this step is, where it sits in the interview (after which step, before which one).
-2. \`### Pourquoi c'est important\`: 2 to 4 bullets, each a concrete consequence of skipping or rushing the step (what goes wrong later in the design or in the interview).
-3. \`### Ce que tu vas produire\`: 2 to 4 bullets matching the points above, in plain words.
-4. \`### Piège fréquent\`: one beginner mistake, in one or two sentences.
-5. \`**À retenir**\`: one sentence.
+1. \`## <${profile.name} title of the step>\`, then 2 or 3 sentences: what this step is, where it sits in the interview (after which step, before which one).
+2. \`### ${profile.protocolStepLesson.why}\`: 2 to 4 bullets, each a concrete consequence of skipping or rushing the step (what goes wrong later in the design or in the interview).
+3. \`### ${profile.protocolStepLesson.produce}\`: 2 to 4 bullets matching the points above, in plain words.
+4. \`### ${profile.protocolStepLesson.pitfall}\`: one beginner mistake, in one or two sentences.
+5. \`**${profile.protocolStepLesson.remember}**\`: one sentence.
 150 to 250 words in total. Use one small running example (a link-shortening service) for illustration only; do not solve the exercise.`,
     diagramPlacementRules({
       min: 0,
       max: 2,
       when: 'only where a picture helps this step on the running example (for example a typical high-level design, or the data model); none for a step that is just a list'
     }),
-    groundingRules(block.sectionIds),
+    groundingRules(block.sectionIds, language),
     excerptSection(block)
   )
   return {
     kind: 'protocol_step_lesson',
+    language,
     input: {
       step,
       excerpts: block.sectionIds,
       corpusVersion: grounding.corpusVersion
     },
-    prompt: { version: PROTOCOL_STEP_LESSON_PROMPT_VERSION, system: SYSTEM, user },
+    prompt: { version: PROTOCOL_STEP_LESSON_PROMPT_VERSION, system: system(language), user },
     groundedSourceSections: block.sectionIds,
-    finalize: repairDiagrams
+    finalize: repairDiagramsFor(language)
   }
 }
 

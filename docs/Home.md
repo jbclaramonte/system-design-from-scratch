@@ -15,6 +15,7 @@ Desktop app to learn system design: lesson, quiz, targeted remediation until mas
 - [[Design System|Design System: tokens, fonts, base styles and shared classes]]
 - [[Attribution and Licenses|Attribution and third-party licenses (About screen)]]
 - [[Packaging|Packaging the macOS app (electron-builder, unsigned local build)]]
+- [[Website|Website: GitHub Pages site, screenshots of the app, deployment]]
 - [[Generation Service]]
 - [[Design Canvas Integration]]
 - [[Design Export|Design Export (graph JSON, text, PNG)]]
@@ -37,6 +38,6 @@ Assessment: [[Quiz]], [[Question]], [[Question Clarification]], [[Attempt]], [[R
 
 Design practice: [[Design Exercise]], [[Interview Protocol]], [[Protocol Step]], [[Protocol Step Lesson]], [[Hint]], [[Reference Solution]], [[Design Canvas]], [[Design Scene]], [[Design Graph]], [[Design Feedback]]
 
-Generation and data: [[Grounding]], [[Source Corpus]], [[Excerpt]], [[Content Cache]], [[Generation]], [[Pre-generation]]
+Generation and data: [[Grounding]], [[Source Corpus]], [[Excerpt]], [[Content Cache]], [[Generation]], [[Generation Language]], [[Pre-generation]]
 
 Task tracking lives in GitHub Issues, see `CLAUDE.md`.

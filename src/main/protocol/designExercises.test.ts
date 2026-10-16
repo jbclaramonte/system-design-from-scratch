@@ -8,10 +8,12 @@ import {
   DESIGN_EXERCISE_PREREQUISITES,
   IMPLEMENTED_DESIGN_EXERCISES
 } from '../path/designExercisePrerequisites'
+import { generationLanguages, type GenerationLanguage } from '../../shared/generationLanguage'
 import { activeStepsFor } from '../../shared/protocol'
 import {
   DESIGN_EXERCISES,
   previousDesignExercise,
+  problemStatementFor,
   seedDesignExercises,
   type DesignExerciseDefinition
 } from './designExercises'
@@ -98,27 +100,48 @@ describe('DESIGN_EXERCISES', () => {
     expect(previousDesignExercise('mint')).toBeNull()
   })
 
-  describe.each(DESIGN_EXERCISES.map((e) => [e.slug, e] as const))(
-    'problem statement of %s',
-    (_slug, exercise: DesignExerciseDefinition) => {
-      const solution = corpus.getReferenceSolution(exercise.referenceSolutionId)!
-      const step1 = solution.steps.find((step) => step.id.startsWith('step-1-'))!
+  /** Direct address, per language: "tu" in French, "you" in English. */
+  const DIRECT_ADDRESS: Record<GenerationLanguage, RegExp> = { fr: /\btu\b/i, en: /\byou\b/i }
 
-      it('is short French text with no number', () => {
-        const sentences = exercise.problemStatement.split(/(?<=[.!?])\s+/)
-        expect(sentences.length).toBeGreaterThanOrEqual(2)
-        expect(sentences.length).toBeLessThanOrEqual(4)
-        expect(exercise.problemStatement).toMatch(/\btu\b/i)
-        expect(exercise.problemStatement).not.toMatch(/\d/)
-      })
+  describe.each(
+    DESIGN_EXERCISES.flatMap((e) =>
+      generationLanguages.map((language) => [e.slug, language, e] as const)
+    )
+  )('problem statement of %s in %s', (_slug, language, exercise: DesignExerciseDefinition) => {
+    const statement = exercise.problemStatements[language]
+    const solution = corpus.getReferenceSolution(exercise.referenceSolutionId)!
+    const step1 = solution.steps.find((step) => step.id.startsWith('step-1-'))!
 
-      it('shares no verbatim span with the Reference Solution use cases and constraints', () => {
-        for (const reference of [solution.useCases, solution.constraints, step1.markdown]) {
-          expect(longestSharedSpan(exercise.problemStatement, reference)).toBeLessThan(4)
-        }
-      })
+    it('is short text addressed to the learner, with no number', () => {
+      const sentences = statement.split(/(?<=[.!?])\s+/)
+      expect(sentences.length).toBeGreaterThanOrEqual(2)
+      expect(sentences.length).toBeLessThanOrEqual(4)
+      expect(statement).toMatch(DIRECT_ADDRESS[language])
+      expect(statement).not.toMatch(/\d/)
+    })
+
+    it('shares no verbatim span with the Reference Solution use cases and constraints', () => {
+      for (const reference of [solution.useCases, solution.constraints, step1.markdown]) {
+        expect(longestSharedSpan(statement, reference)).toBeLessThan(4)
+      }
+    })
+  })
+
+  it('has a statement in every language, different from each other', () => {
+    for (const exercise of DESIGN_EXERCISES) {
+      expect(Object.keys(exercise.problemStatements).sort()).toEqual(
+        [...generationLanguages].sort()
+      )
+      expect(exercise.problemStatements.en).not.toBe(exercise.problemStatements.fr)
     }
-  )
+  })
+
+  it('shows the statement of the Generation Language, falling back to the stored one', () => {
+    const [pastebin] = DESIGN_EXERCISES
+    expect(problemStatementFor('pastebin', 'fr')).toBe(pastebin!.problemStatements.fr)
+    expect(problemStatementFor('pastebin', 'en')).toBe(pastebin!.problemStatements.en)
+    expect(problemStatementFor('dev-protocol-1', 'en')).toBeUndefined()
+  })
 
   it('detects a statement copied from the reference (test of the leak check)', () => {
     const solution = corpus.getReferenceSolution('pastebin')!
@@ -140,7 +163,8 @@ describe('seedDesignExercises', () => {
       ['pastebin', 1, true, 'pastebin'],
       ['twitter', 2, true, 'twitter']
     ])
-    expect(rows[0]!.problemStatement).toBe(DESIGN_EXERCISES[0]!.problemStatement)
+    // The stored statement is the French one, the fallback of an exercise outside the catalogue.
+    expect(rows[0]!.problemStatement).toBe(DESIGN_EXERCISES[0]!.problemStatements.fr)
     expect(rows.map((row) => exerciseIndexOf(rows, row))).toEqual([1, 2])
   })
 

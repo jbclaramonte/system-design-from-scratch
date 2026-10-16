@@ -3,6 +3,7 @@
  * screen. Validation lives here so both sides apply the same rules.
  */
 import type { GenerationErrorInfo } from './generation'
+import { isGenerationLanguage, type GenerationLanguage } from './generationLanguage'
 
 export interface AppSettings {
   /** Mastery Threshold in percent, 50 to 100 (default 100). */
@@ -18,6 +19,11 @@ export interface AppSettings {
    * environment. Must be an existing directory (checked by the main process).
    */
   claudeConfigDir: string | null
+  /**
+   * Generation Language: the language of the content generated from now on, French or English
+   * (default French). Never changes content already generated, a Round in progress or mastery.
+   */
+  generationLanguage: GenerationLanguage
 }
 
 export const settingsLimits = {
@@ -36,7 +42,14 @@ const inRange = (value: unknown, { min, max }: { min: number; max: number }) =>
 /** Validation errors of a settings change, by field; empty when valid. */
 export function settingsErrors(changes: Partial<AppSettings>): SettingsErrors {
   const errors: SettingsErrors = {}
-  const { masteryThreshold, roundLimit, questionsPerQuiz, claudeCliPath, claudeConfigDir } = changes
+  const {
+    masteryThreshold,
+    roundLimit,
+    questionsPerQuiz,
+    claudeCliPath,
+    claudeConfigDir,
+    generationLanguage
+  } = changes
   if (
     masteryThreshold !== undefined &&
     !inRange(masteryThreshold, settingsLimits.masteryThreshold)
@@ -70,6 +83,9 @@ export function settingsErrors(changes: Partial<AppSettings>): SettingsErrors {
     ) {
       errors.claudeConfigDir = 'An absolute directory path, or empty to inherit the environment.'
     }
+  }
+  if (generationLanguage !== undefined && !isGenerationLanguage(generationLanguage)) {
+    errors.generationLanguage = 'French or English.'
   }
   return errors
 }

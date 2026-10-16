@@ -27,21 +27,25 @@ The six other primer solutions stay "coming soon" on the path.
 ## Problem statements (curated)
 
 > [!important] The one deliberate exception to "all content is generated"
-> Problem statements are written by hand, in French, and stored in the catalogue. They are not generated and not copied from the primer.
+> Problem statements are written by hand, in French and in English, and stored in the catalogue (`problemStatements: { fr, en }`). They are not generated and not copied from the primer. The one shown follows the [[Generation Language]] setting.
 
 Why: the primer's "Step 1: Outline use cases and constraints" **is** the reference answer of the functional requirements and estimations steps. Copying it, or letting a Generation paraphrase it, would hand the learner the answer. A statement says only:
 
 - the product being designed and its context (what kind of service, a similar product);
 - what to do first (scope, then estimate when estimations are active).
 
-Never: a use case beyond the product's identity, an out-of-scope item, a constraint, a number. Two to four sentences, addressed with "tu", system design jargon in English (timeline).
+Never: a use case beyond the product's identity, an out-of-scope item, a constraint, a number. Two to four sentences, addressed directly ("tu" in French, "you" in English), system design jargon in English (timeline). A new exercise (#46 to #51) is written in both languages.
 
-| Exercise | Statement |
-|---|---|
-| Pastebin | Tu conçois un service web de partage de texte comme Pastebin.com : on y dépose du texte (du code, des logs, une note) pour le partager avec d'autres personnes grâce à un lien. Bit.ly, qui raccourcit des URL, est un problème très proche. Avant de dessiner quoi que ce soit, cadre ce que le service doit faire, et ce qu'il ne fera pas. |
-| Twitter | Tu conçois le cœur d'un réseau social comme Twitter : chacun y publie des messages courts et suit d'autres personnes pour lire ce qu'elles publient. On te demande la partie timeline et la recherche. Aucun chiffre de trafic n'est donné : pose tes propres hypothèses, estime les ordres de grandeur, puis dessine. |
+| Exercise | Language | Statement |
+|---|---|---|
+| Pastebin | French | Tu conçois un service web de partage de texte comme Pastebin.com : on y dépose du texte (du code, des logs, une note) pour le partager avec d'autres personnes grâce à un lien. Bit.ly, qui raccourcit des URL, est un problème très proche. Avant de dessiner quoi que ce soit, cadre ce que le service doit faire, et ce qu'il ne fera pas. |
+| Pastebin | English | You are designing a web service for sharing text, like Pastebin.com: people drop in some text (code, logs, a note) and share it with others through a link. Bit.ly, which shortens URLs, is a very close problem. Before drawing anything, frame what the service must do, and what it will not do. |
+| Twitter | French | Tu conçois le cœur d'un réseau social comme Twitter : chacun y publie des messages courts et suit d'autres personnes pour lire ce qu'elles publient. On te demande la partie timeline et la recherche. Aucun chiffre de trafic n'est donné : pose tes propres hypothèses, estime les ordres de grandeur, puis dessine. |
+| Twitter | English | You are designing the core of a social network like Twitter: everyone posts short messages and follows other people to read what they post. You are asked for the timeline and the search. No traffic figure is given: make your own assumptions, estimate the orders of magnitude, then draw. |
 
-Guarded by `designExercises.test.ts`: 2 to 4 sentences, "tu", no digit, and no run of 4 or more consecutive words shared with the solution's use cases, constraints or Step 1 (the check is itself tested on a copied sentence).
+Guarded by `designExercises.test.ts`, for each exercise and each language: 2 to 4 sentences, direct address ("tu" / "you"), no digit, and no run of 4 or more consecutive words shared with the solution's use cases, constraints or Step 1 (the check is itself tested on a copied sentence).
+
+**Which statement is shown**: `problemStatementFor(slug, language)` in the language of the setting, read each time an exercise is opened or judged (the exercise view, and the problem statement of the step feedback, Hint and final review prompts). The French statement is also what `seedDesignExercises` stores in `design_exercises.problem_statement`, never updated: it is the fallback of an exercise the catalogue does not know (a dev fixture). Switching the language rewrites nothing, and the feedback already given stays as it was. The leak guard patterns match French and English wordings, and the statements of both languages count as text the learner was given.
 
 ## Prerequisites and completion
 

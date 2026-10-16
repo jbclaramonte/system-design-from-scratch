@@ -3,11 +3,13 @@
 // carries an answer key; the others cover the cache, "Reformulate differently", the queue and the
 // absence of any effect on the Mastery Loop.
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { generationLanguages, type GenerationLanguage } from '../../shared/generationLanguage'
 import type { QuestionType } from '../../shared/quiz'
 import { openDatabase, type Database } from '../db/driver'
 import { migrate } from '../db/migrate'
 import { migrations } from '../db/migrations'
 import { createQuiz } from '../db/repositories/assessment'
+import { updateSettings } from '../db/repositories/settings'
 import { contentCacheKey, getCachedContent } from '../db/repositories/contentCache'
 import { createNotions, createTopic } from '../db/repositories/learningContent'
 import type { CliCallOptions } from '../generation/cliRunner'
@@ -18,6 +20,7 @@ import {
   type QuestionBrief
 } from '../generation/prompts/questionClarification'
 import { GenerationService, type CliRunner } from '../generation/service'
+import { languageRules } from '../generation/prompts'
 import { createFreeAnswerGrader } from './freeAnswerGrader'
 import { localGraders } from './grading'
 import { createQuestionClarifier } from './questionClarifier'
@@ -104,13 +107,14 @@ afterEach(() => {
 })
 
 /** A quiz with one question of each type, every secret in a place the prompt must not read. */
-function seed() {
+function seed(language: GenerationLanguage = 'fr') {
   const topic = createTopic(db, { slug: 'cache', title: 'Cache', position: 0 })
   const [notion] = createNotions(db, [
     { topicId: topic.id, slug: 'cache-aside', title: SECRETS.notion }
   ])
   const created = createQuiz(db, {
     topicId: topic.id,
+    language,
     grounded: true,
     questions: [
       {
@@ -236,6 +240,7 @@ describe('the prompt input never contains an answer key (guard)', () => {
       scenario: null,
       choices: ['A', 'B'],
       topicTitle: 'Cache',
+      language: 'fr',
       // What a careless caller might spread in from a stored question.
       explanation: SECRETS.explanation,
       correct: [1],
@@ -259,7 +264,8 @@ describe('the prompt input never contains an answer key (guard)', () => {
       prompt: 'Question ?',
       scenario: null,
       choices: ['A', 'B'],
-      topicTitle: 'Cache'
+      topicTitle: 'Cache',
+      language: 'fr'
     }).prompt
 
     expect(system).toContain('simpler words')
@@ -292,7 +298,8 @@ describe('the Content Cache', () => {
     const key = contentCacheKey(
       'question_clarification',
       { questionId: question.id },
-      QUESTION_CLARIFICATION_PROMPT_VERSION
+      QUESTION_CLARIFICATION_PROMPT_VERSION,
+      'fr'
     )
     expect(cachedClarifications().map((entry) => entry.key)).toEqual([key])
     expect(getCachedContent(db, key)).toMatchObject({
@@ -434,6 +441,7 @@ describe('the Generation queue', () => {
     // The background slot (concurrency 2, one background at most) is taken by a held pre-generation.
     const hold = service.pregenerate({
       kind: 'lesson',
+      language: 'fr',
       input: { held: true },
       prompt: { version: 'held-1', system: 'held system', user: 'held' }
     })
@@ -453,5 +461,46 @@ describe('the Generation queue', () => {
     hold.cancel()
     await expect(clarifying).resolves.toMatchObject({ fromCache: false })
     await hold.result.catch(() => {})
+  })
+})
+
+describe('Generation Language', () => {
+  const languageOf = (call: CliCallOptions) =>
+    generationLanguages.find((language) => call.systemPrompt.includes(languageRules(language)))
+
+  it.each(generationLanguages)(
+    'rewords a question of a %s quiz in that language, stored under its own key',
+    async (language) => {
+      const { round, byType } = seed(language)
+      // The setting is the other language: the Round finishes in the language of its quiz.
+      updateSettings(db, { generationLanguage: language === 'fr' ? 'en' : 'fr' })
+      const question = byType('single_choice')
+
+      await quiz.clarifyQuestion(round.id, question.id)
+
+      expect(calls.filter(clarificationOf).map(languageOf)).toEqual([language])
+      const key = contentCacheKey(
+        'question_clarification',
+        { questionId: question.id },
+        QUESTION_CLARIFICATION_PROMPT_VERSION,
+        language
+      )
+      expect(cachedClarifications().map((entry) => entry.key)).toEqual([key])
+      expect(getCachedContent(db, key)).toMatchObject({ language })
+    }
+  )
+
+  it('grades and contests a free answer in the language of the quiz, whatever the setting', async () => {
+    const { round, byType } = seed('en')
+    updateSettings(db, { generationLanguage: 'fr' })
+
+    await quiz.submitFreeAnswer(round.id, {
+      questionId: byType('free_answer').id,
+      answer: { text: 'Un TTL.' }
+    })
+
+    const grading = calls.find((call) => call.systemPrompt.includes('system design examiner'))!
+    expect(languageOf(grading)).toBe('en')
+    expect(grading.prompt).toContain('Question (English):')
   })
 })

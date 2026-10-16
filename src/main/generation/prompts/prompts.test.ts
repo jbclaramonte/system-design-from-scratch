@@ -16,15 +16,15 @@ import {
   buildRemediationLessonGeneration,
   cleanExcerptMarkdown,
   diagramAnswerLeak,
-  QUIZ_DIAGRAM_RULES,
+  quizDiagramRules,
   QUIZ_PROMPT_VERSION,
-  LANGUAGE_RULES,
+  languageRules,
   findCitations,
   findNotionMarkers,
   notionMarker,
   quizRules,
   quizSchema,
-  UNGROUNDED_RULES,
+  ungroundedRules,
   unknownCitations,
   type GroundingInput,
   type QuizContent,
@@ -40,8 +40,8 @@ import {
 import { buildFreeAnswerGradingGeneration } from './freeAnswerGrading'
 import { buildProtocolStepLessonGeneration } from './protocolStepLesson'
 import { checkDiagramSource } from '../../../shared/diagramSource'
-import { findMermaidBlocks, repairDiagrams } from '../diagrams'
-import { DIAGRAM_RULES, diagramPlacementRules } from './common'
+import { findMermaidBlocks, repairDiagramsFor } from '../diagrams'
+import { diagramPlacementRules, diagramRules } from './common'
 
 const corpus = fixtureCorpus()
 const cache: TopicBrief = { slug: 'cache', title: 'Cache', inFoundationsModule: false }
@@ -102,7 +102,7 @@ describe('citations and notion markers', () => {
 
 describe('lesson prompt', () => {
   it('is grounded on the topic excerpts, in French, with citation and structure rules', () => {
-    const build = buildLessonGeneration(cache, cacheNotions, grounding)
+    const build = buildLessonGeneration(cache, cacheNotions, grounding, 'fr')
 
     expect(build.kind).toBe('lesson')
     expect(build.schema).toBeUndefined()
@@ -120,7 +120,7 @@ describe('lesson prompt', () => {
   })
 
   it('has an ungrounded Foundations Module variant without excerpts or citations', () => {
-    const build = buildLessonGeneration(http, cacheNotions, ungrounded)
+    const build = buildLessonGeneration(http, cacheNotions, ungrounded, 'fr')
 
     expect(build.groundedSourceSections).toEqual([])
     expect(build.prompt.user).toContain('Foundations Module')
@@ -129,9 +129,14 @@ describe('lesson prompt', () => {
   })
 
   it('changes its cache input with the notions and the corpus version', () => {
-    const a = buildLessonGeneration(cache, cacheNotions, grounding).input
-    const b = buildLessonGeneration(cache, cacheNotions.slice(1), grounding).input
-    const c = buildLessonGeneration(cache, cacheNotions, { ...grounding, corpusVersion: 'v2' })
+    const a = buildLessonGeneration(cache, cacheNotions, grounding, 'fr').input
+    const b = buildLessonGeneration(cache, cacheNotions.slice(1), grounding, 'fr').input
+    const c = buildLessonGeneration(
+      cache,
+      cacheNotions,
+      { ...grounding, corpusVersion: 'v2' },
+      'fr'
+    )
     expect(a).not.toEqual(b)
     expect(a).not.toEqual(c.input)
   })
@@ -147,6 +152,7 @@ describe('remediation lesson prompt', () => {
         excerpts: corpus.findExcerpts({ sectionIds: notion.sourceSections }),
         corpusVersion: 'sha'
       },
+      'fr',
       { angle: 'analogy', missedQuestionPrompts: ['Que fait l’application sur un cache miss ?'] }
     )
 
@@ -161,7 +167,7 @@ describe('remediation lesson prompt', () => {
 })
 
 describe('notion outline', () => {
-  const build = buildNotionOutlineGeneration(cache, grounding)
+  const build = buildNotionOutlineGeneration(cache, grounding, 'fr')
 
   it('is seeded by the sub-topics and accepts a covering outline', () => {
     expect(build.kind).toBe('notion_outline')
@@ -180,7 +186,7 @@ describe('notion outline', () => {
   })
 
   it('is ungrounded in the Foundations Module', () => {
-    const foundations = buildNotionOutlineGeneration(http, ungrounded)
+    const foundations = buildNotionOutlineGeneration(http, ungrounded, 'fr')
     expect(foundations.groundedSourceSections).toEqual([])
     expect(foundations.prompt.user).toContain('Foundations Module')
     const notions = cacheOutline.notions.map((notion) => ({ ...notion, sourceSections: [] }))
@@ -191,19 +197,23 @@ describe('notion outline', () => {
   it('is steered by the Foundations Module scope when given', () => {
     const scoped = buildNotionOutlineGeneration(
       { ...http, scope: 'request and response', leftToPrimer: 'REST versus RPC' },
-      ungrounded
+      ungrounded,
+      'fr'
     )
     expect(scoped.prompt.user).toContain('Scope of this topic: request and response')
     expect(scoped.prompt.user).toContain('Leave out (taught later in grounded topics')
     expect(scoped.prompt.user).toContain('REST versus RPC')
     expect(scoped.input).toMatchObject({ scope: 'request and response' })
-    expect(buildNotionOutlineGeneration(http, ungrounded).prompt.user).not.toContain('Scope of')
+    expect(buildNotionOutlineGeneration(http, ungrounded, 'fr').prompt.user).not.toContain(
+      'Scope of'
+    )
   })
 
   it('keeps a grounded Foundations Module topic on its excerpts and scope', () => {
     const grounded = buildNotionOutlineGeneration(
       { ...http, scope: 'cache basics', leftToPrimer: 'eviction' },
-      grounding
+      grounding,
+      'fr'
     )
     expect(grounded.groundedSourceSections).toEqual(CACHE_SECTIONS)
     expect(grounded.prompt.user).toContain('Foundations Module')
@@ -243,7 +253,7 @@ describe('quiz prompt and schema', () => {
   })
 
   it('asks for the four types, notion tags and answer keys, in French', () => {
-    const build = buildQuizGeneration(cache, cacheNotions, grounding)
+    const build = buildQuizGeneration(cache, cacheNotions, grounding, 'fr')
 
     expect(build.kind).toBe('quiz')
     expect(build.prompt.user).toContain('exactly 6 question(s)')
@@ -371,7 +381,7 @@ describe('quiz prompt and schema', () => {
       errorOf({ questions: [...ok.questions.slice(0, 2), single('3', ['write-through'])] }, options)
     ).not.toBeNull()
 
-    const build = buildQuizGeneration(cache, cacheNotions, grounding, {
+    const build = buildQuizGeneration(cache, cacheNotions, grounding, 'fr', {
       ...options,
       avoidPrompts: ['Ancienne question ?']
     })
@@ -386,7 +396,7 @@ describe('quiz prompt and schema', () => {
   })
 
   it('has an ungrounded variant whose questions cite nothing', () => {
-    const build = buildQuizGeneration(http, cacheNotions, ungrounded)
+    const build = buildQuizGeneration(http, cacheNotions, ungrounded, 'fr')
     expect(build.groundedSourceSections).toEqual([])
     expect(build.schema!.safeParse(validQuiz()).success).toBe(false)
     const quiz = mutate((q) => q.questions.forEach((question) => (question.sourceSections = [])))
@@ -394,12 +404,12 @@ describe('quiz prompt and schema', () => {
   })
 
   it('keeps ungrounded answer keys conservative, and only ungrounded ones', () => {
-    const ungroundedQuiz = buildQuizGeneration(http, cacheNotions, ungrounded).prompt.user
-    const groundedQuiz = buildQuizGeneration(cache, cacheNotions, grounding).prompt.user
-    expect(ungroundedQuiz).toContain(UNGROUNDED_RULES)
+    const ungroundedQuiz = buildQuizGeneration(http, cacheNotions, ungrounded, 'fr').prompt.user
+    const groundedQuiz = buildQuizGeneration(cache, cacheNotions, grounding, 'fr').prompt.user
+    expect(ungroundedQuiz).toContain(ungroundedRules('fr'))
     expect(ungroundedQuiz).toContain('Never make a question depend on a precise measured number')
     expect(groundedQuiz).not.toContain('Answer keys without excerpts')
-    expect(groundedQuiz).not.toContain(UNGROUNDED_RULES)
+    expect(groundedQuiz).not.toContain(ungroundedRules('fr'))
   })
 
   describe('question diagrams', () => {
@@ -465,17 +475,17 @@ describe('quiz prompt and schema', () => {
     })
 
     it('asks for diagrams on architecture and flow scenarios, without the answer', () => {
-      const build = buildQuizGeneration(cache, cacheNotions, grounding)
+      const build = buildQuizGeneration(cache, cacheNotions, grounding, 'fr')
       expect(QUIZ_PROMPT_VERSION).toBe('quiz-7')
       expect(build.prompt.version).toBe('quiz-7')
-      expect(build.prompt.user).toContain(QUIZ_DIAGRAM_RULES)
-      expect(QUIZ_DIAGRAM_RULES).toContain('involves components')
-      expect(QUIZ_DIAGRAM_RULES).toContain('not its answer')
-      expect(QUIZ_DIAGRAM_RULES).toContain('Answerable from the lesson')
-      expect(QUIZ_DIAGRAM_RULES).toContain('at most 8 nodes')
-      expect(QUIZ_DIAGRAM_RULES).toContain('never the flow of one of the choices')
+      expect(build.prompt.user).toContain(quizDiagramRules('fr'))
+      expect(quizDiagramRules('fr')).toContain('involves components')
+      expect(quizDiagramRules('fr')).toContain('not its answer')
+      expect(quizDiagramRules('fr')).toContain('Answerable from the lesson')
+      expect(quizDiagramRules('fr')).toContain('at most 8 nodes')
+      expect(quizDiagramRules('fr')).toContain('never the flow of one of the choices')
       // A free-answer-only quiz gets no diagram rules.
-      const free = buildQuizGeneration(cache, cacheNotions, grounding, {
+      const free = buildQuizGeneration(cache, cacheNotions, grounding, 'fr', {
         count: 1,
         types: ['free_answer']
       })
@@ -484,16 +494,18 @@ describe('quiz prompt and schema', () => {
   })
 
   it('states that every notion must be tagged when there is room, as the schema checks', () => {
-    expect(buildQuizGeneration(cache, cacheNotions, grounding).prompt.user).toContain(
+    expect(buildQuizGeneration(cache, cacheNotions, grounding, 'fr').prompt.user).toContain(
       'Tag every notion listed on at least one question (all 4, this is checked)'
     )
-    expect(buildQuizGeneration(cache, cacheNotions, grounding, { count: 2 }).prompt.user).toContain(
-      'at least 2 different notions'
-    )
+    expect(
+      buildQuizGeneration(cache, cacheNotions, grounding, 'fr', { count: 2 }).prompt.user
+    ).toContain('at least 2 different notions')
   })
 
   it('includes the lesson by hash in the cache input', () => {
-    const build = buildQuizGeneration(cache, cacheNotions, grounding, { lessonMarkdown: '# Leçon' })
+    const build = buildQuizGeneration(cache, cacheNotions, grounding, 'fr', {
+      lessonMarkdown: '# Leçon'
+    })
     expect(build.prompt.user).toContain('<lesson>\n# Leçon\n</lesson>')
     expect((build.input as { lesson: string }).lesson).toMatch(/^[0-9a-f]{64}$/)
   })
@@ -507,21 +519,23 @@ describe('language rule', () => {
   }
   const text = { type: 'text' as const, text: 'Un serveur et une base de données.' }
   const builds = {
-    notionOutline: buildNotionOutlineGeneration(cache, grounding),
-    lesson: buildLessonGeneration(cache, cacheNotions, grounding),
-    ungroundedLesson: buildLessonGeneration(http, cacheNotions, ungrounded),
-    remediationLesson: buildRemediationLessonGeneration(cache, cacheNotions[0]!, grounding, {
+    notionOutline: buildNotionOutlineGeneration(cache, grounding, 'fr'),
+    lesson: buildLessonGeneration(cache, cacheNotions, grounding, 'fr'),
+    ungroundedLesson: buildLessonGeneration(http, cacheNotions, ungrounded, 'fr'),
+    remediationLesson: buildRemediationLessonGeneration(cache, cacheNotions[0]!, grounding, 'fr', {
       angle: 'analogy'
     }),
-    quiz: buildQuizGeneration(cache, cacheNotions, grounding),
-    ungroundedQuiz: buildQuizGeneration(http, cacheNotions, ungrounded),
+    quiz: buildQuizGeneration(cache, cacheNotions, grounding, 'fr'),
+    ungroundedQuiz: buildQuizGeneration(http, cacheNotions, ungrounded, 'fr'),
     freeAnswerGrading: buildFreeAnswerGradingGeneration({
+      language: 'fr',
       question: { prompt: 'Pourquoi un TTL ?', expectedPoints: ['Expiration.'], modelAnswer: 'M.' },
       notions: [{ slug: 'cache-invalidation', title: 'Invalidation', description: null }],
       answer: 'Pour expirer.'
     }),
-    protocolStepLesson: buildProtocolStepLessonGeneration('estimations', grounding),
+    protocolStepLesson: buildProtocolStepLessonGeneration('estimations', grounding, 'fr'),
     designStepFeedback: buildStepFeedbackGeneration({
+      language: 'fr',
       exercise,
       step: 'functional_requirements',
       submission: text,
@@ -529,6 +543,7 @@ describe('language rule', () => {
       attempt: 1
     }),
     designHint: buildHintGeneration({
+      language: 'fr',
       exercise,
       step: 'functional_requirements',
       level: 1,
@@ -537,36 +552,39 @@ describe('language rule', () => {
       previousHints: []
     }),
     designFinalReview: buildFinalReviewGeneration({
+      language: 'fr',
       exercise,
       steps: [{ step: 'functional_requirements', submission: text }]
     })
   }
 
   it.each(Object.entries(builds))('is in the %s prompt', (_, build) => {
-    expect(`${build.prompt.system}\n${build.prompt.user}`).toContain(LANGUAGE_RULES)
+    expect(`${build.prompt.system}\n${build.prompt.user}`).toContain(languageRules('fr'))
   })
 
   it('keeps jargon in English and everyday words in French, with examples', () => {
-    expect(LANGUAGE_RULES).toMatch(/load balancer, sharding, cache/)
-    expect(LANGUAGE_RULES).toMatch(/serveur, client, requête, réponse, mémoire, disque, réseau/)
-    expect(LANGUAGE_RULES).toContain('Bad: "le server renvoie une response"')
+    expect(languageRules('fr')).toMatch(/load balancer, sharding, cache/)
+    expect(languageRules('fr')).toMatch(
+      /serveur, client, requête, réponse, mémoire, disque, réseau/
+    )
+    expect(languageRules('fr')).toContain('Bad: "le server renvoie une response"')
   })
 })
 
 describe('diagram rules', () => {
   const builds = {
-    lesson: buildLessonGeneration(cache, cacheNotions, grounding),
-    ungroundedLesson: buildLessonGeneration(http, cacheNotions, ungrounded),
-    remediationLesson: buildRemediationLessonGeneration(cache, cacheNotions[0]!, grounding, {
+    lesson: buildLessonGeneration(cache, cacheNotions, grounding, 'fr'),
+    ungroundedLesson: buildLessonGeneration(http, cacheNotions, ungrounded, 'fr'),
+    remediationLesson: buildRemediationLessonGeneration(cache, cacheNotions[0]!, grounding, 'fr', {
       angle: 'concrete_example'
     }),
-    protocolStepLesson: buildProtocolStepLessonGeneration('high_level_design', grounding)
+    protocolStepLesson: buildProtocolStepLessonGeneration('high_level_design', grounding, 'fr')
   }
 
   it.each(Object.entries(builds))('are in the %s prompt, with the repair hook', (_, build) => {
-    expect(build.prompt.system).toContain(DIAGRAM_RULES)
+    expect(build.prompt.system).toContain(diagramRules('fr'))
     expect(build.prompt.user).toMatch(/Diagram placement: include .* Mermaid diagram/)
-    expect(build.finalize).toBe(repairDiagrams)
+    expect(build.finalize).toBe(repairDiagramsFor('fr'))
   })
 
   it('ask for 1 to 3 diagrams per lesson, at most 1 per remediation, at most 2 per step', () => {
@@ -579,18 +597,18 @@ describe('diagram rules', () => {
   })
 
   it('name the supported types, the forbidden content and the grounding', () => {
-    expect(DIAGRAM_RULES).toContain('```mermaid')
-    expect(DIAGRAM_RULES).toMatch(/flowchart .*sequenceDiagram .*stateDiagram-v2 .*erDiagram/s)
-    expect(DIAGRAM_RULES).toMatch(/no HTML tags, no <br>/)
-    expect(DIAGRAM_RULES).toMatch(/no click/)
-    expect(DIAGRAM_RULES).toMatch(/%%\{init\}%%/)
-    expect(DIAGRAM_RULES).toMatch(/no style, classDef, class or linkStyle/)
-    expect(DIAGRAM_RULES).toMatch(/at most about 12 nodes/)
-    expect(DIAGRAM_RULES).toMatch(/same grounding rules as the text/)
+    expect(diagramRules('fr')).toContain('```mermaid')
+    expect(diagramRules('fr')).toMatch(/flowchart .*sequenceDiagram .*stateDiagram-v2 .*erDiagram/s)
+    expect(diagramRules('fr')).toMatch(/no HTML tags, no <br>/)
+    expect(diagramRules('fr')).toMatch(/no click/)
+    expect(diagramRules('fr')).toMatch(/%%\{init\}%%/)
+    expect(diagramRules('fr')).toMatch(/no style, classDef, class or linkStyle/)
+    expect(diagramRules('fr')).toMatch(/at most about 12 nodes/)
+    expect(diagramRules('fr')).toMatch(/same grounding rules as the text/)
   })
 
   it('give examples that pass the renderer checks', () => {
-    const examples = findMermaidBlocks(DIAGRAM_RULES)
+    const examples = findMermaidBlocks(diagramRules('fr'))
     expect(examples.map((block) => checkDiagramSource(block.source))).toEqual([
       { ok: true, type: 'flowchart' },
       { ok: true, type: 'sequenceDiagram' }
@@ -598,8 +616,8 @@ describe('diagram rules', () => {
   })
 
   it('leave the other prompts alone', () => {
-    const outline = buildNotionOutlineGeneration(cache, grounding)
-    expect(outline.prompt.system).not.toContain(DIAGRAM_RULES)
+    const outline = buildNotionOutlineGeneration(cache, grounding, 'fr')
+    expect(outline.prompt.system).not.toContain(diagramRules('fr'))
     expect(outline.finalize).toBeUndefined()
   })
 })

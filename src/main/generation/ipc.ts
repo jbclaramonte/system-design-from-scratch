@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { generationKinds } from '../../shared/generation'
+import { DEFAULT_GENERATION_LANGUAGE } from '../../shared/generationLanguage'
 import type { GenerationCancelRequest, GenerationStartRequest } from '../../shared/ipc'
 import { sendEvent, type IpcEventTarget } from '../ipc/sendEvent'
 import { buildPlaceholderGeneration } from './placeholderPrompts'
@@ -46,6 +47,8 @@ export function createGenerationIpc(service: GenerationService): GenerationIpc {
       // PLACEHOLDER (issue #7): the real prompt builders and schemas replace this call.
       const run = service.generate({
         kind,
+        // Dev panel only: free-form input, always the default language.
+        language: DEFAULT_GENERATION_LANGUAGE,
         input,
         ...buildPlaceholderGeneration(kind, input),
         priority,

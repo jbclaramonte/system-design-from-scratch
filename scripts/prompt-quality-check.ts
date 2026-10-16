@@ -53,6 +53,9 @@ const pipelines = (await load(
 const prompts = (await load(
   'generation/prompts/index.ts'
 )) as typeof import('../src/main/generation/prompts/index.ts')
+const { languageProfile } = (await load(
+  'generation/languageProfile.ts'
+)) as typeof import('../src/main/generation/languageProfile.ts')
 
 const args = process.argv.slice(2)
 const positional = args.filter((arg) => !arg.startsWith('--'))
@@ -131,7 +134,7 @@ try {
   const checks = [
     `Lesson citations: ${prompts.findCitations(lesson).length} distinct ids, unknown: ${JSON.stringify(prompts.unknownCitations(lesson, lessonSources))}`,
     `Lesson notion markers in outline order: ${JSON.stringify(markers) === JSON.stringify(notions.map((n) => n.slug))} (${markers.join(', ')})`,
-    `Lesson recap section: ${lesson.includes(`## ${prompts.RECAP_HEADING}`)}`,
+    `Lesson recap section: ${lesson.includes(`## ${languageProfile('fr').lesson.recapHeading}`)}`,
     `Lesson words: ${lesson.split(/\s+/).length}`,
     `Quiz types: ${quiz.questions.map((q) => q.type).join(', ')}`,
     `Quiz notions covered: ${[...new Set(quiz.questions.flatMap((q) => q.notions))].length}/${notions.length}`,

@@ -1,5 +1,11 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import {
+  generationLanguageLabels,
+  generationLanguages,
+  isGenerationLanguage,
+  type GenerationLanguage
+} from '../../../shared/generationLanguage'
+import {
   settingsErrors,
   settingsLimits,
   type AppSettings,
@@ -19,6 +25,7 @@ interface Draft {
   claudeCliPath: string
   /** Empty = inherit the environment. */
   claudeConfigDir: string
+  generationLanguage: GenerationLanguage
 }
 
 const toDraft = (settings: AppSettings): Draft => ({
@@ -26,7 +33,8 @@ const toDraft = (settings: AppSettings): Draft => ({
   roundLimit: String(settings.roundLimit),
   questionsPerQuiz: settings.questionsPerQuiz === null ? '' : String(settings.questionsPerQuiz),
   claudeCliPath: settings.claudeCliPath ?? '',
-  claudeConfigDir: settings.claudeConfigDir ?? ''
+  claudeConfigDir: settings.claudeConfigDir ?? '',
+  generationLanguage: settings.generationLanguage
 })
 
 const fromDraft = (draft: Draft): AppSettings => ({
@@ -34,12 +42,13 @@ const fromDraft = (draft: Draft): AppSettings => ({
   roundLimit: Number(draft.roundLimit),
   questionsPerQuiz: draft.questionsPerQuiz.trim() ? Number(draft.questionsPerQuiz) : null,
   claudeCliPath: draft.claudeCliPath.trim() || null,
-  claudeConfigDir: draft.claudeConfigDir.trim() || null
+  claudeConfigDir: draft.claudeConfigDir.trim() || null,
+  generationLanguage: draft.generationLanguage
 })
 
 /**
- * Mastery Threshold, Round Limit, questions per quiz, the Claude Code CLI path and the Claude
- * config directory (profile).
+ * Course language (Generation Language), Mastery Threshold, Round Limit, questions per quiz, the
+ * Claude Code CLI path and the Claude config directory (profile).
  */
 export function SettingsScreen({ onClose }: { onClose: () => void }) {
   const [draft, setDraft] = useState<Draft | null>(null)
@@ -65,7 +74,7 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
   const values = fromDraft(draft)
   const errors = settingsErrors(values)
   const valid = Object.keys(errors).length === 0
-  const edit = (field: keyof Draft) => (value: string) => {
+  const edit = (field: Exclude<keyof Draft, 'generationLanguage'>) => (value: string) => {
     setStatus(null)
     setDraft({ ...draft, [field]: value })
   }
@@ -188,52 +197,89 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
             </div>
           </section>
 
-          <section className="card settings-group" aria-labelledby="settings-mastery-title">
-            <h2 id="settings-mastery-title">Mastery Loop</h2>
-            <p className="settings-group-intro">
-              When a topic counts as mastered, and how many rounds a learner may fail.
-            </p>
-            <Field
-              id="mastery-threshold"
-              label="Mastery Threshold (%)"
-              help="Minimum quiz score to master a topic. Applies to the rounds completed from now on."
-              value={draft.masteryThreshold}
-              onChange={edit('masteryThreshold')}
-              error={errors.masteryThreshold}
-              type="number"
-              min={settingsLimits.masteryThreshold.min}
-              max={settingsLimits.masteryThreshold.max}
-              mono
-              short
-            />
-            <Field
-              id="round-limit"
-              label="Round Limit"
-              help="Rounds without reaching the threshold before the app offers another angle or a skip."
-              value={draft.roundLimit}
-              onChange={edit('roundLimit')}
-              error={errors.roundLimit}
-              type="number"
-              min={settingsLimits.roundLimit.min}
-              max={settingsLimits.roundLimit.max}
-              mono
-              short
-            />
-            <Field
-              id="questions-per-quiz"
-              label="Questions per quiz"
-              help="Empty: automatic, 6 or one per targeted notion if there are more."
-              value={draft.questionsPerQuiz}
-              onChange={edit('questionsPerQuiz')}
-              error={errors.questionsPerQuiz}
-              type="number"
-              min={settingsLimits.questionsPerQuiz.min}
-              max={settingsLimits.questionsPerQuiz.max}
-              placeholder="Automatic"
-              mono
-              short
-            />
-          </section>
+          <div className="settings-column">
+            <section className="card settings-group" aria-labelledby="settings-course-title">
+              <h2 id="settings-course-title">Course</h2>
+              <p className="settings-group-intro">
+                The language of the course content the app generates for you. The app itself stays
+                in English.
+              </p>
+              <div className="settings-field">
+                <label htmlFor="generation-language">Course language</label>
+                <select
+                  id="generation-language"
+                  data-testid="settings-generation-language"
+                  className="settings-short"
+                  value={draft.generationLanguage}
+                  onChange={(event) => {
+                    const language = event.target.value
+                    if (!isGenerationLanguage(language)) return
+                    setStatus(null)
+                    setDraft({ ...draft, generationLanguage: language })
+                  }}
+                  aria-describedby="generation-language-help"
+                >
+                  {generationLanguages.map((language) => (
+                    <option key={language} value={language}>
+                      {generationLanguageLabels[language]}
+                    </option>
+                  ))}
+                </select>
+                <small id="generation-language-help" className="settings-help">
+                  Applies to the next generation: Lessons, quizzes, feedback and Design Exercise
+                  statements. Content already generated is kept in its language and your mastery is
+                  unchanged; a Round in progress finishes in the language of its quiz.
+                </small>
+              </div>
+            </section>
+
+            <section className="card settings-group" aria-labelledby="settings-mastery-title">
+              <h2 id="settings-mastery-title">Mastery Loop</h2>
+              <p className="settings-group-intro">
+                When a topic counts as mastered, and how many rounds a learner may fail.
+              </p>
+              <Field
+                id="mastery-threshold"
+                label="Mastery Threshold (%)"
+                help="Minimum quiz score to master a topic. Applies to the rounds completed from now on."
+                value={draft.masteryThreshold}
+                onChange={edit('masteryThreshold')}
+                error={errors.masteryThreshold}
+                type="number"
+                min={settingsLimits.masteryThreshold.min}
+                max={settingsLimits.masteryThreshold.max}
+                mono
+                short
+              />
+              <Field
+                id="round-limit"
+                label="Round Limit"
+                help="Rounds without reaching the threshold before the app offers another angle or a skip."
+                value={draft.roundLimit}
+                onChange={edit('roundLimit')}
+                error={errors.roundLimit}
+                type="number"
+                min={settingsLimits.roundLimit.min}
+                max={settingsLimits.roundLimit.max}
+                mono
+                short
+              />
+              <Field
+                id="questions-per-quiz"
+                label="Questions per quiz"
+                help="Empty: automatic, 6 or one per targeted notion if there are more."
+                value={draft.questionsPerQuiz}
+                onChange={edit('questionsPerQuiz')}
+                error={errors.questionsPerQuiz}
+                type="number"
+                min={settingsLimits.questionsPerQuiz.min}
+                max={settingsLimits.questionsPerQuiz.max}
+                placeholder="Automatic"
+                mono
+                short
+              />
+            </section>
+          </div>
         </div>
         {error && (
           <p role="alert" className="notice notice-error">

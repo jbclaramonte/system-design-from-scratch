@@ -5,7 +5,7 @@ tags: [concept, learning-content]
 
 # Notion Outline
 
-The ordered list of [[Notion]]s a [[Topic]] is split into, each with a slug, a French title, a one-line description and the [[Source Corpus]] sections it comes from. Generated once per topic by a [[Generation]] seeded by the topic's sub-topics (ungrounded in the [[Foundations Module]]), then fixed: question tags and [[Attempt]]s reference its notions, so it is never regenerated silently. It drives the sections of the [[Lesson]] and the notion tags of the [[Quiz]].
+The ordered list of [[Notion]]s a [[Topic]] is split into, each with a slug, a title in the [[Generation Language]] of the first lesson, a one-line description and the [[Source Corpus]] sections it comes from. Generated once per topic by a [[Generation]] seeded by the topic's sub-topics (ungrounded in the [[Foundations Module]]), then fixed: question tags and [[Attempt]]s reference its notions, so it is never regenerated silently. It drives the sections of the [[Lesson]] and the notion tags of the [[Quiz]].
 
 ## Related
 

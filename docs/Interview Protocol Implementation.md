@@ -82,12 +82,12 @@ Migration 4 (`interview-protocol`), see [[Data Model]]:
 - `protocol_step_drafts`: the editor text of a text step, or the notes of a canvas step, saved 600 ms after typing stops.
 - `protocol_step_encounters`: one row per step whose Protocol Step Lesson the learner read (in any exercise), with the exercise where it happened.
 - `design_feedback` (existing) holds the step feedback (`{ submissionId, promptVersion, feedback }`), each Hint (`{ level, promptVersion, hint }`, the Hint log: the next level is the count + 1) and each final review (`{ submissionIds, promptVersion, review }`). `grounded` is true when the exercise has a Reference Solution.
-- `design_exercises.problem_statement`: what the learner is asked to design (null: the Reference Solution title). Curated French text for the catalogued exercises, seeded at startup (see [[Design Exercises#Problem statements (curated)]]).
+- `design_exercises.problem_statement`: what the learner is asked to design (null: the Reference Solution title). Curated text for the catalogued exercises, in French and English (the one shown follows the [[Generation Language]]; the stored one is French), seeded at startup (see [[Design Exercises#Problem statements (curated)]]).
 - `content_cache.kind` accepts `protocol_step_lesson`.
 
 ## Generations
 
-Prompts in `src/main/generation/prompts/designFeedback.ts` and `protocolStepLesson.ts`. Rules shared with [[Prompts]]: French output addressing the learner as "tu", system design jargon in English and everyday words in French (`LANGUAGE_RULES`), beginner audience.
+Prompts in `src/main/generation/prompts/designFeedback.ts` and `protocolStepLesson.ts`. Rules shared with [[Prompts]]: output in the [[Generation Language]] (French addressing the learner as "tu" with system design jargon in English and everyday words in French, or English: `languageRules`), beginner audience. The language is the setting at the time of the call; the prompts say the learner may write in either language and the feedback stays in the Generation Language. The section prefixes of the final review ("Cas d'usage :", ... / "Use cases:", ...) come from the language profile.
 
 | Generation | Kind | Cached | Output | Timeout |
 |---|---|---|---|---|

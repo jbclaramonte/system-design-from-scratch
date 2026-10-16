@@ -74,6 +74,7 @@ describe('fenceUntrusted', () => {
 describe('step feedback prompt', () => {
   it('fences the submission last and keeps the Reference Solution hidden', () => {
     const build = buildStepFeedbackGeneration({
+      language: 'fr',
       exercise,
       step: 'functional_requirements',
       submission: { type: 'text', text: INJECTION },
@@ -100,15 +101,16 @@ describe('step feedback prompt', () => {
     expect(build.groundedSourceSections).toEqual([])
   })
 
-  it('asks for categories of missing content, never the reference items (version 4)', () => {
+  it('asks for categories of missing content, never the reference items (version 5)', () => {
     const { prompt } = buildStepFeedbackGeneration({
+      language: 'fr',
       exercise,
       step: 'functional_requirements',
       submission: { type: 'text', text: 'x' },
       previousSteps: [],
       attempt: 1
     })
-    expect(prompt.version).toBe('design-step-feedback-4')
+    expect(prompt.version).toBe('design-step-feedback-5')
     expect(prompt.system).toContain('Point at the CATEGORY of what is missing only')
     expect(prompt.system).toMatch(/not even after "par exemple"/)
     expect(prompt.system).toMatch(/What the learner did write may be confirmed/)
@@ -117,6 +119,7 @@ describe('step feedback prompt', () => {
   it('names the steps of the exercise so the inactive ones are never asked for', () => {
     const build = (activeSteps?: ExerciseBrief['activeSteps']) =>
       buildStepFeedbackGeneration({
+        language: 'fr',
         exercise: { ...exercise, activeSteps },
         step: 'functional_requirements',
         submission: { type: 'text', text: 'x' },
@@ -131,6 +134,7 @@ describe('step feedback prompt', () => {
 
   it('sends a canvas step as description, compact graph, notes and PNG', () => {
     const build = buildStepFeedbackGeneration({
+      language: 'fr',
       exercise,
       step: 'high_level_design',
       submission: { type: 'canvas', graph, description: 'Client -> DB', notes: 'my notes' },
@@ -154,6 +158,7 @@ describe('step feedback prompt', () => {
 
   it('says when there is no Reference Solution', () => {
     const { prompt } = buildStepFeedbackGeneration({
+      language: 'fr',
       exercise: { ...exercise, referenceSolution: null },
       step: 'api',
       submission: { type: 'text', text: 'GET /x' },
@@ -165,6 +170,7 @@ describe('step feedback prompt', () => {
 
   it('caps the Reference Solution', () => {
     const { prompt } = buildStepFeedbackGeneration({
+      language: 'fr',
       exercise: { ...exercise, referenceSolution: 'x'.repeat(REFERENCE_SOLUTION_MAX_CHARS + 500) },
       step: 'api',
       submission: { type: 'text', text: 'GET /x' },
@@ -221,6 +227,7 @@ describe('hint prompt', () => {
   it('follows the level and never reveals the Reference Solution', () => {
     const levels = ([1, 2, 3] as const).map((level) =>
       buildHintGeneration({
+        language: 'fr',
         exercise,
         step: 'functional_requirements',
         level,
@@ -248,6 +255,7 @@ describe('hint prompt', () => {
 describe('final review prompt', () => {
   it('compares every step with the Reference Solution', () => {
     const build = buildFinalReviewGeneration({
+      language: 'fr',
       exercise,
       steps: [
         { step: 'functional_requirements', submission: { type: 'text', text: INJECTION } },
@@ -296,10 +304,14 @@ describe('Protocol Step Lesson prompt', () => {
     expect(excerpts.map((e) => e.sectionId)).toEqual(
       PROTOCOL_STEP_LESSON_SECTIONS.estimations.filter((id) => !id.startsWith('appendix/latency'))
     )
-    const build = buildProtocolStepLessonGeneration('estimations', {
-      excerpts,
-      corpusVersion: 'abc'
-    })
+    const build = buildProtocolStepLessonGeneration(
+      'estimations',
+      {
+        excerpts,
+        corpusVersion: 'abc'
+      },
+      'fr'
+    )
     expect(build.kind).toBe('protocol_step_lesson')
     expect(build.prompt.version).toBe(PROTOCOL_STEP_LESSON_PROMPT_VERSION)
     expect(build.groundedSourceSections).toEqual(excerpts.map((e) => e.sectionId))

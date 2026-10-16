@@ -1,0 +1,162 @@
+{
+  "lesson-grounded": {
+    "version": "lesson-4",
+    "sha256": "d23b46e93613bc2f79639f3ecbeba32f2884ab0bf1b9786368aeaa7bf468cbba"
+  },
+  "lesson-ungrounded": {
+    "version": "lesson-4",
+    "sha256": "836660a76b2f2e62d2f32630c7dfe22b04fbec6aba56ff1ee698f2fc5f65a791"
+  },
+  "remediation-concrete_example": {
+    "version": "remediation-lesson-5",
+    "sha256": "d55ef3b44077772b27d69b8c821e045e12673c59eba39113bd4adc100b8f1c5e"
+  },
+  "remediation-analogy": {
+    "version": "remediation-lesson-5",
+    "sha256": "48f8dcfc2cbb2e91922503d3d3ae71a77a1cb48539ced46b0d00045b5fac9e6d"
+  },
+  "remediation-contrast": {
+    "version": "remediation-lesson-5",
+    "sha256": "8654014e22f02f34738f3728a9efd7ce6efb8c985059b838d0cdfcda8fcc2d3d"
+  },
+  "remediation-guided_questions": {
+    "version": "remediation-lesson-5",
+    "sha256": "324bc197748fb7496b6c5d2c80fc81df0a1cf37672d3242f94953b02f7c31944"
+  },
+  "remediation-ungrounded": {
+    "version": "remediation-lesson-5",
+    "sha256": "f5b32e9efc3bb72deaacb39028658fedebae814a871576eb83fc41fdef9840b1"
+  },
+  "quiz-grounded": {
+    "version": "quiz-7",
+    "sha256": "0a9dc1bf1e6021b80498a4491798cac255c36afa5b682f7f1a3ac13b9ee3e3f0"
+  },
+  "quiz-ungrounded": {
+    "version": "quiz-7",
+    "sha256": "5ffc8bf86418707c1e0fabe0d85b49f31d2379582a8681d6d0c6369ac57a077c"
+  },
+  "quiz-targeted": {
+    "version": "quiz-7",
+    "sha256": "374098f3419f8b93542b63b5ef0995d8d975d2e65cf21c0ca52c54a6dc29972d"
+  },
+  "quiz-replaces": {
+    "version": "quiz-7",
+    "sha256": "243f8403d5f846b2a17854e6d76212ed8b0e445f79b09d9beb39a4f051e39d40"
+  },
+  "quiz-types": {
+    "version": "quiz-7",
+    "sha256": "a3670de2623a8eb03ef5ad3b5c90092ff3ee1c7aa4a16b0a91a2bda5dbd5d165"
+  },
+  "outline-grounded": {
+    "version": "notion-outline-4",
+    "sha256": "b78ee79114afdbcb736b8cf1e6eb6d27afe331e27a7238a6b9252e6cac6414c9"
+  },
+  "outline-ungrounded": {
+    "version": "notion-outline-4",
+    "sha256": "77ff31bf01bab54920276934e93ce232e7c8fa8f934b83c7df6b482c0851092f"
+  },
+  "free-answer": {
+    "version": "free-answer-grading-3",
+    "sha256": "7f668d249d9e065d5fe03b8f60c16e837e4aad336e098847a03cd7d4fa42ff0e"
+  },
+  "free-answer-contest": {
+    "version": "free-answer-grading-3",
+    "sha256": "23f5e7ee2eb8f715f50904c9b65551ee151c3e89b47b3da6fc605fc231faa812"
+  },
+  "protocol-step-functional_requirements": {
+    "version": "protocol-step-lesson-3",
+    "sha256": "3db39f96564251a4b31bc28f9e14cd7f0b5c5832e202ce3b169abfcd3ab7cdaf"
+  },
+  "protocol-step-non_functional_requirements": {
+    "version": "protocol-step-lesson-3",
+    "sha256": "4dfbb9b174f3e441a5c390469740fa50a65c469d0361c40cc06ebfac49e71dc3"
+  },
+  "protocol-step-estimations": {
+    "version": "protocol-step-lesson-3",
+    "sha256": "59a657339b2e060f1ba7d0bdf674735f6ea18374c9dc15ff3db11b0cf36e15d6"
+  },
+  "protocol-step-api": {
+    "version": "protocol-step-lesson-3",
+    "sha256": "a94d09749be18fedf2b09b321b7f049cbade6fbb9476f1a6e707244bc6926786"
+  },
+  "protocol-step-data_model": {
+    "version": "protocol-step-lesson-3",
+    "sha256": "bf3a8119384f1bd85d153e7392151dc54c96277accc6ed836de960983f73e1ba"
+  },
+  "protocol-step-high_level_design": {
+    "version": "protocol-step-lesson-3",
+    "sha256": "f4b739c194e797884e8f52a978f90c351402515d38a2881eb0114aa5cf3fbb94"
+  },
+  "protocol-step-deep_dive": {
+    "version": "protocol-step-lesson-3",
+    "sha256": "848d4a7c623c59cbf708b8cc173f7f04bb3da95ef5eba871b4680aee570402d2"
+  },
+  "step-feedback-text": {
+    "version": "design-step-feedback-5",
+    "sha256": "4d8d83bd19977f73292c02402e431d81b505010e1bcdb8a2e9e546926c1c4161"
+  },
+  "step-feedback-canvas": {
+    "version": "design-step-feedback-5",
+    "sha256": "cbc489f3e2c253bf3c2671f153c7c16d9bde81ca274e77536aacfd8f5f9602e3"
+  },
+  "step-feedback-noref": {
+    "version": "design-step-feedback-5",
+    "sha256": "b88bb4e90a911b164841b37554c260fb7359539b4a787a77918acba1a28d9d08"
+  },
+  "hint-1": {
+    "version": "design-hint-4",
+    "sha256": "b633794d67af01b91461750650ea2d059d01cbad73e86be9fe7246d4c315ae24"
+  },
+  "hint-2": {
+    "version": "design-hint-4",
+    "sha256": "0cd7809df6e0fccf6e42608f3feb344f30b0301414532b93dedf16808d7b2a44"
+  },
+  "hint-3": {
+    "version": "design-hint-4",
+    "sha256": "f63274fedb3b3217d53c4b12fda5d0a9572393ebaecead77a1afe0605cf1e6e9"
+  },
+  "final-review": {
+    "version": "design-final-review-5",
+    "sha256": "9e6ec38166f763d8f30498d046b7d31d4e7a466c54ee3c37ed6b0520b216b35d"
+  },
+  "lesson-question-lesson": {
+    "version": "lesson-question-1",
+    "sha256": "958b6238079861d42825e92b31ccdf3f5174a3a42dc367f70a598202ad04f5ad"
+  },
+  "lesson-question-remediation_lesson": {
+    "version": "lesson-question-1",
+    "sha256": "8a7065788ea8e98b68636264a7144a7a9cfccb482cc7051cfafabf3dcd5d5958"
+  },
+  "lesson-question-protocol_step_lesson": {
+    "version": "lesson-question-1",
+    "sha256": "6556671eeb36a5cd081aa2c62f72bc82387da4396bead70b3b4cc32047ab25ff"
+  },
+  "lesson-question-ungrounded": {
+    "version": "lesson-question-1",
+    "sha256": "cfd9499b5fd576a0a99c6d74bc028c22ff1fba8236a185db98a6b7c3ee34fa06"
+  },
+  "clarification-single_choice": {
+    "version": "question-clarification-1",
+    "sha256": "bf996bc4ab26c56a277c1d0240b285e0edf06c1f7977d2631648b28a88476628"
+  },
+  "clarification-multiple_choice": {
+    "version": "question-clarification-1",
+    "sha256": "3973e5d9a6975e97460b792b1636828fbe065c18792dd487052cda2f385433f6"
+  },
+  "clarification-scenario": {
+    "version": "question-clarification-1",
+    "sha256": "6d6eb3c8e7ad7abeba090cffe578dd89a2533e87dfcfbd40acc24b1f5f4e9aca"
+  },
+  "clarification-free_answer": {
+    "version": "question-clarification-1",
+    "sha256": "f2fbb387ae21a8d7aaf089a100e619070f4c909b08814a59dcf6ace3c720cc56"
+  },
+  "clarification-previous": {
+    "version": "question-clarification-1",
+    "sha256": "e020d91c4aa611fcf0c7d52106a850599ffb2949ebc832bbf7d0244cc40496b5"
+  },
+  "diagram-repair": {
+    "version": "diagram-repair-2",
+    "sha256": "452aed3adcd96bdf2925f2053354ed0c85d3a4cba58378a8705a30d7b3d642e6"
+  }
+}

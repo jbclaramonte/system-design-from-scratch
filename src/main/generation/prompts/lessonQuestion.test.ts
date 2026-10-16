@@ -4,7 +4,7 @@ import {
   LESSON_QUESTION_MAX_THREAD
 } from '../../../shared/lessonQuestion'
 import { fixtureCorpus } from '../testing/contentFixtures'
-import { LANGUAGE_RULES, type GroundingInput } from './common'
+import { languageRules, type GroundingInput } from './common'
 import {
   buildLessonQuestionGeneration,
   LESSON_QUESTION_PROMPT_VERSION,
@@ -38,7 +38,7 @@ const input: LessonQuestionPromptInput = {
 
 describe('buildLessonQuestionGeneration', () => {
   it('puts the selection, the question, the lesson and the grounding material in the prompt', () => {
-    const build = buildLessonQuestionGeneration(brief, input, grounding)
+    const build = buildLessonQuestionGeneration(brief, input, grounding, 'fr')
 
     expect(build.prompt.user).toContain(SELECTION)
     expect(build.prompt.user).toContain(QUESTION)
@@ -54,9 +54,9 @@ describe('buildLessonQuestionGeneration', () => {
   })
 
   it('answers in French, short, grounded, and says when the question is outside the course', () => {
-    const { system } = buildLessonQuestionGeneration(brief, input, grounding).prompt
+    const { system } = buildLessonQuestionGeneration(brief, input, grounding, 'fr').prompt
 
-    expect(system).toContain(LANGUAGE_RULES)
+    expect(system).toContain(languageRules('fr'))
     expect(system).toContain('3 to 6 sentences')
     expect(system).toContain('only')
     expect(system).toContain("Ce point n'est pas traité dans le cours.")
@@ -65,14 +65,14 @@ describe('buildLessonQuestionGeneration', () => {
   })
 
   it('has no schema: the answer streams as Markdown and is not a Content Cache kind', () => {
-    const build = buildLessonQuestionGeneration(brief, input, grounding)
+    const build = buildLessonQuestionGeneration(brief, input, grounding, 'fr')
 
     expect(build.schema).toBeUndefined()
     expect(build.finalize).toBeUndefined()
   })
 
   it('works without Excerpts (Foundations Module): grounded on the lesson, no citations', () => {
-    const build = buildLessonQuestionGeneration(brief, input, ungrounded)
+    const build = buildLessonQuestionGeneration(brief, input, ungrounded, 'fr')
 
     expect(build.groundedSourceSections).toEqual([])
     expect(build.prompt.user).toContain(SELECTION)
@@ -82,7 +82,7 @@ describe('buildLessonQuestionGeneration', () => {
   })
 
   it('removes the bookkeeping comments of the lesson', () => {
-    const { user } = buildLessonQuestionGeneration(brief, input, grounding).prompt
+    const { user } = buildLessonQuestionGeneration(brief, input, grounding, 'fr').prompt
 
     expect(user).not.toContain('<!-- notion')
   })
@@ -91,12 +91,14 @@ describe('buildLessonQuestionGeneration', () => {
     const remediation = buildLessonQuestionGeneration(
       { textKind: 'remediation_lesson', title: 'Write-through' },
       input,
-      grounding
+      grounding,
+      'fr'
     ).prompt.user
     const step = buildLessonQuestionGeneration(
       { textKind: 'protocol_step_lesson', title: 'Estimations' },
       input,
-      ungrounded
+      ungrounded,
+      'fr'
     ).prompt.user
 
     expect(remediation).toContain('Remediation Lesson on one notion: "Write-through"')
@@ -114,7 +116,8 @@ describe('buildLessonQuestionGeneration', () => {
         question: attack,
         thread: [{ selection: attack, question: attack, answer: attack }]
       },
-      grounding
+      grounding,
+      'fr'
     )
 
     const { user, system } = build.prompt
@@ -138,7 +141,8 @@ describe('buildLessonQuestionGeneration', () => {
     const { user } = buildLessonQuestionGeneration(
       brief,
       { ...input, thread: exchanges },
-      grounding
+      grounding,
+      'fr'
     ).prompt
 
     expect(user).not.toContain('question-0')

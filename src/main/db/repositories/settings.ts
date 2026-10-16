@@ -1,3 +1,8 @@
+import {
+  DEFAULT_GENERATION_LANGUAGE,
+  isGenerationLanguage,
+  type GenerationLanguage
+} from '../../../shared/generationLanguage'
 import type { Database } from '../driver'
 import type { Settings } from '../types'
 import { NOW } from './mapping'
@@ -8,7 +13,8 @@ const settingKeys = {
   roundLimit: 'round_limit',
   questionsPerQuiz: 'questions_per_quiz',
   claudeCliPath: 'claude_cli_path',
-  claudeConfigDir: 'claude_config_dir'
+  claudeConfigDir: 'claude_config_dir',
+  generationLanguage: 'generation_language'
 } as const satisfies Record<keyof Settings, string>
 
 /**
@@ -41,4 +47,10 @@ export function updateSettings(db: Database, changes: Partial<Settings>): Settin
     }
   })
   return getSettings(db)
+}
+
+/** The Generation Language setting: what the next Generation is written in. */
+export function getGenerationLanguage(db: Database): GenerationLanguage {
+  const { generationLanguage } = getSettings(db)
+  return isGenerationLanguage(generationLanguage) ? generationLanguage : DEFAULT_GENERATION_LANGUAGE
 }

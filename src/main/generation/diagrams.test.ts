@@ -10,12 +10,12 @@ import {
   findDiagramFailures,
   findMermaidBlocks,
   parseDiagramSource,
-  repairDiagrams,
+  repairDiagramsFor,
   repairDiagramsInMarkdown,
   validateDiagramsInMarkdown
 } from './diagrams'
 import { GenerationError } from './errors'
-import { DIAGRAM_RULES } from './prompts/common'
+import { diagramRules } from './prompts/common'
 import { GenerationService, type FinalizeCall, type FinalizeTools } from './service'
 import { installFakeCli, type FakeCli } from './testing/fakeCli'
 
@@ -118,7 +118,7 @@ describe('parseDiagramSource', () => {
       'stateDiagram-v2\n  [*] --> Valide\n  Valide --> Expire : TTL',
       'erDiagram\n  USER ||--o{ LINK : cree',
       'classDiagram\n  class Cache',
-      ...findMermaidBlocks(DIAGRAM_RULES).map((block) => block.source)
+      ...findMermaidBlocks(diagramRules('fr')).map((block) => block.source)
     ]
     for (const source of sources) expect(await parseDiagramSource(source)).toEqual({ ok: true })
   })
@@ -200,7 +200,8 @@ describe('diagram repair', () => {
     expect(
       await repairDiagramsInMarkdown(
         text,
-        toolsReturning(() => null, calls)
+        toolsReturning(() => null, calls),
+        'fr'
       )
     ).toBe(text)
     expect(calls).toHaveLength(0)
@@ -218,7 +219,8 @@ describe('diagram repair', () => {
           ]
         }),
         calls
-      )
+      ),
+      'fr'
     )
 
     expect(calls).toHaveLength(1)
@@ -243,7 +245,8 @@ describe('diagram repair', () => {
           { id: 2, source: fixed },
           { id: 3, source: 'pie\n  "hit" : 80' }
         ]
-      }))
+      })),
+      'fr'
     )
 
     const blocks = findMermaidBlocks(repaired)
@@ -256,7 +259,8 @@ describe('diagram repair', () => {
   it('keeps the text and records every failure when the repair call fails', async () => {
     const repaired = await repairDiagramsInMarkdown(
       lesson,
-      toolsReturning(() => null)
+      toolsReturning(() => null),
+      'fr'
     )
     expect(repaired.startsWith(lesson)).toBe(true)
     expect(findDiagramFailures(repaired)).toEqual([
@@ -268,7 +272,8 @@ describe('diagram repair', () => {
   it('ignores repairs of blocks that were not broken', async () => {
     const repaired = await repairDiagramsInMarkdown(
       lesson,
-      toolsReturning(() => ({ diagrams: [{ id: 1, source: fixed }] }))
+      toolsReturning(() => ({ diagrams: [{ id: 1, source: fixed }] })),
+      'fr'
     )
     expect(findMermaidBlocks(repaired)[0]!.source).toBe(valid)
   })
@@ -276,7 +281,8 @@ describe('diagram repair', () => {
   it('closes a repaired unclosed fence', async () => {
     const repaired = await repairDiagramsInMarkdown(
       'Fin.\n\n```mermaid\nflowch',
-      toolsReturning(() => ({ diagrams: [{ id: 1, source: fixed }] }))
+      toolsReturning(() => ({ diagrams: [{ id: 1, source: fixed }] })),
+      'fr'
     )
     expect(repaired).toBe(`Fin.\n\n${mermaid(fixed)}`)
   })
@@ -285,7 +291,7 @@ describe('diagram repair', () => {
     const calls: FinalizeCall[] = []
     const content = { questions: [] }
     expect(
-      await repairDiagrams(
+      await repairDiagramsFor('fr')(
         content,
         toolsReturning(() => null, calls)
       )
@@ -301,7 +307,8 @@ describe('diagram repair', () => {
       toolsReturning(
         () => ({ diagrams: [{ id: 1, source: 'flowchart LR\n  A[Serveur (x)] --> B' }] }),
         calls
-      )
+      ),
+      'fr'
     )
     expect(calls[0]!.prompt.user).toMatch(/Error: parse_error \(Parse error on line 2/)
     expect(findDiagramFailures(stillBroken)).toEqual([{ index: 1, code: 'parse_error' }])
@@ -309,13 +316,14 @@ describe('diagram repair', () => {
     const quoted = 'flowchart LR\n  A["Serveur (lecture)"] --> B[Cache]'
     const repaired = await repairDiagramsInMarkdown(
       text,
-      toolsReturning(() => ({ diagrams: [{ id: 1, source: quoted }] }))
+      toolsReturning(() => ({ diagrams: [{ id: 1, source: quoted }] })),
+      'fr'
     )
     expect(repaired).toBe(`Le flux.\n\n${mermaid(quoted)}`)
   })
 
   it('builds a structured repair call with the diagram rules', async () => {
-    const call = buildDiagramRepairCall((await validateDiagramsInMarkdown(lesson)).invalid)
+    const call = buildDiagramRepairCall((await validateDiagramsInMarkdown(lesson)).invalid, 'fr')
     expect(call.prompt.version).toBe('diagram-repair-2')
     expect(call.prompt.system).toContain('Diagrams (Mermaid):')
     expect(call.schema.safeParse({ diagrams: [{ id: 2, source: fixed }] }).success).toBe(true)
@@ -348,9 +356,10 @@ describe('diagram repair in a Generation, with the fake CLI', () => {
   const generate = (mode: string) =>
     service.generate({
       kind: 'lesson',
+      language: 'fr',
       input: { mode },
       prompt: { version: 'test', system: 'Lesson.', user: `scenario:diagram-lesson-${mode}` },
-      finalize: repairDiagrams
+      finalize: repairDiagramsFor('fr')
     })
 
   it('repairs the broken blocks once, then caches and sends the repaired text', async () => {
@@ -401,7 +410,7 @@ describe('diagram repair in a Generation, with the fake CLI', () => {
         throw new GenerationError('cancelled')
       }
     }
-    await expect(repairDiagramsInMarkdown(lesson, tools)).rejects.toMatchObject({
+    await expect(repairDiagramsInMarkdown(lesson, tools, 'fr')).rejects.toMatchObject({
       code: 'cancelled'
     })
   })

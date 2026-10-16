@@ -63,7 +63,7 @@ afterEach(() => {
 
 describe('getLessonReview', () => {
   it('has nothing to review before the first Lesson', () => {
-    expect(getLessonReview(db, corpus, topic.id)).toEqual({
+    expect(getLessonReview(db, corpus, topic.id, 'fr')).toEqual({
       topicId: topic.id,
       lesson: null,
       remediationLessons: []
@@ -79,7 +79,7 @@ describe('getLessonReview', () => {
       sourceSections: ['cache', 'unknown-section']
     })
 
-    const { lesson } = getLessonReview(db, corpus, topic.id)
+    const { lesson } = getLessonReview(db, corpus, topic.id, 'fr')
 
     expect(lesson).toMatchObject({ id: latest.id, markdown: '# Le cache', grounded: true })
     // A section that is not in the corpus is dropped, like in the lesson screen.
@@ -95,7 +95,7 @@ describe('getLessonReview', () => {
     const second = remediation('cache-aside', round2.id, 'R2 cache-aside')
     const orphan = remediation('client-caching', null, 'No round')
 
-    const { remediationLessons } = getLessonReview(db, corpus, topic.id)
+    const { remediationLessons } = getLessonReview(db, corpus, topic.id, 'fr')
 
     expect(remediationLessons.map((l) => l.id)).toEqual([second.id, first.id, other.id, orphan.id])
     expect(remediationLessons.map((l) => [l.roundNumber, l.notion.slug, l.angle])).toEqual([
@@ -107,20 +107,62 @@ describe('getLessonReview', () => {
     expect(remediationLessons[0]).toMatchObject({ markdown: 'R2 cache-aside', grounded: true })
   })
 
+  it('shows the Lesson of the language, else the latest in any language', () => {
+    createLesson(db, { topicId: topic.id, content: 'Bonjour', language: 'fr', grounded: true })
+    const english = createLesson(db, {
+      topicId: topic.id,
+      content: 'Hello',
+      language: 'en',
+      grounded: true
+    })
+    createLesson(db, { topicId: topic.id, content: 'Salut encore', language: 'fr', grounded: true })
+
+    expect(getLessonReview(db, corpus, topic.id, 'en').lesson).toMatchObject({ id: english.id })
+    expect(getLessonReview(db, corpus, topic.id, 'fr').lesson?.markdown).toBe('Salut encore')
+
+    // Only French was read: it stays readable after switching to English.
+    const onlyFrench = createTopic(db, { slug: 'cdn', title: 'CDN', position: 2 })
+    createLesson(db, { topicId: onlyFrench.id, content: 'CDN', language: 'fr', grounded: true })
+    expect(getLessonReview(db, corpus, onlyFrench.id, 'en').lesson?.markdown).toBe('CDN')
+  })
+
+  it('shows one Remediation Lesson per round and notion, in the language when it exists', () => {
+    const round = failedRound(1)
+    const inLanguage = (language: 'fr' | 'en', content: string) =>
+      createRemediationLesson(db, {
+        notionId: notion('cache-aside').id,
+        roundId: round.id,
+        content,
+        language,
+        grounded: true
+      })
+    const french = inLanguage('fr', 'Version française')
+    const english = inLanguage('en', 'English version')
+    const onlyFrench = remediation('write-through', round.id, 'Seulement en français')
+
+    const review = (language: 'fr' | 'en') =>
+      getLessonReview(db, corpus, topic.id, language).remediationLessons
+    expect(review('en').map((l) => l.id)).toEqual([english.id, onlyFrench.id])
+    expect(review('fr').map((l) => l.id)).toEqual([french.id, onlyFrench.id])
+    // Both languages are the same angle: the rank counts the round and notion once.
+    expect(review('en')[0]).toMatchObject({ angle: 'concrete_example', roundNumber: 1 })
+    expect(review('fr')[0]).toMatchObject({ angle: 'concrete_example', roundNumber: 1 })
+  })
+
   it('does not mix topics', () => {
     const other = createTopic(db, { slug: 'cdn', title: 'CDN', position: 2 })
     const [otherNotion] = createNotions(db, [{ topicId: other.id, slug: 'edge', title: 'Edge' }])
     createLesson(db, { topicId: other.id, content: 'CDN lesson', grounded: false })
     createRemediationLesson(db, { notionId: otherNotion!.id, content: 'CDN', grounded: false })
 
-    expect(getLessonReview(db, corpus, topic.id)).toMatchObject({
+    expect(getLessonReview(db, corpus, topic.id, 'fr')).toMatchObject({
       lesson: null,
       remediationLessons: []
     })
   })
 
   it('refuses an unknown topic', () => {
-    expect(() => getLessonReview(db, corpus, 999)).toThrow(/does not exist/)
+    expect(() => getLessonReview(db, corpus, 999, 'fr')).toThrow(/does not exist/)
   })
 })
 

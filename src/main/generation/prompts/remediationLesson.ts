@@ -1,21 +1,23 @@
-// Remediation Lesson prompt: a short French lesson on ONE missed notion, from a different angle
+// Remediation Lesson prompt: a short lesson on ONE missed notion, from a different angle
 // than the original lesson, grounded on the notion's own excerpts.
+import type { GenerationLanguage } from '../../../shared/generationLanguage'
 import { remediationAngles, type RemediationAngle } from '../../../shared/mastery'
+import { languageProfile } from '../languageProfile'
 import {
   assembleExcerpts,
   AUDIENCE_RULES,
-  DIAGRAM_RULES,
   diagramPlacementRules,
+  diagramRules,
   excerptSection,
   groundingRules,
   joinParts,
-  LANGUAGE_RULES,
+  languageRules,
   type GroundingInput,
   type NotionBrief,
   type PromptBuild,
   type TopicBrief
 } from './common'
-import { repairDiagrams } from '../diagrams'
+import { repairDiagramsFor } from '../diagrams'
 
 /** Bump with any change to the prompt below. */
 export const REMEDIATION_LESSON_PROMPT_VERSION = 'remediation-lesson-5'
@@ -24,9 +26,6 @@ export const REMEDIATION_EXCERPT_TOKENS = 3000
 
 /** The angle of a Remediation Lesson (shared with the Mastery Loop, which picks it per notion). */
 export { remediationAngles, type RemediationAngle }
-
-/** Heading of the closing takeaways of a Remediation Lesson. */
-export const TAKEAWAYS_HEADING = 'À retenir'
 
 const angleInstructions: Record<RemediationAngle, string> = {
   concrete_example:
@@ -47,13 +46,15 @@ export interface RemediationOptions {
   usedAngles?: RemediationAngle[]
 }
 
-const SYSTEM = `You are a patient system design tutor. The learner just failed quiz questions on one notion after reading a standard step-by-step lesson about it. You write a short remediation lesson that explains that single notion again, differently.
+const system = (
+  language: GenerationLanguage
+) => `You are a patient system design tutor. The learner just failed quiz questions on one notion after reading a standard step-by-step lesson about it. You write a short remediation lesson that explains that single notion again, differently.
 
-${LANGUAGE_RULES}
+${languageRules(language)}
 
 ${AUDIENCE_RULES}
 
-${DIAGRAM_RULES}
+${diagramRules(language)}
 
 Output only the remediation lesson, in Markdown: no preamble, no closing remark, no code fence around it.`
 
@@ -61,6 +62,7 @@ export function buildRemediationLessonGeneration(
   topic: TopicBrief,
   notion: NotionBrief,
   grounding: GroundingInput,
+  language: GenerationLanguage,
   options: RemediationOptions
 ): PromptBuild<string> {
   const block = assembleExcerpts(grounding.excerpts, REMEDIATION_EXCERPT_TOKENS)
@@ -73,17 +75,18 @@ export function buildRemediationLessonGeneration(
       `The learner already read remediation lessons on this notion with these angles, and still missed it: ${usedAngles.join(', ')}. Use a clearly different style, example and situation from those.`,
     missed.length > 0 &&
       `The learner got these questions wrong. Address the misunderstanding they reveal, without quoting or answering them directly:\n${missed.map((prompt) => `- ${prompt}`).join('\n')}`,
-    `Structure: a \`## ${notion.title}\` heading, the explanation (200 to 350 words, short paragraphs), then a \`**${TAKEAWAYS_HEADING}**\` line followed by 2 or 3 bullets. Stay on this notion only; mention another notion only to contrast it in one sentence.`,
+    `Structure: a \`## ${notion.title}\` heading, the explanation (200 to 350 words, short paragraphs), then a \`**${languageProfile(language).remediation.takeawaysHeading}**\` line followed by 2 or 3 bullets. Stay on this notion only; mention another notion only to contrast it in one sentence.`,
     diagramPlacementRules({
       min: 0,
       max: 1,
       when: 'only if a picture makes the missed notion clearer from the angle above (for example the scenario followed step by step, or the two notions side by side); otherwise none'
     }),
-    groundingRules(block.sectionIds),
+    groundingRules(block.sectionIds, language),
     excerptSection(block)
   )
   return {
     kind: 'remediation_lesson',
+    language,
     input: {
       topic: topic.slug,
       notion: { slug: notion.slug, title: notion.title },
@@ -93,8 +96,8 @@ export function buildRemediationLessonGeneration(
       sectionIds: block.sectionIds,
       corpusVersion: grounding.corpusVersion
     },
-    prompt: { version: REMEDIATION_LESSON_PROMPT_VERSION, system: SYSTEM, user },
+    prompt: { version: REMEDIATION_LESSON_PROMPT_VERSION, system: system(language), user },
     groundedSourceSections: block.sectionIds,
-    finalize: repairDiagrams
+    finalize: repairDiagramsFor(language)
   }
 }

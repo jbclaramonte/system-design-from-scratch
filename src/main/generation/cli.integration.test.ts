@@ -30,6 +30,7 @@ describe.skipIf(!enabled)('Generation with the real Claude Code CLI', () => {
   it('streams a text generation in isolation', { timeout: 90_000 }, async () => {
     const run = service.generate({
       kind: 'lesson',
+      language: 'fr',
       input: { integration: 'text' },
       prompt: {
         version: 'integration-1',
@@ -57,6 +58,7 @@ describe.skipIf(!enabled)('Generation with the real Claude Code CLI', () => {
   it('returns schema-validated structured output', { timeout: 90_000 }, async () => {
     const result = await service.generate({
       kind: 'quiz',
+      language: 'fr',
       input: { integration: 'schema' },
       prompt: {
         version: 'integration-1',

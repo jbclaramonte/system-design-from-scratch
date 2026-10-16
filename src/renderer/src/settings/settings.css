@@ -7,6 +7,12 @@
   align-items: start;
 }
 
+.settings-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
 .settings-group {
   display: flex;
   flex-direction: column;
@@ -38,6 +44,10 @@
 }
 
 .settings-field input.settings-short {
+  width: 10rem;
+}
+
+.settings-field select.settings-short {
   width: 10rem;
 }
 

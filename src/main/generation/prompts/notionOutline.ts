@@ -1,11 +1,13 @@
 // Notion Outline: the ordered list of notions a topic is split into, generated once per topic
 // from its sub-topics and stored in the `notions` table.
 import { z } from 'zod'
+import type { GenerationLanguage } from '../../../shared/generationLanguage'
+import { languageProfile } from '../languageProfile'
 import {
   assembleExcerpts,
   excerptSection,
   joinParts,
-  LANGUAGE_RULES,
+  languageRules,
   type GroundingInput,
   type PromptBuild,
   type TopicBrief
@@ -73,14 +75,18 @@ export function notionOutlineSchema(sectionIds: readonly string[], subTopicIds: 
 
 export type NotionOutline = z.infer<ReturnType<typeof notionOutlineSchema>>
 
-const SYSTEM = `You design the Notion Outline of a system design topic for a French learning app. A notion is one fine-grained idea a learner can be taught in a few paragraphs and tested on with a quiz question, for example "cache-aside" versus "write-through" inside the cache topic. Notions are the unit of mastery tracking.
+const system = (
+  language: GenerationLanguage
+) => `You design the Notion Outline of a system design topic for ${languageProfile(language).nameWithArticle} learning app. A notion is one fine-grained idea a learner can be taught in a few paragraphs and tested on with a quiz question, for example "cache-aside" versus "write-through" inside the cache topic. Notions are the unit of mastery tracking.
 
-${LANGUAGE_RULES}`
+${languageRules(language)}`
 
 export function buildNotionOutlineGeneration(
   topic: TopicBrief,
-  grounding: GroundingInput
+  grounding: GroundingInput,
+  language: GenerationLanguage
 ): PromptBuild<NotionOutline> {
+  const profile = languageProfile(language)
   const block = assembleExcerpts(grounding.excerpts, NOTION_OUTLINE_EXCERPT_TOKENS)
   const subTopicIds = block.sectionIds.filter((id) => id.includes('/'))
   const subTopics = grounding.excerpts.filter((excerpt) => subTopicIds.includes(excerpt.sectionId))
@@ -118,15 +124,16 @@ export function buildNotionOutlineGeneration(
     seed,
     `Rules:
 - Between 4 and ${MAX_NOTIONS} notions, in teaching order: from the simplest and most fundamental to the most advanced.
-- slug: short English kebab-case id built from the technical term (for example \`cache-aside\`, \`write-through\`, \`cache-invalidation\`). It must stay stable, so no numbering and no French.
-- title: short French title that keeps the system design jargon in English and everyday words in French (for example "Cache-aside (lazy loading)", "Le serveur et ses requêtes").
-- description: one French sentence of at most 25 words saying what the learner must understand.
+- slug: short English kebab-case id built from the technical term (for example \`cache-aside\`, \`write-through\`, \`cache-invalidation\`). It must stay stable, so ${profile.notionOutline.slugStability}.
+- title: short ${profile.name} title that ${profile.notionOutline.titlePolicy} (for example ${profile.notionOutline.titleExamples}).
+- description: one ${profile.name} sentence of at most 25 words saying what the learner must understand.
 - Notions must not overlap: each idea belongs to exactly one notion.`,
     excerptSection(block)
   )
 
   return {
     kind: 'notion_outline',
+    language,
     input: {
       topic: topic.slug,
       title: topic.title,
@@ -135,7 +142,7 @@ export function buildNotionOutlineGeneration(
       sectionIds: block.sectionIds,
       corpusVersion: grounding.corpusVersion
     },
-    prompt: { version: NOTION_OUTLINE_PROMPT_VERSION, system: SYSTEM, user },
+    prompt: { version: NOTION_OUTLINE_PROMPT_VERSION, system: system(language), user },
     schema: notionOutlineSchema(block.sectionIds, subTopicIds),
     groundedSourceSections: block.sectionIds
   }

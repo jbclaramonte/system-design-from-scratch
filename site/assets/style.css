@@ -1,0 +1,476 @@
+/*
+ * Website of System Design from Scratch. Plain CSS, no build step, no external request.
+ * Colors follow the app's design tokens (docs/Design System.md): the dark theme is the app's own
+ * (canvas #06080d, surfaces #0b0f19 and #111827, indigo and emerald accents); the light theme is
+ * its counterpart for readers whose system asks for it. Fonts: Geist and JetBrains Mono (OFL-1.1),
+ * self-hosted in assets/fonts, with the system stack as fallback.
+ */
+
+@font-face {
+  font-family: 'Geist Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url('fonts/geist-latin-wght-normal.woff2') format('woff2-variations');
+}
+
+@font-face {
+  font-family: 'JetBrains Mono Variable';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 800;
+  src: url('fonts/jetbrains-mono-latin-wght-normal.woff2') format('woff2-variations');
+}
+
+:root {
+  color-scheme: light dark;
+  --canvas: #f8fafc;
+  --surface: #ffffff;
+  --surface-strong: #eef2f7;
+  --border: #d5dde8;
+  --text: #0f172a;
+  --text-secondary: #475569;
+  --link: #4338ca;
+  --accent: #4338ca;
+  --on-accent: #ffffff;
+  --mastered: #047857;
+  --attention: #92400e;
+  --code-bg: #0b0f19;
+  --code-text: #e2e8f0;
+  --focus: #4338ca;
+  --shadow: 0 1px 2px rgb(15 23 42 / 8%), 0 8px 24px rgb(15 23 42 / 6%);
+  --font-sans:
+    'Geist Variable', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    sans-serif;
+  --font-mono:
+    'JetBrains Mono Variable', ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+  --radius: 0.5rem;
+  --gutter: 1rem;
+  --max-width: 72rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --canvas: #06080d;
+    --surface: #0b0f19;
+    --surface-strong: #111827;
+    --border: #1f2937;
+    --text: #f8fafc;
+    --text-secondary: #94a3b8;
+    --link: #a5b4fc;
+    --accent: #f8fafc;
+    --on-accent: #0b0f19;
+    --mastered: #34d399;
+    --attention: #fbbf24;
+    --focus: #818cf8;
+    --shadow: none;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 1rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+body {
+  margin: 0;
+  background: var(--canvas);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 1.0625rem;
+  line-height: 1.6;
+  -webkit-text-size-adjust: 100%;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+a {
+  color: var(--link);
+  text-underline-offset: 0.2em;
+}
+
+a:hover {
+  text-decoration-thickness: 2px;
+}
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  margin: 0 0 0.6em;
+}
+
+h1 {
+  font-size: clamp(2.1rem, 5vw + 0.5rem, 3.4rem);
+}
+
+h2 {
+  font-size: clamp(1.6rem, 2.5vw + 0.8rem, 2.2rem);
+}
+
+h3 {
+  font-size: 1.2rem;
+}
+
+p {
+  margin: 0 0 1em;
+}
+
+code,
+pre {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+
+code {
+  background: var(--surface-strong);
+  border-radius: 0.25rem;
+  padding: 0.1em 0.35em;
+}
+
+pre {
+  margin: 0 0 1em;
+  padding: 1rem;
+  overflow-x: auto;
+  background: var(--code-bg);
+  color: var(--code-text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  line-height: 1.5;
+}
+
+pre code {
+  background: none;
+  padding: 0;
+  color: inherit;
+}
+
+.container {
+  width: 100%;
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+}
+
+.skip-link {
+  position: absolute;
+  left: var(--gutter);
+  top: -4rem;
+  padding: 0.5rem 1rem;
+  background: var(--accent);
+  color: var(--on-accent);
+  border-radius: var(--radius);
+  z-index: 10;
+}
+
+.skip-link:focus {
+  top: var(--gutter);
+}
+
+/* Header */
+
+.site-header {
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.site-header .container {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1.5rem;
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 650;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.brand img {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.4rem;
+}
+
+.brand span {
+  font-weight: 400;
+  color: var(--text-secondary);
+}
+
+.site-nav ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.25rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.site-nav a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  padding: 0.25rem 0;
+}
+
+.site-nav a:hover {
+  color: var(--text);
+  text-decoration: underline;
+}
+
+/* Buttons */
+
+.button {
+  display: inline-block;
+  padding: 0.65rem 1.2rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.button:hover {
+  border-color: var(--text-secondary);
+}
+
+.button-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+
+.button-primary:hover {
+  opacity: 0.92;
+  border-color: var(--accent);
+}
+
+/* Hero */
+
+.hero {
+  padding-top: clamp(2.5rem, 7vw, 5rem);
+  padding-bottom: clamp(1.5rem, 4vw, 3rem);
+}
+
+.hero .lead {
+  max-width: 44rem;
+  font-size: 1.25rem;
+  color: var(--text-secondary);
+}
+
+.eyebrow {
+  margin: 0 0 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.note {
+  margin-top: 1rem;
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+}
+
+/* Sections */
+
+section {
+  padding: clamp(2rem, 5vw, 3.5rem) 0;
+}
+
+.section-intro {
+  max-width: 46rem;
+  color: var(--text-secondary);
+}
+
+.step {
+  border-top: 1px solid var(--border);
+}
+
+.step-number {
+  display: inline-grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  margin-right: 0.5rem;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  vertical-align: 0.15em;
+}
+
+.step-text {
+  max-width: 46rem;
+}
+
+.shots {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 30rem), 1fr));
+  gap: 1.5rem;
+  margin: 1.5rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.shots.single {
+  grid-template-columns: minmax(0, 46rem);
+}
+
+figure {
+  margin: 0;
+}
+
+.shot-frame {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #06080d;
+  box-shadow: var(--shadow);
+}
+
+.shot-frame a {
+  display: block;
+  line-height: 0;
+}
+
+figcaption {
+  margin-top: 0.6rem;
+  font-size: 0.92rem;
+  color: var(--text-secondary);
+}
+
+/* Cards and lists */
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  padding: 1.1rem 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.card h3 {
+  margin-bottom: 0.4em;
+}
+
+.card p:last-child {
+  margin-bottom: 0;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  margin: 0 0 1em;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+th,
+td {
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.download {
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.attribution {
+  font-size: 0.97rem;
+}
+
+.attribution blockquote {
+  margin: 0 0 1em;
+  padding: 0.25rem 0 0.25rem 1rem;
+  border-left: 3px solid var(--border);
+  color: var(--text-secondary);
+}
+
+/* Footer */
+
+.site-footer {
+  padding: 2rem 0 3rem;
+  border-top: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.site-footer p {
+  margin-bottom: 0.5rem;
+}
+
+@media (max-width: 40rem) {
+  body {
+    font-size: 1rem;
+  }
+
+  .hero .lead {
+    font-size: 1.1rem;
+  }
+
+  pre {
+    font-size: 0.8rem;
+  }
+}

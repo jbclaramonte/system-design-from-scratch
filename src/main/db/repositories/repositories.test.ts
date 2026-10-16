@@ -347,11 +347,11 @@ describe('design practice', () => {
 
 describe('content cache', () => {
   it('keys on kind, inputs and prompt version, independently of property order', () => {
-    const key = contentCacheKey('lesson', { topic: 'cache', level: 1 }, 'v1')
+    const key = contentCacheKey('lesson', { topic: 'cache', level: 1 }, 'v1', 'fr')
     expect(key).toMatch(/^[0-9a-f]{64}$/)
-    expect(contentCacheKey('lesson', { level: 1, topic: 'cache' }, 'v1')).toBe(key)
-    expect(contentCacheKey('lesson', { topic: 'cache', level: 1 }, 'v2')).not.toBe(key)
-    expect(contentCacheKey('quiz', { topic: 'cache', level: 1 }, 'v1')).not.toBe(key)
+    expect(contentCacheKey('lesson', { level: 1, topic: 'cache' }, 'v1', 'fr')).toBe(key)
+    expect(contentCacheKey('lesson', { topic: 'cache', level: 1 }, 'v2', 'fr')).not.toBe(key)
+    expect(contentCacheKey('quiz', { topic: 'cache', level: 1 }, 'v1', 'fr')).not.toBe(key)
   })
 
   it('stores and replaces entries', () => {
@@ -359,13 +359,17 @@ describe('content cache', () => {
       kind: 'lesson' as const,
       inputs: { topic: 'cache' },
       promptVersion: 'v1',
+      language: 'fr' as const,
       content: { markdown: 'first' },
       grounded: true,
       sourceSections: ['cache']
     }
     const stored = putCachedContent(db, entry)
     expect(getCachedContent(db, stored.cacheKey)).toEqual(stored)
-    const replaced = putCachedContent(db, { ...entry, content: { markdown: 'second' } })
+    const replaced = putCachedContent(db, {
+      ...entry,
+      content: { markdown: 'second' }
+    })
     expect(replaced.cacheKey).toBe(stored.cacheKey)
     expect(replaced.content).toEqual({ markdown: 'second' })
     expect(db.prepare('SELECT COUNT(*) AS n FROM content_cache').get()).toEqual({ n: 1 })
@@ -379,7 +383,8 @@ describe('settings', () => {
       roundLimit: 3,
       questionsPerQuiz: null,
       claudeCliPath: null,
-      claudeConfigDir: null
+      claudeConfigDir: null,
+      generationLanguage: 'fr'
     }
     expect(getSettings(db)).toEqual(defaults)
     expect(updateSettings(db, { roundLimit: 5 })).toEqual({ ...defaults, roundLimit: 5 })

@@ -17,9 +17,10 @@ import {
   type PipelineDeps
 } from '../generation/pipelines'
 import { sendEvent } from '../ipc/sendEvent'
-import { getSettings } from '../db/repositories/settings'
+import { getGenerationLanguage, getSettings } from '../db/repositories/settings'
 import { firstRoundQuizOptions } from '../mastery/quizOptions'
 import type { GenerationErrorInfo, GenerationOutput } from '../../shared/generation'
+import type { GenerationLanguage } from '../../shared/generationLanguage'
 import type {
   LessonCancelRequest,
   LessonEvent,
@@ -95,7 +96,11 @@ export function createLessonIpc(deps: PipelineDeps, options: LessonIpcOptions = 
   const runs = new Map<string, AbortController>()
 
   /** The `lessons` row is what the learner saw; one per Content Cache entry. */
-  function recordLesson(topicId: number, output: GenerationOutput): void {
+  function recordLesson(
+    topicId: number,
+    output: GenerationOutput,
+    language: GenerationLanguage
+  ): void {
     const known = listLessonsByTopic(db, topicId).some(
       (lesson) => lesson.contentCacheKey === output.cacheKey
     )
@@ -104,6 +109,7 @@ export function createLessonIpc(deps: PipelineDeps, options: LessonIpcOptions = 
       createLesson(db, {
         topicId,
         content: output.content,
+        language,
         grounded: output.grounded,
         sourceSections: output.sourceSections,
         contentCacheKey: output.cacheKey
@@ -118,8 +124,13 @@ export function createLessonIpc(deps: PipelineDeps, options: LessonIpcOptions = 
    * Pre-generates the quiz of the lesson the learner is reading (answerable from it), with the
    * first round's options: the Mastery Loop's first round finds it in the Content Cache.
    */
-  function pregenerateQuiz(topicId: number, lessonMarkdown: string): void {
-    prepareQuiz(deps, topicId, firstRoundQuizOptions(lessonMarkdown, getSettings(db)))
+  function pregenerateQuiz(
+    topicId: number,
+    lessonMarkdown: string,
+    language: GenerationLanguage
+  ): void {
+    // The language of the lesson being read, even if the setting changes meanwhile.
+    prepareQuiz(deps, topicId, firstRoundQuizOptions(lessonMarkdown, getSettings(db)), { language })
       .then((request) => service.pregenerate(request).result)
       .catch((error: unknown) => {
         if (!(error instanceof GenerationError && error.code === 'cancelled')) {
@@ -129,14 +140,17 @@ export function createLessonIpc(deps: PipelineDeps, options: LessonIpcOptions = 
   }
 
   async function run(topicId: number, signal: AbortSignal, send: (event: LessonEvent) => void) {
+    // Read once: the whole flow (outline, lesson, quiz Pre-generation) uses the language the
+    // learner had selected when the lesson started.
+    const language = getGenerationLanguage(db)
     try {
       if (listNotionsByTopic(db, topicId).length === 0) {
         send({ type: 'notion_outline', status: 'generating' })
       }
       // Not tied to this request's signal: the outline is shared by concurrent requests and
       // needed anyway, so a cancelled request only stops waiting for it.
-      const notions = await abortable(ensureNotionOutline(deps, topicId), signal)
-      const request = await prepareLesson(deps, topicId, { signal })
+      const notions = await abortable(ensureNotionOutline(deps, topicId, { language }), signal)
+      const request = await prepareLesson(deps, topicId, { signal, language })
       send({
         type: 'prepared',
         grounded: (request.groundedSourceSections ?? []).length > 0,
@@ -150,9 +164,11 @@ export function createLessonIpc(deps: PipelineDeps, options: LessonIpcOptions = 
           event.type === 'done' && typeof event.output.content === 'string'
             ? event.output.content
             : null
-        if (event.type === 'done' && markdown !== null) recordLesson(topicId, event.output)
+        if (event.type === 'done' && markdown !== null) {
+          recordLesson(topicId, event.output, language)
+        }
         send(event)
-        if (markdown !== null) pregenerateQuiz(topicId, markdown)
+        if (markdown !== null) pregenerateQuiz(topicId, markdown, language)
       }
     } catch (error) {
       send({ type: 'error', error: toErrorInfo(error) })

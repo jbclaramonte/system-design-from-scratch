@@ -583,7 +583,8 @@ describe('submitFreeAnswer', () => {
           modelAnswer: 'Réponse modèle'
         },
         notions: [{ slug: 'b', title: 'Notion B', description: null }],
-        answer: 'Une réponse partielle.'
+        answer: 'Une réponse partielle.',
+        language: 'fr'
       }
     ])
     expect(feedback).toMatchObject({

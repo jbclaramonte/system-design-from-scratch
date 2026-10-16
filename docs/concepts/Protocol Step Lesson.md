@@ -5,7 +5,7 @@ tags: [concept, design-practice]
 
 # Protocol Step Lesson
 
-The short "why it matters" lesson of a [[Protocol Step]]: what the step is, why skipping it hurts, what the learner will produce, one common pitfall. Shown the first time the learner meets the step (in any [[Design Exercise]]), then available on request. Generated in French, [[Grounding|grounded]] on the primer's interview method section, one per step, stored in the [[Content Cache]].
+The short "why it matters" lesson of a [[Protocol Step]]: what the step is, why skipping it hurts, what the learner will produce, one common pitfall. Shown the first time the learner meets the step (in any [[Design Exercise]]), then available on request. Generated in the [[Generation Language]], [[Grounding|grounded]] on the primer's interview method section, one per step, stored in the [[Content Cache]].
 
 ## Related
 

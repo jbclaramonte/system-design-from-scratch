@@ -19,6 +19,8 @@
     "package:linux": "install-electron && electron-vite build && electron-builder --linux --x64 && node scripts/check-package.mjs --platform linux",
     "package:linux:dir": "install-electron && electron-vite build && electron-builder --linux dir --x64 && node scripts/check-package.mjs --platform linux --app-only",
     "smoke:packaged": "node scripts/smoke-packaged.mjs",
+    "site:screenshots": "node scripts/site-screenshots.mjs",
+    "site:check": "node scripts/check-site.mjs",
     "preview": "install-electron && electron-vite preview",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json",

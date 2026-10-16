@@ -116,7 +116,8 @@ const hint = prompts.buildHintGeneration({
   level: 3,
   current: { type: 'text', text: submission },
   previousSteps: [],
-  previousHints: []
+  previousHints: [],
+  language: 'fr'
 })
 started = Date.now()
 try {

@@ -84,7 +84,8 @@ const handlers: IpcHandlers = {
     roundLimit: 3,
     questionsPerQuiz: null,
     claudeCliPath: null,
-    claudeConfigDir: null
+    claudeConfigDir: null,
+    generationLanguage: 'fr'
   }),
   'settings:update': () => {
     throw new Error('invalid')

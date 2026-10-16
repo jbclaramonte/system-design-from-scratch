@@ -4,7 +4,7 @@
 export interface NotionRef {
   id: number
   slug: string
-  /** French title. */
+  /** Title, in the language the topic was seeded in (French for the Foundations Module). */
   title: string
   description: string | null
 }

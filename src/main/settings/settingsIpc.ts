@@ -3,6 +3,7 @@
 import { statSync } from 'node:fs'
 import { z } from 'zod'
 import type { Database } from '../db'
+import { generationLanguages } from '../../shared/generationLanguage'
 import { getSettings, updateSettings } from '../db/repositories/settings'
 import {
   settingsErrors,
@@ -19,7 +20,8 @@ const updateRequest = z
     roundLimit: z.number(),
     questionsPerQuiz: z.number().nullable(),
     claudeCliPath: z.string().nullable(),
-    claudeConfigDir: z.string().nullable()
+    claudeConfigDir: z.string().nullable(),
+    generationLanguage: z.enum(generationLanguages)
   })
   .partial()
   .strict()

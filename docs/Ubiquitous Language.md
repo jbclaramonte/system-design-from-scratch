@@ -31,7 +31,7 @@ Single source of truth for domain terms. Use these exact terms in code, schema, 
 |---|---|---|
 | [[Quiz]] | A set of questions on a topic, played as one round. | test, exam |
 | [[Question]] | One item in a quiz, tagged with notions. Types: single-choice, multiple-choice, scenario, free answer. | exercise (reserved for design) |
-| [[Question Clarification]] | A plainer French rewording of a quiz Question the learner does not understand, with one concrete example, shown under the Question. It clarifies the wording only: never a hint at the answer. Stored in the Content Cache per Question; no effect on the Mastery Loop. | hint (that is design practice), explanation (that is the stored answer rationale), help text |
+| [[Question Clarification]] | A plainer rewording, in the language of its quiz, of a quiz Question the learner does not understand, with one concrete example, shown under the Question. It clarifies the wording only: never a hint at the answer. Stored in the Content Cache per Question; no effect on the Mastery Loop. | hint (that is design practice), explanation (that is the stored answer rationale), help text |
 | [[Attempt]] | One recorded answer to a question (date, question, notion, type, result). | submission, try |
 | [[Round]] | One iteration of the mastery loop: quiz, grade, and possibly remediation. | turn, iteration, cycle |
 | [[Mastery Loop]] | Lesson, quiz, remediation, new quiz... until the threshold is met. | learning loop, feedback loop |
@@ -65,6 +65,7 @@ Single source of truth for domain terms. Use these exact terms in code, schema, 
 | [[Grounding]] | Generating from bundled primer excerpts and citing the source section. Content is either grounded or ungrounded. | RAG, sourced |
 | [[Source Corpus]] | The bundled primer, split by heading. | knowledge base, dataset |
 | [[Excerpt]] | A passage of the source corpus returned by lookup, with a citation to its source section, passed to a generation for grounding. | snippet, chunk |
-| [[Content Cache]] | SQLite store of every generated lesson, remediation lesson and quiz, reused on repeat. | store, memo |
+| [[Content Cache]] | SQLite store of every generated lesson, remediation lesson, quiz, Protocol Step Lesson and Question Clarification, one entry per [[Generation Language]], reused on repeat. | store, memo |
 | [[Generation]] | One LLM call (via the Claude Code CLI) that produces content or grades a free answer. | completion, request |
+| [[Generation Language]] | The language the course content is written in, French or English, chosen in Settings (default French). Applies to every Generation that produces text the learner reads (Lessons, Remediation Lessons, Protocol Step Lessons, quizzes and their feedback, Design Feedback, Lesson Questions, Question Clarifications) and to the Design Exercise statements; it is part of the Content Cache key. Switching it never deletes or overwrites content of the other language and never affects mastery; a Round in progress finishes in the language of its quiz. The app UI is English whatever it is. | course language (the Settings label only), locale, i18n |
 | [[Pre-generation]] | A Generation started in the background before its result is needed (for example the quiz while the lesson is read); waits behind foreground Generations, cancellable, stored in the Content Cache. | prefetch, warm-up |

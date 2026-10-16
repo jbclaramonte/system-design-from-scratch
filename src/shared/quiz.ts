@@ -70,9 +70,9 @@ export interface QuestionView {
   id: number
   position: number
   type: QuestionType
-  /** French. */
+  /** In the Generation Language of the quiz. */
   prompt: string
-  /** Situation of a scenario question, French. */
+  /** Situation of a scenario question. */
   scenario: string | null
   /**
    * Mermaid source of the question's Diagram (choice questions only), or null. Checked at
@@ -127,7 +127,7 @@ export interface ChoiceFeedbackItem {
 interface QuestionFeedbackBase extends GradingResult {
   questionId: number
   type: QuestionType
-  /** French. */
+  /** In the Generation Language of the quiz. */
   prompt: string
   /**
    * Informational, the mastery `score` stays all-or-nothing. Multiple choice: (correct picks -
@@ -143,13 +143,13 @@ export interface ChoiceQuestionFeedback extends QuestionFeedbackBase {
   choices: ChoiceFeedbackItem[]
   /** Scenario situation, shown again next to its trade-off justification. */
   scenario: string | null
-  /** Stored explanation (for a scenario, the trade-off justification). French. */
+  /** Stored explanation (for a scenario, the trade-off justification). In the language of the quiz. */
   explanation: string
 }
 
 /**
  * What the free-answer grading Generation returns (see docs/Quiz Engine.md). `expectedPoints` is
- * aligned with the question's expected points, in order. French text.
+ * aligned with the question's expected points, in order. Text in the Generation Language of the quiz.
  */
 export type FreeAnswerGrading = {
   verdict: AttemptResult
@@ -179,7 +179,7 @@ export type FreeAnswerGradingRecord = {
 }
 
 export interface ExpectedPointFeedback {
-  /** The expected point, from the question's rubric. French. */
+  /** The expected point, from the question's rubric. */
   point: string
   covered: boolean
   justification: string
@@ -269,7 +269,7 @@ export type FreeAnswerGradingOutcome =
 
 /**
  * A Question Clarification: a plainer wording of a question the learner does not understand and
- * one concrete example. French. It never carries a hint at the answer (see
+ * one concrete example, in the language of the quiz. It never carries a hint at the answer (see
  * `buildQuestionClarificationGeneration`).
  */
 export type QuestionClarification = {

@@ -1,4 +1,4 @@
-// Question Clarification prompt and output schema: a plainer French rewording of a quiz question
+// Question Clarification prompt and output schema: a plainer rewording of a quiz question
 // the learner does not understand, with one concrete example. It clarifies the wording only.
 //
 // The answer keys cannot leak by construction: `QuestionBrief` has no field for the correct
@@ -6,7 +6,8 @@
 // only the prompt, the scenario and the choice texts into it, and the builder reads nothing else.
 import { z } from 'zod'
 import type { QuestionClarification, QuestionType } from '../../../shared/quiz'
-import { AUDIENCE_RULES, joinParts, LANGUAGE_RULES, type PromptBuild } from './common'
+import type { GenerationLanguage } from '../../../shared/generationLanguage'
+import { AUDIENCE_RULES, joinParts, languageRules, type PromptBuild } from './common'
 
 /** Bump with any change to the prompt or schema below. */
 export const QUESTION_CLARIFICATION_PROMPT_VERSION = 'question-clarification-1'
@@ -22,14 +23,16 @@ export const QUESTION_CLARIFICATION_TIMEOUT_MS = 60_000
 export interface QuestionBrief {
   questionId: number
   type: QuestionType
-  /** French. */
+  /** In the Generation Language of its quiz. */
   prompt: string
-  /** Situation of a scenario question, French. */
+  /** Situation of a scenario question, in the same language. */
   scenario: string | null
   /** Choice texts, in display order. Empty for a free answer. */
   choices: readonly string[]
   /** Topic title, for orientation only. */
   topicTitle: string
+  /** Language of the clarification: the one of the question's quiz (a Round finishes in it). */
+  language: GenerationLanguage
 }
 
 export const questionClarificationSchema = z.object({
@@ -44,9 +47,11 @@ const typeDescriptions: Record<QuestionType, string> = {
   free_answer: 'free answer (the learner writes one to a few sentences; no choices)'
 }
 
-const SYSTEM = `You help a beginner in system design who did not understand a quiz question. You reword the question in plainer words and give one concrete example, so the learner can then answer it themselves.
+const system = (
+  language: GenerationLanguage
+) => `You help a beginner in system design who did not understand a quiz question. You reword the question in plainer words and give one concrete example, so the learner can then answer it themselves.
 
-${LANGUAGE_RULES}
+${languageRules(language)}
 
 ${AUDIENCE_RULES}
 
@@ -86,6 +91,7 @@ export function buildQuestionClarificationGeneration(
   brief: QuestionBrief,
   previous?: QuestionClarification
 ): PromptBuild<QuestionClarification> {
+  const { language } = brief
   const user = joinParts(
     'Reword this quiz question for a learner who did not understand it.',
     questionBlock(brief),
@@ -94,10 +100,11 @@ export function buildQuestionClarificationGeneration(
   )
   return {
     kind: 'question_clarification',
+    language,
     // Content Cache key with the prompt version: one entry per Question. `previous` is not part
     // of it, so a new version replaces the stored one.
     input: { questionId: brief.questionId },
-    prompt: { version: QUESTION_CLARIFICATION_PROMPT_VERSION, system: SYSTEM, user },
+    prompt: { version: QUESTION_CLARIFICATION_PROMPT_VERSION, system: system(language), user },
     schema: questionClarificationSchema,
     // Rewording only: not tied to the lesson or the Excerpts.
     groundedSourceSections: []

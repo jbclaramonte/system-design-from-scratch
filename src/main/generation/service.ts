@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import type { GenerationLanguage } from '../../shared/generationLanguage'
 import type {
   GenerationErrorInfo,
   GenerationEvent,
@@ -31,6 +32,8 @@ export interface GenerationPrompt {
 
 export interface GenerationRequest<T extends Json = Json> {
   kind: GenerationKind
+  /** What the content is written in. Part of the Content Cache key (see `contentCacheKey`). */
+  language: GenerationLanguage
   /** What the content is generated from. Part of the Content Cache key. */
   input: Json
   prompt: GenerationPrompt
@@ -54,7 +57,7 @@ export interface GenerationRequest<T extends Json = Json> {
   timeoutMs?: number
   /**
    * Post-processing of a valid output, run before it is stored and sent with `done` (the
-   * Mermaid Diagram repair of lessons, see `repairDiagrams`). Not part of the Content Cache key.
+   * Mermaid Diagram repair of lessons, see `repairDiagramsFor`). Not part of the Content Cache key.
    */
   finalize?: ContentFinalizer
 }
@@ -255,7 +258,7 @@ export class GenerationService {
     }
 
     const key = isContentCacheKind(request.kind)
-      ? contentCacheKey(request.kind, request.input, request.prompt.version)
+      ? contentCacheKey(request.kind, request.input, request.prompt.version, request.language)
       : null
 
     const cached = key && !request.refresh ? this.fromCache(key, request.schema) : undefined
@@ -474,6 +477,7 @@ export class GenerationService {
           kind: request.kind,
           inputs: request.input,
           promptVersion: request.prompt.version,
+          language: request.language,
           content,
           grounded,
           sourceSections

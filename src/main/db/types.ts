@@ -1,5 +1,6 @@
 /** Row types returned by the repositories. Timestamps are ISO 8601 strings. */
 
+import type { GenerationLanguage } from '../../shared/generationLanguage'
 import type { Json } from '../../shared/json'
 import type { RoundLimitChoice } from '../../shared/mastery'
 import type { AppSettings } from '../../shared/settings'
@@ -18,6 +19,11 @@ export interface Grounded {
   grounded: boolean
   /** References to the Source Corpus sections the content was generated from. */
   sourceSections: string[]
+}
+
+/** The Generation Language content was written in. */
+export interface Localized {
+  language: GenerationLanguage
 }
 
 export interface Topic extends Timestamps {
@@ -39,14 +45,14 @@ export interface Notion extends Timestamps {
   sourceSections: string[]
 }
 
-export interface Lesson extends Timestamps, Grounded {
+export interface Lesson extends Timestamps, Grounded, Localized {
   id: number
   topicId: number
   content: string
   contentCacheKey: string | null
 }
 
-export interface RemediationLesson extends Timestamps, Grounded {
+export interface RemediationLesson extends Timestamps, Grounded, Localized {
   id: number
   notionId: number
   roundId: number | null
@@ -54,7 +60,7 @@ export interface RemediationLesson extends Timestamps, Grounded {
   contentCacheKey: string | null
 }
 
-export interface Quiz extends Timestamps, Grounded {
+export interface Quiz extends Timestamps, Grounded, Localized {
   id: number
   topicId: number
   contentCacheKey: string | null
@@ -169,7 +175,7 @@ export interface ProtocolStepEncounter extends Timestamps {
 export type ContentCacheKind =
   'lesson' | 'remediation_lesson' | 'quiz' | 'protocol_step_lesson' | 'question_clarification'
 
-export interface ContentCacheEntry extends Timestamps, Grounded {
+export interface ContentCacheEntry extends Timestamps, Grounded, Localized {
   cacheKey: string
   kind: ContentCacheKind
   inputs: Json

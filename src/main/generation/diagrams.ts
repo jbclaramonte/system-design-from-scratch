@@ -14,7 +14,9 @@ import {
   type DiagramError,
   type DiagramErrorCode
 } from '../../shared/diagramSource'
-import { DIAGRAM_RULES } from './prompts/common'
+import type { GenerationLanguage } from '../../shared/generationLanguage'
+import { languageProfile } from './languageProfile'
+import { diagramRules } from './prompts/common'
 import type { MermaidParse } from './mermaidParser'
 import type { ContentFinalizer, FinalizeCall, FinalizeTools } from './service'
 
@@ -241,13 +243,16 @@ export const diagramRepairSchema = z.object({
 
 export type DiagramRepair = z.infer<typeof diagramRepairSchema>
 
-const REPAIR_SYSTEM = `You fix Mermaid diagrams written for a French system design course, so that a strict renderer can draw them. You return corrected diagram sources only.
+const repairSystem = (
+  language: GenerationLanguage
+) => `You fix Mermaid diagrams written for ${languageProfile(language).nameWithArticle} system design course, so that a strict renderer can draw them. You return corrected diagram sources only.
 
-${DIAGRAM_RULES}`
+${diagramRules(language)}`
 
 /** The repair Generation of a text's invalid blocks: one call for all of them. */
 export function buildDiagramRepairCall(
-  invalid: readonly InvalidDiagram[]
+  invalid: readonly InvalidDiagram[],
+  language: GenerationLanguage
 ): FinalizeCall<DiagramRepair> {
   const diagrams = invalid
     .map(
@@ -261,7 +266,7 @@ export function buildDiagramRepairCall(
 
 ${diagrams}`
   return {
-    prompt: { version: DIAGRAM_REPAIR_PROMPT_VERSION, system: REPAIR_SYSTEM, user },
+    prompt: { version: DIAGRAM_REPAIR_PROMPT_VERSION, system: repairSystem(language), user },
     schema: diagramRepairSchema,
     timeoutMs: DIAGRAM_REPAIR_TIMEOUT_MS
   }
@@ -282,12 +287,13 @@ function unfence(source: string): string {
 export async function repairDiagramsInMarkdown(
   markdown: string,
   tools: FinalizeTools,
+  language: GenerationLanguage,
   options: DiagramParseOptions = {}
 ): Promise<string> {
   const { invalid } = await validateDiagramsInMarkdown(markdown, options)
   if (invalid.length === 0) return markdown
 
-  const repair = await tools.complete(buildDiagramRepairCall(invalid))
+  const repair = await tools.complete(buildDiagramRepairCall(invalid, language))
   const fixed = new Map<number, string>()
   for (const diagram of repair?.diagrams ?? []) {
     const source = unfence(diagram.source)
@@ -322,8 +328,18 @@ export async function repairDiagramsInMarkdown(
 }
 
 /** `finalize` hook of the lesson-like prompts: diagram repair of a Markdown output. */
-export const repairDiagrams: ContentFinalizer = async (content: Json, tools: FinalizeTools) =>
-  typeof content === 'string' ? repairDiagramsInMarkdown(content, tools) : content
+const repairers = new Map<GenerationLanguage, ContentFinalizer>()
+
+/** The same finalizer instance for a language, so a build's hook can be compared. */
+export function repairDiagramsFor(language: GenerationLanguage): ContentFinalizer {
+  let repairer = repairers.get(language)
+  if (!repairer) {
+    repairer = async (content: Json, tools: FinalizeTools) =>
+      typeof content === 'string' ? repairDiagramsInMarkdown(content, tools, language) : content
+    repairers.set(language, repairer)
+  }
+  return repairer
+}
 
 /**
  * `finalize` hook of the quiz: a question's `diagram` is optional, so a diagram that mermaid's

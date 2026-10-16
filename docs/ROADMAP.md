@@ -100,8 +100,11 @@ gantt
     #54 Forced Unlock of Learning Path steps  :done, a3, 2026-10-15, 2d
     #55 Declared Mastery, mark a topic known  :done, a4, after a3, 2d
 
+    section Course language
+    #57 Course language, French or English    :done, l1, 2026-10-16, 3d
+
     section Website
-    #56 GitHub Pages homepage                 :w1, 2026-10-16, 2d
+    #56 GitHub Pages homepage                 :done, w1, after l1, 2d
 ```
 
 ## Dependency table
@@ -164,6 +167,7 @@ gantt
 | #54 | #17, #34 |
 | #55 | #11, #17, #18, #54 |
 | #56 | #41, #55 |
+| #57 | #6, #7, #10, #14, #15, #52, #53 |
 
 ## Conventions
 

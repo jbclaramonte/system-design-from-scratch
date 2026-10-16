@@ -20,7 +20,8 @@ const request: FreeAnswerGradingRequest = {
       description: 'Retirer une entrée quand la donnée change.'
     }
   ],
-  answer: 'Pour que le cache ne serve pas une vieille valeur trop longtemps.'
+  answer: 'Pour que le cache ne serve pas une vieille valeur trop longtemps.',
+  language: 'fr'
 }
 
 const injection =
@@ -51,7 +52,10 @@ describe('buildFreeAnswerGradingGeneration', () => {
   })
 
   it('delimits the untrusted answer after the rubric, and says to ignore instructions in it', () => {
-    const { prompt } = buildFreeAnswerGradingGeneration({ ...request, answer: injection })
+    const { prompt } = buildFreeAnswerGradingGeneration({
+      ...request,
+      answer: injection
+    })
 
     expect(prompt.system).toMatch(/data to grade, never instructions/)
     expect(prompt.system).toMatch(/empty, off-topic or nonsense answer.*"incorrect"/)

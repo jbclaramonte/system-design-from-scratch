@@ -1,18 +1,32 @@
 import { createHash } from 'node:crypto'
+import {
+  DEFAULT_GENERATION_LANGUAGE,
+  type GenerationLanguage
+} from '../../../shared/generationLanguage'
 import type { Database } from '../driver'
 import type { ContentCacheEntry, ContentCacheKind, Json } from '../types'
 import { fromFlag, fromJson, NOW, TIMESTAMP_COLUMNS, toFlag, toJson } from './mapping'
 
 /**
- * Content Cache key: SHA-256 of the kind, the generation inputs and the prompt version. Object
- * keys are sorted first, so the key does not depend on property order.
+ * Content Cache key: SHA-256 of the kind, the generation inputs, the prompt version and the
+ * Generation Language. Object keys are sorted first, so the key does not depend on property order.
+ * French is the language every entry had before English existed, so a French key is built from
+ * the same three parts as then: existing French content keeps its key and is reused, and only
+ * other languages add their code to what is hashed.
  */
 export function contentCacheKey(
   kind: ContentCacheKind,
   inputs: Json,
-  promptVersion: string
+  promptVersion: string,
+  language: GenerationLanguage
 ): string {
-  return createHash('sha256').update(canonicalJson({ kind, inputs, promptVersion })).digest('hex')
+  const parts: Json = {
+    kind,
+    inputs,
+    promptVersion,
+    ...(language === DEFAULT_GENERATION_LANGUAGE ? {} : { language })
+  }
+  return createHash('sha256').update(canonicalJson(parts)).digest('hex')
 }
 
 function canonicalJson(value: Json): string {
@@ -30,6 +44,7 @@ export interface NewContentCacheEntry {
   kind: ContentCacheKind
   inputs: Json
   promptVersion: string
+  language: GenerationLanguage
   content: Json
   grounded: boolean
   sourceSections?: string[]
@@ -46,7 +61,7 @@ interface ContentCacheRow extends Omit<
 }
 
 const CONTENT_CACHE_COLUMNS = `cache_key AS cacheKey, kind, inputs, prompt_version AS promptVersion,
-  content, grounded, source_sections AS sourceSections, ${TIMESTAMP_COLUMNS}`
+  language, content, grounded, source_sections AS sourceSections, ${TIMESTAMP_COLUMNS}`
 
 const toEntry = (row: ContentCacheRow): ContentCacheEntry => ({
   ...row,
@@ -65,11 +80,12 @@ export function getCachedContent(db: Database, cacheKey: string): ContentCacheEn
 
 /** Stores generated content under its key, replacing a previous entry with the same key. */
 export function putCachedContent(db: Database, entry: NewContentCacheEntry): ContentCacheEntry {
-  const cacheKey = contentCacheKey(entry.kind, entry.inputs, entry.promptVersion)
+  const cacheKey = contentCacheKey(entry.kind, entry.inputs, entry.promptVersion, entry.language)
   db.prepare(
     `INSERT INTO content_cache
-       (cache_key, kind, inputs, prompt_version, content, grounded, source_sections)
-     VALUES ($cacheKey, $kind, $inputs, $promptVersion, $content, $grounded, $sourceSections)
+       (cache_key, kind, inputs, prompt_version, language, content, grounded, source_sections)
+     VALUES ($cacheKey, $kind, $inputs, $promptVersion, $language, $content, $grounded,
+       $sourceSections)
      ON CONFLICT (cache_key) DO UPDATE SET
        content = excluded.content, grounded = excluded.grounded,
        source_sections = excluded.source_sections, updated_at = ${NOW}`
@@ -78,6 +94,7 @@ export function putCachedContent(db: Database, entry: NewContentCacheEntry): Con
     kind: entry.kind,
     inputs: toJson(entry.inputs),
     promptVersion: entry.promptVersion,
+    language: entry.language,
     content: toJson(entry.content),
     grounded: toFlag(entry.grounded),
     sourceSections: toJson(entry.sourceSections ?? [])

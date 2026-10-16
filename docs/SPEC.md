@@ -20,7 +20,7 @@ Personal desktop app to learn system design from scratch, built around this loop
 ## 2. Audience and language
 
 - Single user (personal tool). Keep the code structure clean enough to open it up later.
-- Course content and UI shown to the user are in French. Technical terms stay in English (load balancer, sharding, cache, etc.) because interviews are mostly in English.
+- Course content shown to the user is generated in French or in English, chosen in Settings (the [[Generation Language]], French by default). In French, technical terms stay in English (load balancer, sharding, cache, etc.) because interviews are mostly in English; in English there is no translation rule. The app UI itself is in English. See [[Prompts#Generation Language]].
 - The repo itself (code, docs, issues) is in English.
 - Starting level: complete beginner.
 
@@ -72,6 +72,7 @@ Small helpers around the text and the quiz, outside the mastery loop: they never
   2. A new quiz is composed of fresh questions on those notions, plus a reminder of already mastered ones.
   3. The loop continues until the threshold is reached.
 - Settings:
+  - Course language (French or English), for the content generated from then on. Content already generated is kept in its language, mastery never depends on it, and a round in progress finishes in the language of its quiz. See [[Generation Language]].
   - Global mastery threshold in percent, adjustable, 100% by default.
   - Guard rail: after N rounds without success (N adjustable), the app offers another angle (concrete example, analogy) or to skip and come back later. See [[Round Limit]].
 - Question types:

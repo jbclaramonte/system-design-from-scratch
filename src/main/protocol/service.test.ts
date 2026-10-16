@@ -7,6 +7,7 @@ import { openDatabase, type Database } from '../db/driver'
 import { migrate } from '../db/migrate'
 import { migrations } from '../db/migrations'
 import { getCachedContent } from '../db/repositories/contentCache'
+import { updateSettings } from '../db/repositories/settings'
 import {
   createDesignExercise,
   createProtocolStepSubmission,
@@ -126,8 +127,9 @@ describe('exercise view', () => {
   })
 
   it('falls back on the Reference Solution title without a problem statement', () => {
+    // An exercise the catalogue does not know (no curated statement in any language).
     const exercise = createDesignExercise(db, {
-      slug: 'pastebin',
+      slug: 'pastebin-copy',
       title: 'Pastebin',
       position: 1,
       grounded: true,
@@ -212,7 +214,7 @@ describe('step feedback', () => {
       protocolStep: 'functional_requirements',
       grounded: true
     })
-    expect(row!.content).toMatchObject({ promptVersion: 'design-step-feedback-4' })
+    expect(row!.content).toMatchObject({ promptVersion: 'design-step-feedback-5' })
     const [call] = fake.calls()
     expect(call!.images).toBe(0)
     expect(call!.stdin).toContain('Design Pastebin.com (or Bit.ly)')
@@ -380,7 +382,7 @@ describe('the catalogued Design Exercises', () => {
   it('shows the curated statement and the active steps of the order index', () => {
     const exercise = protocol.getExercise(idOf('twitter'))
     expect(exercise.exerciseIndex).toBe(2)
-    expect(exercise.problemStatement).toBe(DESIGN_EXERCISES[1]!.problemStatement)
+    expect(exercise.problemStatement).toBe(DESIGN_EXERCISES[1]!.problemStatements.fr)
     expect(exercise.steps.filter((s) => s.active).map((s) => s.step)).toEqual([
       'functional_requirements',
       'estimations',
@@ -408,7 +410,7 @@ describe('the catalogued Design Exercises', () => {
     expect(review.status).toBe('done')
     const [hint, fr, hld, final] = fake.calls().map((call) => call.stdin)
     for (const prompt of [hint!, fr!, hld!, final!]) {
-      expect(prompt).toContain(DESIGN_EXERCISES[0]!.problemStatement)
+      expect(prompt).toContain(DESIGN_EXERCISES[0]!.problemStatements.fr)
       expect(prompt).toContain(
         'Protocol Steps of this exercise: Functional requirements, High-level design.'
       )
@@ -520,5 +522,77 @@ describe('CLI input with images', () => {
     })
     expect(buildCliArgs({ ...options, images: [] })).not.toContain('--input-format')
     expect(buildCliInput({ prompt: 'plain' })).toBe('plain')
+  })
+})
+
+describe('Generation Language', () => {
+  const idOf = (slug: string) => {
+    seedDesignExercises(db, corpus)
+    return listDesignExercises(db).find((exercise) => exercise.slug === slug)!.id
+  }
+  const setLanguage = (generationLanguage: 'fr' | 'en') =>
+    updateSettings(db, { generationLanguage })
+
+  it('shows the problem statement of the language selected, French by default', () => {
+    const [pastebin, twitter] = DESIGN_EXERCISES
+    const id = idOf('pastebin')
+    expect(protocol.getExercise(id).problemStatement).toBe(pastebin!.problemStatements.fr)
+
+    setLanguage('en')
+    expect(protocol.getExercise(id).problemStatement).toBe(pastebin!.problemStatements.en)
+    expect(protocol.getExercise(idOf('twitter')).problemStatement).toBe(
+      twitter!.problemStatements.en
+    )
+    // Nothing is rewritten in the database: switching back shows the French statement again.
+    setLanguage('fr')
+    expect(protocol.getExercise(id).problemStatement).toBe(pastebin!.problemStatements.fr)
+  })
+
+  it('gives the feedback prompts the statement and the output language of the setting', async () => {
+    const id = idOf('pastebin')
+    setLanguage('en')
+    await protocol.submitStep(id, 'functional_requirements', {
+      type: 'text',
+      text: 'users paste text scenario:design'
+    })
+    await protocol.requestHint(id, 'functional_requirements', {
+      type: 'text',
+      text: 'scenario:design'
+    })
+    const english = fake.calls().map((call) => call.stdin)
+    for (const prompt of english) {
+      expect(prompt).toContain(DESIGN_EXERCISES[0]!.problemStatements.en)
+      expect(prompt).not.toContain(DESIGN_EXERCISES[0]!.problemStatements.fr)
+    }
+    expect(english[0]).toContain('English output.')
+
+    setLanguage('fr')
+    await protocol.submitStep(id, 'functional_requirements', {
+      type: 'text',
+      text: 'users paste text scenario:design'
+    })
+    const french = fake.calls().at(-1)!.stdin
+    expect(french).toContain(DESIGN_EXERCISES[0]!.problemStatements.fr)
+    expect(french).toContain('French output.')
+    // The English feedback already given stays: one more submission, not a rewrite.
+    expect(listProtocolStepSubmissions(db, id)).toHaveLength(2)
+  })
+
+  it('keeps a Protocol Step Lesson per language in the Content Cache', async () => {
+    const french = await generation.generate(protocol.prepareStepLesson('api').request).result
+    setLanguage('en')
+    const request = protocol.prepareStepLesson('api').request
+    expect(request.language).toBe('en')
+    const english = await generation.generate(request).result
+
+    expect(english.fromCache).toBe(false)
+    expect(english.cacheKey).not.toBe(french.cacheKey)
+    expect(getCachedContent(db, french.cacheKey!)).toMatchObject({ language: 'fr' })
+    expect(getCachedContent(db, english.cacheKey!)).toMatchObject({ language: 'en' })
+
+    setLanguage('fr')
+    const again = await generation.generate(protocol.prepareStepLesson('api').request).result
+    expect(again).toMatchObject({ fromCache: true, cacheKey: french.cacheKey })
+    expect(fake.calls()).toHaveLength(2)
   })
 })

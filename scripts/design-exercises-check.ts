@@ -91,7 +91,7 @@ for (const [run, slug] of RUNS.entries()) {
   const definition = DESIGN_EXERCISES.find((exercise) => exercise.slug === slug)!
   const terms = definition.referenceTerms[step] ?? []
   const submission = SUBMISSIONS[slug]!
-  const allowed = [definition.title, definition.problemStatement, submission].join('\n')
+  const allowed = [definition.title, definition.problemStatements.fr, submission].join('\n')
   const rawLeaks: string[][] = []
   // A fresh database per run: the repeat is a first submission too.
   const db = openDatabase(':memory:')
@@ -113,7 +113,7 @@ for (const [run, slug] of RUNS.entries()) {
   const exercise = listDesignExercises(db).find((row) => row.slug === slug)!
   const part = [
     `## Run ${run + 1}: exercise ${definition.orderIndex}, ${definition.title}`,
-    `Problem statement shown to the learner:\n\n> ${definition.problemStatement}`,
+    `Problem statement shown to the learner:\n\n> ${definition.problemStatements.fr}`,
     `Submission (functional requirements, mediocre on purpose):\n\n\`\`\`text\n${submission}\n\`\`\``
   ]
   const started = Date.now()

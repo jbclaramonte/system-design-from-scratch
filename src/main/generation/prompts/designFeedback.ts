@@ -5,6 +5,7 @@
 // to judge, never quotes it, and Hints never reveal it.
 import { z } from 'zod'
 import type { DesignGraph } from '../../../shared/designGraph'
+import type { GenerationLanguage } from '../../../shared/generationLanguage'
 import {
   checklistVerdicts,
   PROTOCOL_STEP_DEFINITIONS,
@@ -15,20 +16,21 @@ import {
   type StepFeedback
 } from '../../../shared/protocol'
 import type { CliImage } from '../cliRunner'
+import { languageProfile } from '../languageProfile'
 import {
   AUDIENCE_RULES,
   cleanExcerptMarkdown,
   joinParts,
-  LANGUAGE_RULES,
+  languageRules,
   type PromptBuild
 } from './common'
 
 /** Bump with any change to the prompt or schema of step feedback. */
-export const DESIGN_STEP_FEEDBACK_PROMPT_VERSION = 'design-step-feedback-4'
+export const DESIGN_STEP_FEEDBACK_PROMPT_VERSION = 'design-step-feedback-5'
 /** Bump with any change to the prompt or schema of Hints. */
-export const DESIGN_HINT_PROMPT_VERSION = 'design-hint-3'
+export const DESIGN_HINT_PROMPT_VERSION = 'design-hint-4'
 /** Bump with any change to the prompt or schema of the final review. */
-export const DESIGN_FINAL_REVIEW_PROMPT_VERSION = 'design-final-review-4'
+export const DESIGN_FINAL_REVIEW_PROMPT_VERSION = 'design-final-review-5'
 
 /** Step feedback and final reviews read a whole design: allow more than the default. */
 export const DESIGN_FEEDBACK_TIMEOUT_MS = 150_000
@@ -79,6 +81,8 @@ export interface StepFeedbackRequest {
   attempt: number
   /** The Design Export PNG of a canvas step, sent as an image block when present. */
   png?: string | null
+  /** Language of the feedback, whatever language the learner wrote in. */
+  language: GenerationLanguage
 }
 
 export interface HintRequest {
@@ -90,12 +94,14 @@ export interface HintRequest {
   previousSteps: StepSubmissionBrief[]
   /** Hints already given on this step, lowest level first. */
   previousHints: string[]
+  language: GenerationLanguage
 }
 
 export interface FinalReviewRequest {
   exercise: ExerciseBrief
   /** Latest reviewed submission of every active step, in canonical order. */
   steps: StepSubmissionBrief[]
+  language: GenerationLanguage
 }
 
 // Untrusted text
@@ -222,7 +228,9 @@ export function stepFeedbackSchema(checklistLength: number) {
   }) satisfies z.ZodType<StepFeedback>
 }
 
-const STEP_FEEDBACK_SYSTEM = `You are a supportive but demanding system design interviewer. A beginner practises the interview method step by step on a Design Exercise; you give feedback on the one step they just submitted.
+const stepFeedbackSystem = (language: GenerationLanguage) => {
+  const profile = languageProfile(language)
+  return `You are a supportive but demanding system design interviewer. A beginner practises the interview method step by step on a Design Exercise; you give feedback on the one step they just submitted.
 
 ${SECURITY}
 
@@ -233,26 +241,29 @@ ${SCOPE_RULES}
 Feedback:
 - checklist: one entry per checklist item, in order. verdict "met" when the submission clearly does it, "partial" when it is started but incomplete or vague, "missing" when absent or wrong. comment: one sentence pointing at what the submission says or lacks.
 - summary: 1 to 3 sentences, what is solid and the most important thing to improve.
-- gaps: what is missing for this step (at most 4), each as a concrete pointer ("tu ne dis pas ...").
+- gaps: what is missing for this step (at most 4), each as a concrete pointer ("${profile.designFeedback.gapPointer}").
 - errors: wrong statements or wrong connections (at most 4); empty when there is none. For a diagram, check the arrows (direction, missing or dangling links) and components that do not fit.
 - forgottenTradeOffs: trade-offs the learner should have mentioned at this step (at most 3); empty when none is relevant.
 - nextStep: one actionable suggestion for improving this step or for the next step.
 
 Missing content (applies to every field: checklist comments, summary, gaps, errors, forgottenTradeOffs, nextStep):
-- Point at the CATEGORY of what is missing only: "tu ne dis pas ce qui est hors périmètre", "pense aux cas limites de tes cas d'usage", "qui d'autre que l'utilisateur agit sur le système ?". Never name a specific item, example, number or out-of-scope entry of the Reference Solution that the learner did not write, not even after "par exemple" or inside a question.
+- Point at the CATEGORY of what is missing only: ${profile.designFeedback.missingContentExamples}. Never name a specific item, example, number or out-of-scope entry of the Reference Solution that the learner did not write, not even after "${profile.designFeedback.forExample}" or inside a question.
 - What the learner did write may be confirmed, praised and refined with the reference (a sharper wording, an edge case of that very item).
 - forgottenTradeOffs: only trade-offs of what the learner wrote; empty otherwise.
 
-${LANGUAGE_RULES}
+${languageRules(language)}
+
+${profile.learnerTextNote}
 
 ${AUDIENCE_RULES}
 
 Keep it short and concrete.`
+}
 
 export function buildStepFeedbackGeneration(
   request: StepFeedbackRequest
 ): PromptBuild<StepFeedback> & { images: CliImage[] } {
-  const { exercise, step, submission, previousSteps, attempt, png } = request
+  const { exercise, step, submission, previousSteps, attempt, png, language } = request
   const definition = PROTOCOL_STEP_DEFINITIONS[step]
   const withPng = submission.type === 'canvas' && !!png
   const user = joinParts(
@@ -266,12 +277,17 @@ export function buildStepFeedbackGeneration(
       'The attached image is a capture of the learner diagram (same content as the description and graph below). Use it for layout and labels; the graph is authoritative for connections.',
     `The learner's submission for the step "${definition.title}":`,
     fenceUntrusted(LEARNER_TAGS.submission, submissionText(submission), stepAttribute(step)),
-    `Remember: ${definition.checklist.length} checklist verdicts, in order. French output.`
+    `Remember: ${definition.checklist.length} checklist verdicts, in order. ${languageProfile(language).name} output.`
   )
   return {
     kind: 'design_feedback',
+    language,
     input: { feedback: 'step', step, attempt },
-    prompt: { version: DESIGN_STEP_FEEDBACK_PROMPT_VERSION, system: STEP_FEEDBACK_SYSTEM, user },
+    prompt: {
+      version: DESIGN_STEP_FEEDBACK_PROMPT_VERSION,
+      system: stepFeedbackSystem(language),
+      user
+    },
     schema: stepFeedbackSchema(definition.checklist.length),
     // The Reference Solution is not a Source Corpus section: the output is not cited.
     groundedSourceSections: [],
@@ -292,7 +308,9 @@ export const HINT_LEVEL_RULES: Record<HintLevel, string> = {
   3: 'Level 3, near-solution: describe the shape of a good answer for the most important missing point (what kind of element, where it goes, why), leaving the learner to write or draw it. Never give the complete answer to the step, never list everything that is missing.'
 }
 
-const HINT_SYSTEM = `You give graded, spoiler-free Hints to a beginner working on one step of a system design interview exercise. A Hint helps the learner find the next idea by themselves.
+const hintSystem = (
+  language: GenerationLanguage
+) => `You give graded, spoiler-free Hints to a beginner working on one step of a system design interview exercise. A Hint helps the learner find the next idea by themselves.
 
 ${SECURITY}
 
@@ -306,10 +324,12 @@ Hint:
 - Follow the level rule exactly. Do not repeat an earlier Hint: go one level further.
 - If the step already looks complete, say what to double-check instead.
 
-${LANGUAGE_RULES}`
+${languageRules(language)}
+
+${languageProfile(language).learnerTextNote}`
 
 export function buildHintGeneration(request: HintRequest): PromptBuild<HintContent> {
-  const { exercise, step, level, current, previousSteps, previousHints } = request
+  const { exercise, step, level, current, previousSteps, previousHints, language } = request
   const user = joinParts(
     exercisePart(exercise),
     stepPart(step),
@@ -323,8 +343,9 @@ export function buildHintGeneration(request: HintRequest): PromptBuild<HintConte
   )
   return {
     kind: 'design_feedback',
+    language,
     input: { feedback: 'hint', step, level },
-    prompt: { version: DESIGN_HINT_PROMPT_VERSION, system: HINT_SYSTEM, user },
+    prompt: { version: DESIGN_HINT_PROMPT_VERSION, system: hintSystem(language), user },
     schema: hintSchema,
     groundedSourceSections: []
   }
@@ -340,13 +361,15 @@ export const finalReviewSchema = z.object({
   nextTime: z.array(z.string().min(1).max(300)).max(3)
 }) satisfies z.ZodType<FinalReview>
 
-const FINAL_REVIEW_SYSTEM = `You are a system design interviewer giving the final review of a beginner's whole Design Exercise, after every step was submitted. You compare their design with the primer's Reference Solution.
+const finalReviewSystem = (language: GenerationLanguage) => {
+  const profile = languageProfile(language)
+  return `You are a system design interviewer giving the final review of a beginner's whole Design Exercise, after every step was submitted. You compare their design with the primer's Reference Solution.
 
 ${SECURITY}
 
 Comparison rules:
 - The learner reads the Reference Solution right after your review, so you may now say what it does differently, in your own words. Do not copy its sentences, tables or code; summarize.
-- Say which part of the Reference Solution each comparison draws from: start each gapsVsReference entry with the part in French ("Cas d'usage :", "Hors périmètre :", "Estimations :", "Composants :", "Passage à l'échelle :").
+- Say which part of the Reference Solution each comparison draws from: start each gapsVsReference entry with the part in ${profile.name} (${profile.designFeedback.finalReviewPrefixes}).
 - It is one good answer, not the only one: when the learner made a different but defensible choice, say so and name the trade-off instead of counting it as a gap.
 - Judge only the steps the learner had to do (listed below); do not blame them for steps that were not part of this exercise.
 
@@ -357,12 +380,15 @@ Review:
 - tradeOffsToDiscuss: trade-offs an interviewer would expect to discuss on this design (1 to 5).
 - nextTime: at most 3 habits to practise in the next exercise.
 
-${LANGUAGE_RULES}
+${languageRules(language)}
+
+${profile.learnerTextNote}
 
 ${AUDIENCE_RULES}`
+}
 
 export function buildFinalReviewGeneration(request: FinalReviewRequest): PromptBuild<FinalReview> {
-  const { exercise, steps } = request
+  const { exercise, steps, language } = request
   const user = joinParts(
     exercisePart(exercise),
     `Steps the learner had to do in this exercise: ${steps.map(({ step }) => PROTOCOL_STEP_DEFINITIONS[step].title).join(', ')}.`,
@@ -371,12 +397,17 @@ export function buildFinalReviewGeneration(request: FinalReviewRequest): PromptB
     ...steps.map(({ step, submission }) =>
       fenceUntrusted(LEARNER_TAGS.submission, submissionText(submission), stepAttribute(step))
     ),
-    'Write the final review. French output.'
+    `Write the final review. ${languageProfile(language).name} output.`
   )
   return {
     kind: 'design_feedback',
+    language,
     input: { feedback: 'final_review', steps: steps.map(({ step }) => step) },
-    prompt: { version: DESIGN_FINAL_REVIEW_PROMPT_VERSION, system: FINAL_REVIEW_SYSTEM, user },
+    prompt: {
+      version: DESIGN_FINAL_REVIEW_PROMPT_VERSION,
+      system: finalReviewSystem(language),
+      user
+    },
     schema: finalReviewSchema,
     groundedSourceSections: []
   }

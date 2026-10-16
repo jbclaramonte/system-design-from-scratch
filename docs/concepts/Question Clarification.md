@@ -6,7 +6,7 @@ issue: 53
 
 # Question Clarification
 
-A plainer French rewording of a [[Question]] the learner does not understand, with one concrete example, shown under the Question by the "I don't understand the question" button. The Question and its choices stay on screen and the learner answers the original Question.
+A plainer rewording (in the language of the question's quiz) of a [[Question]] the learner does not understand, with one concrete example, shown under the Question by the "I don't understand the question" button. The Question and its choices stay on screen and the learner answers the original Question.
 
 It clarifies the wording only: it never reveals the correct choice, never hints at which choice is right, never eliminates a choice and never teaches the answer. To make a leak impossible by construction, the prompt gets the Question as the learner sees it (prompt, scenario, choice texts) and nothing else: no `correct` flag, no explanation, no expected points or model answer, no [[Notion]] tags.
 

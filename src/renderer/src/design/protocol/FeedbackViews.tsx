@@ -17,7 +17,7 @@ import {
 } from './protocolText'
 
 /**
- * A list of French sentences as a card with a severity chip (Gaps, Errors, Strengths...). The
+ * A list of sentences as a card with a severity chip (Gaps, Errors, Strengths...). The
  * chip carries the label, so the severity never relies on color alone.
  */
 function List({

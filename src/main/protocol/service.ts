@@ -18,6 +18,7 @@ import {
   saveProtocolStepDraft,
   settleProtocolStepSubmission
 } from '../db/repositories/designPractice'
+import { getGenerationLanguage } from '../db/repositories/settings'
 import type { DesignExercise, DesignFeedback, ProtocolStepSubmission } from '../db/types'
 import { GenerationError } from '../generation/errors'
 import {
@@ -34,6 +35,7 @@ import {
 } from '../generation/prompts'
 import type { GenerationRequest, GenerationService } from '../generation/service'
 import type { Json } from '../../shared/generation'
+import type { GenerationLanguage } from '../../shared/generationLanguage'
 import {
   activeStepsFor,
   nextHintLevel,
@@ -54,7 +56,7 @@ import {
   type StoredSubmission,
   type SubmissionView
 } from '../../shared/protocol'
-import { referenceTermsFor } from './designExercises'
+import { problemStatementFor, referenceTermsFor } from './designExercises'
 import { exerciseIndexOf } from './exercises'
 import { findLeakedTerms, leakRetryNote, redactLeakedEntries, stepFeedbackTexts } from './leakGuard'
 import { referenceForSteps } from './reference'
@@ -128,6 +130,8 @@ interface FinalReviewRecord {
 interface ExerciseContext {
   exercise: DesignExercise
   index: number
+  /** Generation Language of this call: the feedback and the statement shown follow it. */
+  language: GenerationLanguage
   problemStatement: string
   solution: ReferenceSolution | undefined
   referenceSolution: { title: string; url: string } | null
@@ -199,10 +203,16 @@ export function createProtocolService(deps: ProtocolServiceDeps): ProtocolServic
         `Reference Solution ${exercise.referenceSolutionSection} is not in the corpus.`
       )
     }
+    const language = getGenerationLanguage(db)
     return {
       exercise,
       index,
-      problemStatement: exercise.problemStatement ?? solution?.title ?? exercise.title,
+      language,
+      problemStatement:
+        problemStatementFor(exercise.slug, language) ??
+        exercise.problemStatement ??
+        solution?.title ??
+        exercise.title,
       solution,
       referenceSolution: solution ? { title: solution.title, url: solution.source.url } : null
     }
@@ -348,10 +358,11 @@ export function createProtocolService(deps: ProtocolServiceDeps): ProtocolServic
         step,
         (id) => corpus.findExcerpts({ sectionIds: [id], limit: 1 })[0]
       )
-      const build = buildProtocolStepLessonGeneration(step, {
-        excerpts,
-        corpusVersion: corpus.data.metadata.commitSha
-      })
+      const build = buildProtocolStepLessonGeneration(
+        step,
+        { excerpts, corpusVersion: corpus.data.metadata.commitSha },
+        getGenerationLanguage(db)
+      )
       return { request: build, sourceSections: build.groundedSourceSections }
     },
 
@@ -392,7 +403,8 @@ export function createProtocolService(deps: ProtocolServiceDeps): ProtocolServic
         submission: inputBrief(input),
         previousSteps: briefs(previous),
         attempt: reviewedBefore + 1,
-        png
+        png,
+        language: ctx.language
       })
       return outcome(
         designExerciseId,
@@ -465,7 +477,8 @@ export function createProtocolService(deps: ProtocolServiceDeps): ProtocolServic
         level,
         current: inputBrief(current),
         previousSteps: briefs(latestReviewed(designExerciseId, earlierSteps)),
-        previousHints: given.map((hint) => hint.hint)
+        previousHints: given.map((hint) => hint.hint),
+        language: ctx.language
       })
       return outcome(designExerciseId, async () => {
         const { content } = await service.generate<HintContent>({
@@ -500,7 +513,8 @@ export function createProtocolService(deps: ProtocolServiceDeps): ProtocolServic
       }
       const build = buildFinalReviewGeneration({
         exercise: briefFor(ctx, active),
-        steps: briefs(latest)
+        steps: briefs(latest),
+        language: ctx.language
       })
       return outcome(designExerciseId, async () => {
         const { content } = await service.generate<FinalReview>({

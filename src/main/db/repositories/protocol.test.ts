@@ -16,7 +16,8 @@ import {
   saveProtocolStepDraft,
   settleProtocolStepSubmission
 } from './designPractice'
-import { createLesson, createTopic } from './learningContent'
+import { insertLegacyCacheEntry, insertLegacyLesson } from '../testing/legacyRows'
+import { createTopic } from './learningContent'
 
 let db: Database
 
@@ -30,44 +31,42 @@ describe('migration 4 (interview-protocol)', () => {
   it('keeps Content Cache entries and the keys that point at them', () => {
     migrate(db, migrations.slice(0, 3))
     const topic = createTopic(db, { slug: 'cache', title: 'Cache', position: 1 })
-    const entry = putCachedContent(db, {
+    const cacheKey = insertLegacyCacheEntry(db, {
       kind: 'lesson',
       inputs: { topic: 'cache' },
       promptVersion: 'lesson-1',
       content: '# Cache',
-      grounded: true,
       sourceSections: ['cache']
     })
-    const lesson = createLesson(db, {
+    const lessonId = insertLegacyLesson(db, {
       topicId: topic.id,
       content: '# Cache',
-      grounded: true,
-      sourceSections: ['cache'],
-      contentCacheKey: entry.cacheKey
+      contentCacheKey: cacheKey
     })
 
     migrate(db, migrations)
 
-    expect(getCachedContent(db, entry.cacheKey)).toMatchObject({
+    expect(getCachedContent(db, cacheKey)).toMatchObject({
       kind: 'lesson',
       content: '# Cache',
       sourceSections: ['cache'],
-      createdAt: entry.createdAt
+      language: 'fr'
     })
     const key = () =>
       db
         .prepare('SELECT content_cache_key AS key FROM lessons WHERE id = $id')
-        .get<{ key: string | null }>({ id: lesson.id })!.key
-    expect(key()).toBe(entry.cacheKey)
+        .get<{ key: string | null }>({ id: lessonId })!.key
+    expect(key()).toBe(cacheKey)
     expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([])
     // The foreign key still points at the rebuilt table.
-    db.prepare('DELETE FROM content_cache WHERE cache_key = $key').run({ key: entry.cacheKey })
+    db.prepare('DELETE FROM content_cache WHERE cache_key = $key').run({ key: cacheKey })
     expect(key()).toBeNull()
   })
 
   it('accepts the protocol_step_lesson kind', () => {
     migrate(db, migrations)
     const entry = putCachedContent(db, {
+      language: 'fr',
       kind: 'protocol_step_lesson',
       inputs: { step: 'api' },
       promptVersion: 'protocol-step-lesson-1',
@@ -75,7 +74,7 @@ describe('migration 4 (interview-protocol)', () => {
       grounded: true
     })
     expect(entry.cacheKey).toBe(
-      contentCacheKey('protocol_step_lesson', { step: 'api' }, 'protocol-step-lesson-1')
+      contentCacheKey('protocol_step_lesson', { step: 'api' }, 'protocol-step-lesson-1', 'fr')
     )
     expect(() =>
       db.exec(

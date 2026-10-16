@@ -1,3 +1,7 @@
+import {
+  DEFAULT_GENERATION_LANGUAGE,
+  type GenerationLanguage
+} from '../../../shared/generationLanguage'
 import type { Database } from '../driver'
 import type { Lesson, Notion, RemediationLesson, Topic } from '../types'
 import { fromFlag, fromJson, TIMESTAMP_COLUMNS, toFlag, toJson } from './mapping'
@@ -123,6 +127,8 @@ export function listNotionsByTopic(db: Database, topicId: number): Notion[] {
 export interface NewLesson {
   topicId: number
   content: string
+  /** Default French (what rows were before the Generation Language existed). */
+  language?: GenerationLanguage
   grounded: boolean
   sourceSections?: string[]
   contentCacheKey?: string | null
@@ -133,7 +139,7 @@ interface LessonRow extends Omit<Lesson, 'grounded' | 'sourceSections'> {
   sourceSections: string
 }
 
-const LESSON_COLUMNS = `id, topic_id AS topicId, content, grounded, source_sections AS sourceSections,
+const LESSON_COLUMNS = `id, topic_id AS topicId, content, language, grounded, source_sections AS sourceSections,
   content_cache_key AS contentCacheKey, ${TIMESTAMP_COLUMNS}`
 
 const toLesson = (row: LessonRow): Lesson => ({
@@ -145,12 +151,13 @@ const toLesson = (row: LessonRow): Lesson => ({
 export function createLesson(db: Database, lesson: NewLesson): Lesson {
   const { lastInsertRowid } = db
     .prepare(
-      `INSERT INTO lessons (topic_id, content, grounded, source_sections, content_cache_key)
-       VALUES ($topicId, $content, $grounded, $sourceSections, $contentCacheKey)`
+      `INSERT INTO lessons (topic_id, content, language, grounded, source_sections, content_cache_key)
+       VALUES ($topicId, $content, $language, $grounded, $sourceSections, $contentCacheKey)`
     )
     .run({
       topicId: lesson.topicId,
       content: lesson.content,
+      language: lesson.language ?? DEFAULT_GENERATION_LANGUAGE,
       grounded: toFlag(lesson.grounded),
       sourceSections: toJson(lesson.sourceSections ?? []),
       contentCacheKey: lesson.contentCacheKey ?? null
@@ -179,6 +186,8 @@ export interface NewRemediationLesson {
   notionId: number
   roundId?: number | null
   content: string
+  /** Default French (what rows were before the Generation Language existed). */
+  language?: GenerationLanguage
   grounded: boolean
   sourceSections?: string[]
   contentCacheKey?: string | null
@@ -189,7 +198,8 @@ interface RemediationLessonRow extends Omit<RemediationLesson, 'grounded' | 'sou
   sourceSections: string
 }
 
-const REMEDIATION_LESSON_COLUMNS = `id, notion_id AS notionId, round_id AS roundId, content, grounded,
+const REMEDIATION_LESSON_COLUMNS = `id, notion_id AS notionId, round_id AS roundId, content, language,
+  grounded,
   source_sections AS sourceSections, content_cache_key AS contentCacheKey, ${TIMESTAMP_COLUMNS}`
 
 const toRemediationLesson = (row: RemediationLessonRow): RemediationLesson => ({
@@ -205,13 +215,15 @@ export function createRemediationLesson(
   const { lastInsertRowid } = db
     .prepare(
       `INSERT INTO remediation_lessons
-         (notion_id, round_id, content, grounded, source_sections, content_cache_key)
-       VALUES ($notionId, $roundId, $content, $grounded, $sourceSections, $contentCacheKey)`
+         (notion_id, round_id, content, language, grounded, source_sections, content_cache_key)
+       VALUES ($notionId, $roundId, $content, $language, $grounded, $sourceSections,
+         $contentCacheKey)`
     )
     .run({
       notionId: lesson.notionId,
       roundId: lesson.roundId ?? null,
       content: lesson.content,
+      language: lesson.language ?? DEFAULT_GENERATION_LANGUAGE,
       grounded: toFlag(lesson.grounded),
       sourceSections: toJson(lesson.sourceSections ?? []),
       contentCacheKey: lesson.contentCacheKey ?? null

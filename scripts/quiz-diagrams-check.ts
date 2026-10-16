@@ -198,7 +198,7 @@ try {
   })
   const schema = JSON.stringify(z.toJSONSchema(request.schema!, { target: 'draft-7' }))
   console.log(
-    `prompt ${request.prompt.user.length} + system ${request.prompt.system.length} chars, JSON schema ${schema.length} chars (${schema.match(/"enum"/g)?.length ?? 0} enums, ${schema.match(/"properties"/g)?.length ?? 0} objects), diagram rules ${prompts.QUIZ_DIAGRAM_RULES.length} chars, version ${request.prompt.version}`
+    `prompt ${request.prompt.user.length} + system ${request.prompt.system.length} chars, JSON schema ${schema.length} chars (${schema.match(/"enum"/g)?.length ?? 0} enums, ${schema.match(/"properties"/g)?.length ?? 0} objects), diagram rules ${prompts.quizDiagramRules('fr').length} chars, version ${request.prompt.version}`
   )
   if (dryRun) process.exit(0)
   const quiz = (await service.generate(request).result).content

@@ -4,6 +4,7 @@ import { z } from 'zod'
 import { lessonSources, toErrorInfo } from '../content/lessonIpc'
 import { toNotionRef } from '../content/topics'
 import type { GenerationClient } from '../generation/ipc'
+import { getGenerationLanguage } from '../db/repositories/settings'
 import { sendEvent } from '../ipc/sendEvent'
 import type { TopicLockGuard } from '../path/lock'
 import {
@@ -90,7 +91,7 @@ export function createMasteryIpc(
       mastery.getState(topicId)
       // Same rule as the Lesson and the Rounds: the main process refuses a locked topic.
       assertTopicUnlocked(topicId)
-      return getLessonReview(deps.db, deps.corpus, topicId)
+      return getLessonReview(deps.db, deps.corpus, topicId, getGenerationLanguage(deps.db))
     },
 
     startRound(request, client) {

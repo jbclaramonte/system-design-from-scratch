@@ -6,7 +6,7 @@ issue: 52
 
 # Lesson Question
 
-A question the learner asks about a passage they selected while reading a [[Lesson]], a [[Remediation Lesson]] or a [[Protocol Step Lesson]]. A side panel on the right of the text quotes the passage and keeps a short thread of questions and streamed answers (in French), so the learner can ask follow-ups without leaving the app.
+A question the learner asks about a passage they selected while reading a [[Lesson]], a [[Remediation Lesson]] or a [[Protocol Step Lesson]]. A side panel on the right of the text quotes the passage and keeps a short thread of questions and streamed answers (in the [[Generation Language]]), so the learner can ask follow-ups without leaving the app.
 
 The answer is a [[Generation]] grounded on the text being read and on the [[Excerpt|Excerpts]] of its topic ([[Grounding]]); when the question goes beyond the course, the answer says so instead of inventing.
 

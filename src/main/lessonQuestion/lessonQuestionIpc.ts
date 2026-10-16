@@ -9,6 +9,7 @@ import type { Corpus } from '../corpus'
 import type { Database } from '../db'
 import { hasOpenRound } from '../db/repositories/assessment'
 import { getNotion, getTopic } from '../db/repositories/learningContent'
+import { getGenerationLanguage } from '../db/repositories/settings'
 import type { GenerationClient } from '../generation/ipc'
 import { notionGrounding, topicGrounding } from '../generation/pipelines'
 import {
@@ -145,7 +146,13 @@ export function createLessonQuestionIpc(
     send: (event: LessonEvent) => void
   ) {
     try {
-      const build = buildLessonQuestionGeneration(subject.brief, request, subject.grounding)
+      // The Generation Language when the question is asked, not the one of the text read.
+      const build = buildLessonQuestionGeneration(
+        subject.brief,
+        request,
+        subject.grounding,
+        getGenerationLanguage(deps.db)
+      )
       send({
         type: 'prepared',
         grounded: build.groundedSourceSections.length > 0,
@@ -154,6 +161,7 @@ export function createLessonQuestionIpc(
       })
       const generation = deps.service.generate({
         kind: build.kind,
+        language: build.language,
         input: build.input,
         prompt: build.prompt,
         groundedSourceSections: build.groundedSourceSections,

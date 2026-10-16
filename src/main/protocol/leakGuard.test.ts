@@ -41,7 +41,9 @@ describe('reference terms', () => {
     expect(findLeakedTerms([CATEGORY_ONLY], '', twitterTerms)).toEqual([])
     for (const exercise of DESIGN_EXERCISES) {
       const terms = exercise.referenceTerms.functional_requirements!
-      expect(findLeakedTerms([exercise.problemStatement, exercise.title], '', terms)).toEqual([])
+      for (const statement of Object.values(exercise.problemStatements)) {
+        expect(findLeakedTerms([statement, exercise.title], '', terms)).toEqual([])
+      }
     }
   })
 })

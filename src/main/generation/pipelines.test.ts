@@ -162,7 +162,7 @@ describe('quiz, remediation and flag-and-regenerate pipelines', () => {
     const deps = depsWith(fixtureRunner(calls))
 
     const result = await deps.service.generate(await prepareQuiz(deps, cache.id)).result
-    const quiz = saveQuiz(db, cache.id, result)
+    const quiz = saveQuiz(db, cache.id, result, 'fr')
 
     expect(calls).toHaveLength(2) // outline, then quiz
     expect(calls[1]!.jsonSchema).toBeDefined()
@@ -227,7 +227,8 @@ describe('quiz, remediation and flag-and-regenerate pipelines', () => {
     const quiz = saveQuiz(
       db,
       cache.id,
-      await deps.service.generate(await prepareQuiz(deps, cache.id)).result
+      await deps.service.generate(await prepareQuiz(deps, cache.id)).result,
+      'fr'
     )
     const faulty = listQuestions(db, quiz.id)[1]!
     await expect(regenerateQuestion(deps, faulty.id)).rejects.toThrow(/not flagged/)
@@ -264,7 +265,8 @@ describe('quiz, remediation and flag-and-regenerate pipelines', () => {
     const quiz = saveQuiz(
       db,
       cache.id,
-      await deps.service.generate(await prepareQuiz(deps, cache.id)).result
+      await deps.service.generate(await prepareQuiz(deps, cache.id)).result,
+      'fr'
     )
     const faulty = listQuestions(db, quiz.id)[0]!
     flagQuestion(db, faulty.id, null)

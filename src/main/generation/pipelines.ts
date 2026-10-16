@@ -17,8 +17,10 @@ import {
   getTopic,
   listNotionsByTopic
 } from '../db/repositories/learningContent'
+import { getGenerationLanguage } from '../db/repositories/settings'
 import type { Notion, Question, Quiz, Topic } from '../db/types'
 import type { GenerationPriority, Json } from '../../shared/generation'
+import type { GenerationLanguage } from '../../shared/generationLanguage'
 import {
   buildLessonGeneration,
   buildNotionOutlineGeneration,
@@ -44,7 +46,16 @@ export interface PipelineDeps {
 export interface RunOptions {
   priority?: GenerationPriority
   signal?: AbortSignal
+  /**
+   * What the content is written in. Default: the Generation Language setting, read when the
+   * request is prepared. A caller that must match earlier content (the quiz pre-generated while a
+   * lesson is read) passes it.
+   */
+  language?: GenerationLanguage
 }
+
+const languageOf = (db: Database, options: RunOptions): GenerationLanguage =>
+  options.language ?? getGenerationLanguage(db)
 
 /** Corpus version of ungrounded content: it does not change with the primer. */
 const UNGROUNDED = 'ungrounded'
@@ -117,6 +128,7 @@ const toRequest = <T extends Json>(
   options: RunOptions
 ): GenerationRequest<T> => ({
   kind: build.kind,
+  language: build.language,
   input: build.input,
   prompt: build.prompt,
   schema: build.schema,
@@ -146,11 +158,13 @@ export function ensureNotionOutline(
   const pending = inFlight.get(topicId)
   if (pending) return pending
 
+  const language = languageOf(deps.db, options)
   const run = (async () => {
     const topic = requireTopic(deps.db, topicId)
     const build = buildNotionOutlineGeneration(
       topicBrief(topic),
-      topicGrounding(deps.corpus, topic)
+      topicGrounding(deps.corpus, topic),
+      language
     )
     const { content } = await deps.service.generate(toRequest(build, options)).result
     return deps.db.transaction(() => {
@@ -179,7 +193,8 @@ export async function prepareLesson(
   const build = buildLessonGeneration(
     topicBrief(topic),
     notions,
-    topicGrounding(deps.corpus, topic)
+    topicGrounding(deps.corpus, topic),
+    languageOf(deps.db, options)
   )
   return toRequest(build, options)
 }
@@ -197,6 +212,7 @@ export async function prepareQuiz(
     topicBrief(topic),
     notions,
     topicGrounding(deps.corpus, topic),
+    languageOf(deps.db, options),
     quiz
   )
   return toRequest(build, options)
@@ -216,6 +232,7 @@ export function prepareRemediationLesson(
     topicBrief(topic),
     notion,
     notionGrounding(deps.corpus, notion),
+    languageOf(deps.db, options),
     remediation
   )
   return toRequest(build, options)
@@ -228,11 +245,13 @@ export function saveQuiz(
   result: Pick<
     GenerationResult<QuizContent>,
     'content' | 'grounded' | 'sourceSections' | 'cacheKey'
-  >
+  >,
+  language: GenerationLanguage
 ): Quiz {
   const idBySlug = new Map(listNotionsByTopic(db, topicId).map((n) => [n.slug, n.id]))
   return createQuiz(db, {
     topicId,
+    language,
     grounded: result.grounded,
     sourceSections: result.sourceSections,
     contentCacheKey: result.cacheKey,
@@ -253,7 +272,8 @@ export function saveQuiz(
 /**
  * Generates a replacement for a flagged question (see `flagQuestion`) and swaps it in: same
  * type, same notion tags, same position; the flagged question stays in the quiz history. The
- * new question must differ from every question the quiz ever had.
+ * new question must differ from every question the quiz ever had, and is written in the
+ * language of its quiz (the Round in progress finishes in it, whatever the setting is now).
  */
 export async function regenerateQuestion(
   deps: PipelineDeps,
@@ -274,7 +294,7 @@ export async function regenerateQuestion(
   const grounding: GroundingInput = quiz.grounded
     ? topicGrounding(deps.corpus, topic)
     : { excerpts: [], corpusVersion: UNGROUNDED }
-  const build = buildQuizGeneration(topicBrief(topic), notions, grounding, {
+  const build = buildQuizGeneration(topicBrief(topic), notions, grounding, quiz.language, {
     count: 1,
     types: [flagged.type],
     focusNotions: tagged.map((notion) => notion.slug),

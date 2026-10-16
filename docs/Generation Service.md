@@ -57,13 +57,14 @@ sequenceDiagram
 
 ## API
 
-`GenerationService.generate({ kind, input, prompt, schema?, groundedSourceSections?, priority?, signal?, timeoutMs? })` returns `{ events, result }`:
+`GenerationService.generate({ kind, language, input, prompt, schema?, groundedSourceSections?, priority?, signal?, timeoutMs? })` returns `{ events, result }`:
 
 - `events`: async iterable of `GenerationEvent` (`queued`, `started`, `text_delta`, `retry`, then `done` or `error`). Types in `src/shared/generation.ts`, shared with the renderer.
 - `result`: promise of the `GenerationOutput` (`content`, `fromCache`, `grounded`, `sourceSections`, `cacheKey`, `usage`), rejected with a `GenerationError`.
 - `kind`: `lesson`, `remediation_lesson`, `quiz`, `notion_outline`, `free_answer_grading`, `design_feedback` (step feedback, [[Hint]]s, final review), `protocol_step_lesson` ([[Protocol Step Lesson]]), `lesson_question` (a [[Lesson Question]]: streamed, never cached), `question_clarification` ([[Question Clarification]]: structured, cached per Question).
 - `refresh`: skips the Content Cache read and stores the new output over the entry ("Reformulate differently" of a [[Question Clarification]]).
 - `images`: PNG images sent before the prompt text (the [[Design Export]] capture of a graph step). The CLI then gets `--input-format stream-json` and one stream-json user message on stdin (`buildCliInput`); see [[Interview Protocol Implementation#Image input through the Claude Code CLI]]. Not part of the cache key: only for uncached kinds.
+- `language`: the [[Generation Language]] the content is written in (`'fr'` or `'en'`), required. Part of the cache key; the prompt builders return it (`PromptBuild.language`) and `toRequest` copies it. The service does not choose a language: callers read the setting (`getGenerationLanguage`) or pass the language of the content they continue, see [[Prompts#Generation Language]].
 - `prompt`: `{ version, system, user }`. `version` is part of the cache key: bump it with every prompt change.
 - `schema`: a Zod schema. When set, the Generation is structured: the schema is converted to JSON schema (draft-07, without `$schema`, which the CLI rejects) and passed as `--json-schema`; the CLI returns `structured_output`, which is validated again with Zod. Structured Generations send no `text_delta` (the CLI streams partial JSON fragments, not worth rendering).
 - `groundedSourceSections`: [[Source Corpus]] section ids such as `cache/when-to-update-the-cache`. Non-empty means [[Grounding|grounded]].
@@ -72,8 +73,8 @@ sequenceDiagram
 
 ## Content Cache
 
-- Key: `contentCacheKey(kind, input, prompt.version)` from `src/main/db/repositories/contentCache.ts`.
-- Only `lesson`, `remediation_lesson`, `quiz` and `protocol_step_lesson` are cached (the kinds of the `content_cache` table, see [[Data Model]]). Grading and design feedback depend on the learner's answer and are generated every time.
+- Key: `contentCacheKey(kind, input, prompt.version, language)` from `src/main/db/repositories/contentCache.ts`: a SHA-256 of the kind, the inputs and the version, plus the language **when it is not French**. A French key is built from the same three parts as before English existed, so every stored French entry keeps its key and is reused; an English request has its own key and never reads a French entry (and the reverse). Entries also carry a `language` column. Switching the language never deletes or overwrites the other language's entries (`generationLanguage.test.ts`).
+- Only `lesson`, `remediation_lesson`, `quiz`, `protocol_step_lesson` and `question_clarification` are cached (the kinds of the `content_cache` table, see [[Data Model]]). Grading and design feedback depend on the learner's answer and are generated every time.
 - A hit returns at once with `fromCache: true` and `usage: null`. A cached structured entry that no longer matches its schema is regenerated.
 - Successful results are stored with `grounded` and `source_sections`. Failed and cancelled runs are never stored.
 - `request.finalize` (optional) post-processes a valid output before it is stored and sent with `done`; it may run one extra structured CLI call through `FinalizeTools.complete` (same CLI settings and signal, one attempt, not cached, null on failure). Used by the lesson-like prompts for the Mermaid Diagram validation (mermaid's parser runs in the main process, loaded lazily) and repair, see [[Prompts#Diagrams]] and [[Mermaid Diagrams#Parser in the main process]].

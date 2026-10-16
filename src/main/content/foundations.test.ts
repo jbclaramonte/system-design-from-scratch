@@ -21,7 +21,7 @@ import {
   regenerateQuestion
 } from '../generation/pipelines'
 import {
-  UNGROUNDED_RULES,
+  ungroundedRules,
   type NotionOutline,
   type QuizContent,
   type QuizQuestion
@@ -307,7 +307,7 @@ describe('Foundations Module topic through the whole flow', () => {
     expect(calls[0]!.prompt).toContain('Leave out (taught later in grounded topics')
     for (const call of calls) {
       for (const marker of GROUNDING_MARKERS) expect(call.prompt).not.toContain(marker)
-      if (kindOf(call) !== 'outline') expect(call.prompt).toContain(UNGROUNDED_RULES)
+      if (kindOf(call) !== 'outline') expect(call.prompt).toContain(ungroundedRules('fr'))
     }
   })
 
@@ -360,7 +360,7 @@ describe('Foundations Module topic through the whole flow', () => {
     // Every prompt carries appendix excerpts and the grounded rules, never the ungrounded ones.
     for (const call of calls) {
       expect(call.prompt).toContain('<excerpt id="appendix/')
-      expect(call.prompt).not.toContain(UNGROUNDED_RULES)
+      expect(call.prompt).not.toContain(ungroundedRules('fr'))
     }
     expect(calls[0]!.prompt).toContain('<excerpt id="appendix/powers-of-two-table"')
   })

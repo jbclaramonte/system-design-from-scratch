@@ -39,7 +39,12 @@ export function createQuestionClarifier(
     async clarify(brief, { another = false, signal } = {}) {
       let build = buildQuestionClarificationGeneration(brief)
       if (another) {
-        const key = contentCacheKey('question_clarification', build.input, build.prompt.version)
+        const key = contentCacheKey(
+          'question_clarification',
+          build.input,
+          build.prompt.version,
+          build.language
+        )
         const stored = questionClarificationSchema.safeParse(getCachedContent(db, key)?.content)
         if (stored.success) build = buildQuestionClarificationGeneration(brief, stored.data)
       }

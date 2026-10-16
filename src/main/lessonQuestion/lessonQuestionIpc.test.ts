@@ -1,6 +1,7 @@
 import { EventEmitter } from 'node:events'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import type { LessonEvent, LessonStreamEvent } from '../../shared/lesson'
+import { generationLanguages } from '../../shared/generationLanguage'
 import type { LessonQuestionAskRequest } from '../../shared/lessonQuestion'
 import { seedTopics } from '../content/topics'
 import { openDatabase, type Database } from '../db/driver'
@@ -8,10 +9,12 @@ import { migrate } from '../db/migrate'
 import { migrations } from '../db/migrations'
 import { completeRound } from '../db/repositories/assessment'
 import { createNotions, listTopics } from '../db/repositories/learningContent'
+import { updateSettings } from '../db/repositories/settings'
 import type { CliCallOptions } from '../generation/cliRunner'
 import { cliFailure, GenerationError } from '../generation/errors'
 import type { GenerationClient } from '../generation/ipc'
 import { saveQuiz } from '../generation/pipelines'
+import { languageRules } from '../generation/prompts'
 import { GenerationService, type CliRunner } from '../generation/service'
 import { cacheOutline, fixtureCorpus, validQuiz } from '../generation/testing/contentFixtures'
 import { createQuizIpc } from '../ipc/quiz'
@@ -156,6 +159,20 @@ describe('lessonQuestion:ask', () => {
     })
   })
 
+  it.each(generationLanguages)(
+    'answers in the Generation Language of the setting (%s), when it is asked',
+    async (language) => {
+      updateSettings(db, { generationLanguage: language })
+      const other = language === 'fr' ? 'en' : 'fr'
+
+      ipcFor().ask(lessonRequest(), client)
+
+      await expect.poll(() => isEnded('q1')).toBe(true)
+      expect(calls[0]!.systemPrompt).toContain(languageRules(language))
+      expect(calls[0]!.systemPrompt).not.toContain(languageRules(other))
+    }
+  )
+
   it('gives the CLI the selection, the question, the Lesson and the Excerpts of the topic', async () => {
     ipcFor().ask(
       lessonRequest({
@@ -296,12 +313,17 @@ describe('Lesson Question and the Quiz rounds', () => {
   function setUpQuiz() {
     const topicId = cacheTopicId()
     cacheNotionIds()
-    const quiz = saveQuiz(db, topicId, {
-      content: validQuiz(),
-      grounded: true,
-      sourceSections: [],
-      cacheKey: null
-    })
+    const quiz = saveQuiz(
+      db,
+      topicId,
+      {
+        content: validQuiz(),
+        grounded: true,
+        sourceSections: [],
+        cacheKey: null
+      },
+      'fr'
+    )
     return { topicId, quizId: quiz.id }
   }
 

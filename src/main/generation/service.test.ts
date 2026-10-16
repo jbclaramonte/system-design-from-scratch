@@ -31,6 +31,7 @@ const prompt = (scenario: string, version = 'v1') => ({
 
 const lessonRequest = (scenario = 'text'): GenerationRequest => ({
   kind: 'lesson',
+  language: 'fr',
   input: { topic: 'cache' },
   prompt: prompt(scenario),
   groundedSourceSections: ['cache/when-to-update-the-cache']
@@ -92,7 +93,7 @@ describe('GenerationService with the fake CLI', () => {
       sourceSections: ['cache/when-to-update-the-cache'],
       usage: { outputTokens: 12, costUsd: 0.0001232 }
     })
-    const key = contentCacheKey('lesson', { topic: 'cache' }, 'v1')
+    const key = contentCacheKey('lesson', { topic: 'cache' }, 'v1', 'fr')
     expect(result.cacheKey).toBe(key)
     expect(getCachedContent(db, key)).toMatchObject({
       content: 'Bonjour, le cache en bref.',
@@ -130,6 +131,7 @@ describe('GenerationService with the fake CLI', () => {
   it('validates structured output, passes the JSON schema and sends no text deltas', async () => {
     const run = service.generate({
       kind: 'quiz',
+      language: 'fr',
       input: { t: 1 },
       prompt: prompt('json'),
       schema: quizSchema
@@ -149,6 +151,7 @@ describe('GenerationService with the fake CLI', () => {
   it('accepts JSON in a fenced text block when there is no structured output', async () => {
     const result = await service.generate({
       kind: 'quiz',
+      language: 'fr',
       input: {},
       prompt: prompt('json-in-text'),
       schema: quizSchema
@@ -160,6 +163,7 @@ describe('GenerationService with the fake CLI', () => {
   it('retries once on invalid output, feeding the validation error back', async () => {
     const run = service.generate({
       kind: 'quiz',
+      language: 'fr',
       input: {},
       prompt: prompt('json-invalid-once'),
       schema: quizSchema
@@ -177,6 +181,7 @@ describe('GenerationService with the fake CLI', () => {
   it('fails with invalid_output after the retry and caches nothing', async () => {
     const run = service.generate({
       kind: 'quiz',
+      language: 'fr',
       input: {},
       prompt: prompt('json-invalid-always'),
       schema: quizSchema
@@ -187,7 +192,7 @@ describe('GenerationService with the fake CLI', () => {
     expect(events.at(-1)).toMatchObject({ type: 'error', error: { code: 'invalid_output' } })
     await expect(run.result).rejects.toMatchObject({ code: 'invalid_output' })
     expect(fake.calls()).toHaveLength(2)
-    expect(getCachedContent(db, contentCacheKey('quiz', {}, 'v1'))).toBeUndefined()
+    expect(getCachedContent(db, contentCacheKey('quiz', {}, 'v1', 'fr'))).toBeUndefined()
   })
 
   it('treats empty text as invalid output', async () => {
@@ -202,7 +207,7 @@ describe('GenerationService with the fake CLI', () => {
     await expect(run.result).rejects.toBeInstanceOf(GenerationError)
     await expect(run.result).rejects.toMatchObject({ code: 'bad_model' })
     expect(
-      getCachedContent(db, contentCacheKey('lesson', { topic: 'cache' }, 'v1'))
+      getCachedContent(db, contentCacheKey('lesson', { topic: 'cache' }, 'v1', 'fr'))
     ).toBeUndefined()
   })
 
@@ -220,7 +225,7 @@ describe('GenerationService with the fake CLI', () => {
     await new Promise((resolve) => setTimeout(resolve, 1500))
     expect(isAlive(fake.calls()[0]!.pid)).toBe(false)
     expect(
-      getCachedContent(db, contentCacheKey('lesson', { topic: 'cache' }, 'v1'))
+      getCachedContent(db, contentCacheKey('lesson', { topic: 'cache' }, 'v1', 'fr'))
     ).toBeUndefined()
   })
 
@@ -233,6 +238,7 @@ describe('GenerationService with the fake CLI', () => {
   it('never caches kinds outside the Content Cache', async () => {
     const request: GenerationRequest = {
       kind: 'free_answer_grading',
+      language: 'fr',
       input: { answer: 'x' },
       prompt: prompt('text')
     }
@@ -246,6 +252,7 @@ describe('GenerationService with the fake CLI', () => {
 
   it('regenerates a cached structured entry that no longer matches the schema', async () => {
     putCachedContent(db, {
+      language: 'fr',
       kind: 'quiz',
       inputs: {},
       promptVersion: 'v1',
@@ -255,6 +262,7 @@ describe('GenerationService with the fake CLI', () => {
 
     const result = await service.generate({
       kind: 'quiz',
+      language: 'fr',
       input: {},
       prompt: prompt('json'),
       schema: quizSchema
@@ -288,6 +296,7 @@ describe('GenerationService Claude config directory', () => {
     })
     const request = (topic: string): GenerationRequest => ({
       kind: 'lesson',
+      language: 'fr',
       input: { topic },
       prompt: prompt('text')
     })
@@ -335,6 +344,7 @@ describe('GenerationService queue and deduplication', () => {
 
   const request = (topic: string, extra: Partial<GenerationRequest> = {}): GenerationRequest => ({
     kind: 'lesson',
+    language: 'fr',
     input: { topic },
     prompt: { version: 'v1', system: 's', user: topic },
     ...extra

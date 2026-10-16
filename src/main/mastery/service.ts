@@ -22,7 +22,7 @@ import {
   removeDeclaredMastery,
   setRoundLimitChoice
 } from '../db/repositories/mastery'
-import { getSettings } from '../db/repositories/settings'
+import { getGenerationLanguage, getSettings } from '../db/repositories/settings'
 import type { Notion, Round } from '../db/types'
 import { GenerationError } from '../generation/errors'
 import {
@@ -36,6 +36,7 @@ import type { QuizContent } from '../generation/prompts'
 import type { GenerationRequest } from '../generation/service'
 import type { QuizService } from '../quiz/service'
 import type { GenerationEvent, GenerationOutput } from '../../shared/generation'
+import type { GenerationLanguage } from '../../shared/generationLanguage'
 import type {
   MasteryState,
   RemediationTarget,
@@ -130,8 +131,14 @@ export function createMasteryService(deps: MasteryServiceDeps): MasteryService {
     return deriveMastery(loadMasterySnapshot(db, topicId))
   }
 
-  function latestLesson(topicId: number): string {
-    const lesson = listLessonsByTopic(db, topicId)[0]
+  /**
+   * The lesson a quiz is written from: the latest one in the quiz's language, else the latest in
+   * any language (the learner read it; a quiz in the language selected since is still answerable
+   * from it).
+   */
+  function latestLesson(topicId: number, language: GenerationLanguage): string {
+    const lessons = listLessonsByTopic(db, topicId)
+    const lesson = lessons.find((l) => l.language === language) ?? lessons[0]
     if (!lesson) throw new Error('Read the lesson before the first quiz.')
     return lesson.content
   }
@@ -200,12 +207,15 @@ export function createMasteryService(deps: MasteryServiceDeps): MasteryService {
     async nextQuizRequest(topicId, run = {}) {
       const { step } = derive(topicId)
       const settings = getSettings(db)
+      // What is generated next follows the setting (a Round in progress is not generated here: it
+      // resumes its stored quiz, in the language that quiz was written in).
+      const language = run.language ?? getGenerationLanguage(db)
       if (step.name === 'lesson') {
         return prepareQuiz(
           deps,
           topicId,
-          firstRoundQuizOptions(latestLesson(topicId), settings),
-          run
+          firstRoundQuizOptions(latestLesson(topicId, language), settings),
+          { ...run, language }
         )
       }
       if (step.name !== 'remediation') {
@@ -215,14 +225,14 @@ export function createMasteryService(deps: MasteryServiceDeps): MasteryService {
       const notions = listNotionsByTopic(db, topicId).map((notion) => notion.slug)
       const options = nextRoundQuizOptions(
         {
-          lessonMarkdown: latestLesson(topicId),
+          lessonMarkdown: latestLesson(topicId, language),
           focusNotions: notions.filter((slug) => focus.has(slug)),
           reminderNotions: notions.filter((slug) => !focus.has(slug)),
           avoidPrompts: playedPrompts(topicId)
         },
         settings
       )
-      return prepareQuiz(deps, topicId, options, run)
+      return prepareQuiz(deps, topicId, options, { ...run, language })
     },
 
     async startRound(topicId, { signal, onEvent } = {}) {
@@ -231,7 +241,8 @@ export function createMasteryService(deps: MasteryServiceDeps): MasteryService {
       const refused = cannotStartRound(step)
       if (refused) throw new Error(refused)
 
-      const run = deps.service.generate(await service.nextQuizRequest(topicId, { signal }))
+      const request = await service.nextQuizRequest(topicId, { signal })
+      const run = deps.service.generate(request)
       for await (const event of run.events) if (event.type !== 'done') onEvent?.(event)
       const result = await run.result
 
@@ -241,7 +252,7 @@ export function createMasteryService(deps: MasteryServiceDeps): MasteryService {
         const stored = listQuizzesByTopic(db, topicId).find(
           (q) => q.contentCacheKey === result.cacheKey && !played.has(q.id)
         )
-        return (stored ?? saveQuiz(db, topicId, result)).id
+        return (stored ?? saveQuiz(db, topicId, result, request.language)).id
       })
       return quiz.startRound(quizId)
     },
@@ -261,18 +272,22 @@ export function createMasteryService(deps: MasteryServiceDeps): MasteryService {
       return { request, roundId, notion: getNotion(db, notionId)! }
     },
 
-    recordRemediation({ roundId, notion }, output) {
+    recordRemediation(run, output) {
+      const { roundId, notion } = run
       if (typeof output.content !== 'string') return
       const content = output.content
       db.transaction(() => {
+        // One per round, notion and language: the same Remediation Lesson read in the other
+        // language is another entry.
         const known = listRemediationLessonsByNotion(db, notion.id).some(
-          (lesson) => lesson.roundId === roundId
+          (lesson) => lesson.roundId === roundId && lesson.language === run.request.language
         )
         if (known) return
         createRemediationLesson(db, {
           notionId: notion.id,
           roundId,
           content,
+          language: run.request.language,
           grounded: output.grounded,
           sourceSections: output.sourceSections,
           contentCacheKey: output.cacheKey

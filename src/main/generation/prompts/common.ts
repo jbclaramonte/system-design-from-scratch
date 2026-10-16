@@ -2,12 +2,16 @@
 // language and audience rules, Grounding rules, citation format and the excerpt block.
 import type { z } from 'zod'
 import type { GenerationKind, Json } from '../../../shared/generation'
+import type { GenerationLanguage } from '../../../shared/generationLanguage'
 import { fitExcerptsToBudget, type Excerpt } from '../../corpus/lookup'
+import { languageProfile } from '../languageProfile'
 import type { ContentFinalizer, GenerationPrompt } from '../service'
 
 /** What a prompt builder returns: everything `GenerationService.generate` needs but scheduling. */
 export interface PromptBuild<T extends Json = Json> {
   kind: GenerationKind
+  /** Language the content is written in: part of the Content Cache key (cached kinds). */
+  language: GenerationLanguage
   /** Part of the Content Cache key: everything the output depends on, besides the prompt text. */
   input: Json
   prompt: GenerationPrompt
@@ -48,50 +52,40 @@ export interface GroundingInput {
 }
 
 /**
- * French course, system design jargon in English, everyday computing words in French. Every
- * prompt includes it verbatim (tested), so changing it means bumping every prompt version.
+ * The output rules of the Generation Language: address form, jargon policy, everyday-word policy
+ * (from its language profile). Every prompt includes it verbatim (tested), so changing a profile
+ * means bumping every prompt version that includes it.
  */
-export const LANGUAGE_RULES = `Language:
-- Write everything the learner reads in French, natural and simple, addressing the learner as "tu".
-- Keep only system design jargon in English, exactly as it is said in interviews (load balancer, sharding, cache, cache-aside, write-through, replication, throughput, latency, TTL...). Never translate it; the first time a term appears you may add a short French gloss in parentheses.
-- Write everyday computing words in French, as a French developer says them: serveur, client, requête, réponse, mémoire, disque, réseau, base de données, octet (Ko, Mo, Go, To), fichier, machine, panne.
-- Examples. Good: "le serveur renvoie une réponse", "la mémoire est plus rapide que le disque", "un load balancer répartit les requêtes", "10 Go par jour". Bad: "le server renvoie une response", "la memory est plus rapide que le disk", "un répartiteur de charge", "10 GB par jour".
-- Do not mix in English sentences.`
+export const languageRules = (language: GenerationLanguage): string =>
+  languageProfile(language).languageRules
 
 export const AUDIENCE_RULES = `Audience: a complete beginner in system design who knows basic programming. Define every technical term the first time it appears, prefer short sentences, and give one concrete example for each abstract idea.`
 
 /**
  * How to write a Mermaid Diagram the app can draw (see docs/Mermaid Diagrams.md): supported
  * types, plain-text labels, size, and grounding. Shared by every prompt that may ask for a
- * diagram; where and how many is up to the prompt (`diagramPlacementRules` for lessons).
- * Changing it means bumping the version of every prompt that includes it.
+ * diagram; where and how many is up to the prompt (`diagramPlacementRules` for lessons). The
+ * label language and the examples come from the language profile. Changing it means bumping the
+ * version of every prompt that includes it.
  */
-export const DIAGRAM_RULES = `Diagrams (Mermaid):
+export function diagramRules(language: GenerationLanguage): string {
+  const { diagram } = languageProfile(language)
+  return `Diagrams (Mermaid):
 - Write each diagram as a fenced block that starts with \`\`\`mermaid on its own line and ends with \`\`\` on its own line.
 - Use only these diagram types: flowchart (LR or TD) for an architecture or a data flow, sequenceDiagram for a request flow between components over time, stateDiagram-v2 for states and transitions, erDiagram for a data model, classDiagram only if nothing else fits. Nothing else (no pie, gantt, mindmap, timeline, journey, C4...).
-- Keep it small and readable: at most about 12 nodes (or participants), one idea per diagram, short labels of 1 to 4 words. Labels follow the language rules: system design jargon in English, everyday words in French.
+- Keep it small and readable: at most about 12 nodes (or participants), one idea per diagram, short labels of 1 to 4 words. Labels follow the language rules: ${diagram.labelPolicy}.
 - Plain text only: no HTML tags, no <br>, no Markdown inside labels, no emojis, no click or link lines, no %%{init}%% or other configuration, no style, classDef, class or linkStyle lines, no front matter.
-- Node ids are short ASCII words (C, LB, S1, DB). Put the visible text in a label; wrap a label in double quotes when it contains punctuation, parentheses, accents next to symbols, slashes or colons, for example S1["Serveur (lecture seule)"]. Never use double quotes inside a label. Avoid ; and # in any text.
-- Label every arrow that carries data or a request (-->|requête|, ->>: lecture).
+- Node ids are short ASCII words (C, LB, S1, DB). Put the visible text in a label; wrap a label in double quotes when it contains punctuation, parentheses, accents next to symbols, slashes or colons, for example ${diagram.quotedLabelExample}. Never use double quotes inside a label. Avoid ; and # in any text.
+- Label every arrow that carries data or a request (${diagram.arrowLabelExamples}).
 - A diagram shows only what the surrounding text says, and never contradicts it. It follows the same grounding rules as the text: no component, product, number or guarantee that the text does not state.
 - Valid examples:
 \`\`\`mermaid
-flowchart LR
-  C[Client] -->|requête| LB[Load balancer]
-  LB -->|requête| S1[Serveur 1]
-  LB -->|requête| S2[Serveur 2]
-  S1 -->|lecture| DB[(Base de données)]
-  S2 -->|lecture| DB
+${diagram.flowchartExample}
 \`\`\`
 \`\`\`mermaid
-sequenceDiagram
-  participant C as Client
-  participant S as Serveur
-  participant K as Cache
-  C->>S: requête
-  S->>K: lecture de la clé
-  K-->>S: absente (cache miss)
+${diagram.sequenceExample}
 \`\`\``
+}
 
 /**
  * Where and how many diagrams a lesson-like text gets: `max` diagrams at most (`min` at
@@ -132,14 +126,20 @@ export function unknownCitations(markdown: string, allowed: readonly string[]): 
  * Ungrounded content (Foundations Module) has no excerpt to check it against: keep it to
  * textbook basics, numbers as definitions or rough orders of magnitude, no references.
  */
-export const UNGROUNDED_RULES = `Grounding: this content belongs to the Foundations Module, outside the System Design Primer. There are no source excerpts and nobody checks your facts before the learner reads them, so be conservative:
+export function ungroundedRules(language: GenerationLanguage): string {
+  const { ungrounded } = languageProfile(language)
+  return `Grounding: this content belongs to the Foundations Module, outside the System Design Primer. There are no source excerpts and nobody checks your facts before the learner reads them, so be conservative:
 - Write from well-established general knowledge only: the standard basics that any introductory course on networks, operating systems or databases teaches the same way. Leave out what you are not sure of, vendor-specific details, recent changes and disputed claims.
-- Numbers: give exact values only for definitions and fixed conventions (1 octet = 8 bits, 2^10 = 1024, a day has 86,400 seconds, status code 404, port 443 for HTTPS). Give measured quantities (latencies, throughputs, failure rates, sizes of real systems) only as rough orders of magnitude, with "environ" or "de l'ordre de", and say they depend on the hardware and change over time. Never invent a precise figure, statistic or benchmark.
-- When you simplify, say so ("en simplifiant"). When the right choice depends on the situation, say what it depends on instead of stating one universal rule.
+- Numbers: give exact values only for definitions and fixed conventions (1 octet = 8 bits, 2^10 = 1024, a day has 86,400 seconds, status code 404, port 443 for HTTPS). Give measured quantities (latencies, throughputs, failure rates, sizes of real systems) only as rough orders of magnitude, with ${ungrounded.approximately}, and say they depend on the hardware and change over time. Never invent a precise figure, statistic or benchmark.
+- When you simplify, say so (${ungrounded.simplifying}). When the right choice depends on the situation, say what it depends on instead of stating one universal rule.
 - No references of any kind: do not write any [source: ...] citation, and do not cite books, articles, studies, RFC numbers, URLs or quotes.`
+}
 
-export function groundingRules(sectionIds: readonly string[]): string {
-  if (sectionIds.length === 0) return UNGROUNDED_RULES
+export function groundingRules(
+  sectionIds: readonly string[],
+  language: GenerationLanguage
+): string {
+  if (sectionIds.length === 0) return ungroundedRules(language)
   return `Grounding:
 - Use only the facts stated in the excerpts below. If an idea would help but is not in the excerpts, leave it out rather than inventing it. You may add everyday analogies and simple examples that illustrate a fact of the excerpts, but no new technical claims (numbers, product names, guarantees, extra strategies).
 - Cite the excerpt a statement comes from inline, right after the sentence or paragraph, as ${citation('<excerpt id>')}, for example ${citation(sectionIds[0]!)}. One id per bracket, copied exactly from the excerpt list. Never cite anything else (no URLs, no other ids).`

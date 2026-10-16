@@ -3,6 +3,7 @@
 import { createHash } from 'node:crypto'
 import { z } from 'zod'
 import { questionTypes, type Json, type QuestionType } from '../../db/types'
+import type { GenerationLanguage } from '../../../shared/generationLanguage'
 import { checkDiagramSource, diagramNodeCount } from '../../../shared/diagramSource'
 import {
   assembleExcerpts,
@@ -10,7 +11,7 @@ import {
   excerptSection,
   groundingRules,
   joinParts,
-  LANGUAGE_RULES,
+  languageRules,
   notionList,
   type GroundingInput,
   type NotionBrief,
@@ -18,6 +19,7 @@ import {
   type TopicBrief
 } from './common'
 import { dropUnparsableQuizDiagrams } from '../diagrams'
+import { languageProfile } from '../languageProfile'
 import { sourceSectionsSchema } from './notionOutline'
 
 /** Bump with any change to the prompt or schema below. */
@@ -298,22 +300,24 @@ const typeRules: Record<QuestionType, string> = {
  * When and how a choice question gets a `diagram`. Quiz-specific: a JSON field, not a fenced
  * block, smaller than a lesson's diagrams, and it must not give the answer away.
  */
-export const QUIZ_DIAGRAM_RULES = `Diagrams (optional \`diagram\` field, Mermaid source without \`\`\` fences):
+export function quizDiagramRules(language: GenerationLanguage): string {
+  const { quizDiagram, diagram } = languageProfile(language)
+  return `Diagrams (optional \`diagram\` field, Mermaid source without \`\`\` fences):
 - Every \`scenario\` question whose situation involves components (client, server, cache, database, load balancer, CDN...) or a request flow gets a \`diagram\` of that situation: in a system design quiz that is most scenarios. Elsewhere it is optional: add one to a \`single_choice\` or \`multiple_choice\` question only if it really helps to understand the question. Never on \`free_answer\`.
-- The diagram shows the situation of the question, not its answer: no label, arrow or title may contain the text of a correct choice, the words "correct" or "bonne réponse", or mark the component the question is about with a hint. Draw the system as it is before the change the question asks about; if a correct choice is a component name (for example "CDN"), leave that component out of the diagram. When the question asks which strategy or pattern to pick, draw only what exists before the choice, never the flow of one of the choices (for example, no Application -> Cache -> Database write chain when write-through is a choice).
+- The diagram shows the situation of the question, not its answer: no label, arrow or title may contain the text of a correct choice, the words ${quizDiagram.answerWords}, or mark the component the question is about with a hint. Draw the system as it is before the change the question asks about; if a correct choice is a component name (for example "CDN"), leave that component out of the diagram. When the question asks which strategy or pattern to pick, draw only what exists before the choice, never the flow of one of the choices (for example, no Application -> Cache -> Database write chain when write-through is a choice).
 - Answerable from the lesson: only components, flows and numbers that the question text or the lesson state. No new product, component or number.
 - Types: \`flowchart LR\` or \`flowchart TD\` for an architecture, \`sequenceDiagram\` for a request flow over time. Nothing else.
-- Small: at most 8 nodes (or participants), short labels of 1 to 4 words, system design jargon in English and everyday words in French.
-- Plain text only: no HTML tags or <br>, no Markdown, no emojis, no click lines, no %%{init}%%, no style, classDef or linkStyle lines, no front matter. Node ids are short ASCII words (C, LB, S1, DB); wrap a label with punctuation, parentheses or a slash in double quotes, for example S1["Serveur (lecture seule)"]. Label the arrows that carry requests or data.
-- Example (scenario "le cache tombe en panne, que se passe-t-il ?"):
-flowchart LR
-  C[Client] -->|requête| S[Serveur web]
-  S -->|lecture| K[Cache]
-  S -->|lecture| DB[(Database)]`
+- Small: at most 8 nodes (or participants), short labels of 1 to 4 words, ${quizDiagram.labelPolicy}.
+- Plain text only: no HTML tags or <br>, no Markdown, no emojis, no click lines, no %%{init}%%, no style, classDef or linkStyle lines, no front matter. Node ids are short ASCII words (C, LB, S1, DB); wrap a label with punctuation, parentheses or a slash in double quotes, for example ${diagram.quotedLabelExample}. Label the arrows that carry requests or data.
+- Example (scenario "${quizDiagram.exampleScenario}"):
+${quizDiagram.example}`
+}
 
-const SYSTEM = `You write quizzes for a French system design learning app. Your questions are graded automatically from the answer key you provide, so the key must be unambiguous and correct.
+const system = (
+  language: GenerationLanguage
+) => `You write quizzes for ${languageProfile(language).nameWithArticle} system design learning app. Your questions are graded automatically from the answer key you provide, so the key must be unambiguous and correct.
 
-${LANGUAGE_RULES}
+${languageRules(language)}
 
 ${AUDIENCE_RULES}`
 
@@ -321,8 +325,10 @@ export function buildQuizGeneration(
   topic: TopicBrief,
   notions: readonly NotionBrief[],
   grounding: GroundingInput,
+  language: GenerationLanguage,
   options: QuizOptions = {}
 ): PromptBuild<QuizContent> {
+  const profile = languageProfile(language)
   const block = assembleExcerpts(grounding.excerpts, QUIZ_EXCERPT_TOKENS)
   const rules = quizRules(notions, block.sectionIds, options)
   const bySlug = new Map(notions.map((notion) => [notion.slug, notion]))
@@ -343,16 +349,16 @@ export function buildQuizGeneration(
     `Question types allowed: ${rules.types.map((t) => `\`${t}\``).join(', ')}.${rules.count >= rules.types.length ? ' Use each allowed type at least once, then favor `single_choice` and `scenario`.' : ''}
 ${rules.types.map((type) => `- ${typeRules[type]}`).join('\n')}`,
     `Rules for every question:
-- \`prompt\`: the question itself, in French, self-contained, one idea at a time. Order the quiz from easiest to hardest.
+- \`prompt\`: the question itself, in ${profile.name}, self-contained, one idea at a time. Order the quiz from easiest to hardest.
 - \`notions\`: the slugs of the 1 or 2 notions the question really tests.
 - \`sourceSections\`: ${rules.sectionIds.length ? 'the excerpt ids that support the answer key.' : 'always an empty array (ungrounded).'}
 - Test understanding (why, when, what happens if...), not memorization of wording or numbers. Every question must be answerable by a beginner who read ${options.lessonMarkdown ? 'the lesson below' : 'a lesson covering these notions'}, using only the facts of the ${rules.sectionIds.length ? 'excerpts' : 'lesson'}.
-- Distractors: plausible for a beginner (common misconceptions, real terms of the topic used in the wrong place), similar in length and style to the correct choice. No "toutes les réponses" or "aucune de ces réponses", no trick wording, no double negation. Vary the position of correct choices.
-- \`explanation\` (choice questions): 1 to 3 French sentences on why the correct choice(s) are right and why the most tempting wrong one is wrong. It is shown after the answer.`,
-    rules.types.some((type) => type !== 'free_answer') && QUIZ_DIAGRAM_RULES,
+- Distractors: plausible for a beginner (common misconceptions, real terms of the topic used in the wrong place), similar in length and style to the correct choice. No ${profile.quiz.noneOfTheAbove}, no trick wording, no double negation. Vary the position of correct choices.
+- \`explanation\` (choice questions): 1 to 3 ${profile.name} sentences on why the correct choice(s) are right and why the most tempting wrong one is wrong. It is shown after the answer.`,
+    rules.types.some((type) => type !== 'free_answer') && quizDiagramRules(language),
     rules.avoidPrompts.length > 0 &&
       `Do not repeat or paraphrase these earlier questions:\n${rules.avoidPrompts.map((p) => `- ${p}`).join('\n')}`,
-    groundingRules(block.sectionIds).replace(
+    groundingRules(block.sectionIds, language).replace(
       /Cite the excerpt[^\n]*/,
       'Give the supporting excerpt ids in `sourceSections`; do not write [source: ...] in the questions.'
     ),
@@ -365,6 +371,7 @@ ${rules.types.map((type) => `- ${typeRules[type]}`).join('\n')}`,
 
   return {
     kind: 'quiz',
+    language,
     input: {
       topic: topic.slug,
       notions: rules.notionSlugs,
@@ -377,7 +384,7 @@ ${rules.types.map((type) => `- ${typeRules[type]}`).join('\n')}`,
       sectionIds: block.sectionIds,
       corpusVersion: grounding.corpusVersion
     },
-    prompt: { version: QUIZ_PROMPT_VERSION, system: SYSTEM, user },
+    prompt: { version: QUIZ_PROMPT_VERSION, system: system(language), user },
     schema: quizSchema(rules),
     groundedSourceSections: block.sectionIds,
     finalize: dropUnparsableQuizDiagrams

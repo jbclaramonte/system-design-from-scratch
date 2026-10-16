@@ -97,7 +97,7 @@ export interface WeakPoint {
 export interface DashboardAttempt {
   id: number
   questionId: number
-  /** French. */
+  /** In the Generation Language the notion was generated in. */
   prompt: string
   questionType: QuestionType
   result: AttemptResult

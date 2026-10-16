@@ -6,7 +6,9 @@ import { settingsErrors } from '../../shared/settings'
 import { openDatabase, type Database } from '../db/driver'
 import { migrate } from '../db/migrate'
 import { migrations } from '../db/migrations'
-import { getSettings } from '../db/repositories/settings'
+import { putCachedContent } from '../db/repositories/contentCache'
+import { createLesson, createTopic } from '../db/repositories/learningContent'
+import { getGenerationLanguage, getSettings } from '../db/repositories/settings'
 import { checkCli, parseAuthStatus } from './checkCli'
 import { createSettingsIpc } from './settingsIpc'
 
@@ -18,7 +20,8 @@ describe('settingsErrors', () => {
         roundLimit: 3,
         questionsPerQuiz: null,
         claudeCliPath: null,
-        claudeConfigDir: null
+        claudeConfigDir: null,
+        generationLanguage: 'fr'
       })
     ).toEqual({})
     expect(settingsErrors({ masteryThreshold: 50, roundLimit: 1, questionsPerQuiz: 4 })).toEqual({})
@@ -38,6 +41,17 @@ describe('settingsErrors', () => {
       'claudeConfigDir'
     ])
     expect(Object.keys(settingsErrors({ claudeConfigDir: ' ' }))).toEqual(['claudeConfigDir'])
+  })
+
+  it('accepts French and English as the Generation Language, nothing else', () => {
+    expect(settingsErrors({ generationLanguage: 'fr' })).toEqual({})
+    expect(settingsErrors({ generationLanguage: 'en' })).toEqual({})
+    expect(Object.keys(settingsErrors({ generationLanguage: 'de' as never }))).toEqual([
+      'generationLanguage'
+    ])
+    expect(Object.keys(settingsErrors({ generationLanguage: '' as never }))).toEqual([
+      'generationLanguage'
+    ])
   })
 
   it('accepts an absolute Claude config directory or null', () => {
@@ -65,7 +79,8 @@ describe('settings IPC', () => {
       roundLimit: 3,
       questionsPerQuiz: null,
       claudeCliPath: null,
-      claudeConfigDir: null
+      claudeConfigDir: null,
+      generationLanguage: 'fr'
     })
     expect(() => ipc.update({ masteryThreshold: 20 })).toThrow(/between 50 and 100/)
     expect(() => ipc.update({ roundLimit: 3, unknown: 1 } as never)).toThrow()
@@ -86,6 +101,56 @@ describe('settings IPC', () => {
     expect(onCliPathChange).toHaveBeenCalledTimes(2)
     expect(ipc.update({ questionsPerQuiz: 8 }).questionsPerQuiz).toBe(8)
     expect(ipc.update({ questionsPerQuiz: null }).questionsPerQuiz).toBeNull()
+  })
+
+  it('validates, persists and applies the Generation Language without touching stored content', () => {
+    const ipc = createSettingsIpc(db)
+    const topic = createTopic(db, { slug: 'cache', title: 'Cache', position: 1 })
+    createLesson(db, { topicId: topic.id, content: 'Bonjour', grounded: false })
+    putCachedContent(db, {
+      kind: 'lesson',
+      inputs: { topic: 'cache' },
+      promptVersion: 'lesson-4',
+      language: 'fr',
+      content: 'Bonjour',
+      grounded: false
+    })
+    const stored = () => ({
+      lessons: db.prepare('SELECT * FROM lessons').all(),
+      cache: db.prepare('SELECT * FROM content_cache').all()
+    })
+    const before = stored()
+
+    expect(ipc.get().generationLanguage).toBe('fr')
+    expect(() => ipc.update({ generationLanguage: 'de' } as never)).toThrow()
+    expect(() => ipc.update({ generationLanguage: 1 } as never)).toThrow()
+    expect(getSettings(db).generationLanguage).toBe('fr')
+
+    expect(ipc.update({ generationLanguage: 'en' }).generationLanguage).toBe('en')
+    expect(getGenerationLanguage(db)).toBe('en')
+    // Other settings keep their value, the change is for the next Generation only.
+    expect(ipc.get()).toMatchObject({ masteryThreshold: 100, generationLanguage: 'en' })
+    expect(stored()).toEqual(before)
+    expect(ipc.update({ generationLanguage: 'fr' }).generationLanguage).toBe('fr')
+    expect(stored()).toEqual(before)
+  })
+
+  it('keeps the Generation Language after the app restarts (a new connection on the same file)', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'language-setting-'))
+    try {
+      const file = join(dir, 'app.sqlite')
+      const first = openDatabase(file)
+      migrate(first, migrations)
+      createSettingsIpc(first).update({ generationLanguage: 'en' })
+      first.close()
+
+      const second = openDatabase(file)
+      migrate(second, migrations)
+      expect(createSettingsIpc(second).get().generationLanguage).toBe('en')
+      second.close()
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 
   it('stores an existing Claude config directory and refuses a missing one or a file', () => {

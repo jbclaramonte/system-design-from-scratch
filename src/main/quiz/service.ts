@@ -239,13 +239,14 @@ export function createQuizService(
       prompt: question.prompt,
       scenario: choiceBody?.scenario ?? null,
       choices: choiceBody?.choices.map((choice) => choice.text) ?? [],
-      topicTitle: getTopic(db, requireQuiz(round.quizId).topicId)?.title ?? ''
+      topicTitle: getTopic(db, requireQuiz(round.quizId).topicId)?.title ?? '',
+      language: requireQuiz(round.quizId).language
     }
   }
 
   function gradingRequestFor(round: Round, question: Question) {
     const body = parseFreeAnswerBody(question.body)
-    const topicId = requireQuiz(round.quizId).topicId
+    const { topicId, language } = requireQuiz(round.quizId)
     const notions = listNotionsByTopic(db, topicId)
       .filter((notion) => question.notionIds.includes(notion.id))
       .map(({ slug, title, description }) => ({ slug, title, description }))
@@ -255,7 +256,9 @@ export function createQuizService(
         expectedPoints: body.expectedPoints,
         modelAnswer: body.modelAnswer
       },
-      notions
+      notions,
+      // The Round finishes in the language of its quiz, whatever the setting is now.
+      language
     }
   }
 

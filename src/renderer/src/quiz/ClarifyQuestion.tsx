@@ -3,7 +3,7 @@ import './quiz.css'
 import { useClarification } from './useClarification'
 
 /**
- * "I don't understand the question": a plainer French wording of the question and one concrete
+ * "I don't understand the question": a plainer wording of the question and one concrete
  * example, shown under the question. The question and its choices stay on screen and the
  * original question is the one answered. It never carries a hint at the answer, records nothing
  * and has no effect on the score, the round or the grading. The result is stored per question

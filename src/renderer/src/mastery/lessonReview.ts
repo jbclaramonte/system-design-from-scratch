@@ -25,7 +25,7 @@ export type ReviewKey = 'lesson' | `remediation:${number}`
 export interface ReviewTab {
   key: ReviewKey
   kind: 'lesson' | 'remediation'
-  /** "Lesson", or the French notion title of a Remediation Lesson. */
+  /** "Lesson", or the notion title of a Remediation Lesson. */
   title: string
   /** Remediation Lessons: "Round 2 · Analogy" ("Remediation Lesson · ..." when the round is unknown). */
   detail: string | null

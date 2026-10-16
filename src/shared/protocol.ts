@@ -28,7 +28,7 @@ export type ProtocolStepInput = 'text' | 'canvas'
 export interface ProtocolChecklistItem {
   /** Stable id, kebab-case. */
   id: string
-  /** What a good submission does, in English (prompt material; the learner sees French feedback). */
+  /** What a good submission does, in English (prompt material; the learner sees feedback in the Generation Language). */
   item: string
 }
 
@@ -289,7 +289,7 @@ export function nextHintLevel(given: number): HintLevel | null {
 export const checklistVerdicts = ['met', 'partial', 'missing'] as const
 export type ChecklistVerdict = (typeof checklistVerdicts)[number]
 
-/** Design Feedback on one submitted step. French text. */
+/** Design Feedback on one submitted step. Text in the Generation Language. */
 export type StepFeedback = {
   /** One entry per checklist item of the step, in order. */
   checklist: { verdict: ChecklistVerdict; comment: string }[]
@@ -304,7 +304,7 @@ export type HintContent = {
   hint: string
 }
 
-/** Final review of the whole exercise against the Reference Solution. French text. */
+/** Final review of the whole exercise against the Reference Solution. Text in the Generation Language. */
 export type FinalReview = {
   summary: string
   strengths: string[]

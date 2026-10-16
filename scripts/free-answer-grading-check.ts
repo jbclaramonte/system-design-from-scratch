@@ -88,7 +88,12 @@ const sections: string[] = []
 for (const answer of answers) {
   const started = Date.now()
   try {
-    const { grading } = await grader.grade({ question, notions, answer: answer.text })
+    const { grading } = await grader.grade({
+      question,
+      notions,
+      answer: answer.text,
+      language: 'fr'
+    })
     const seconds = ((Date.now() - started) / 1000).toFixed(1)
     console.log(`${answer.label}: ${grading.verdict} in ${seconds} s`)
     sections.push(

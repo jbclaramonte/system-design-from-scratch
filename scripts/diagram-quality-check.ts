@@ -199,9 +199,10 @@ ${sample.final.replace(/^(#+) /gm, '$1## ')}
 
 const cannedRequest = {
   kind: 'lesson' as const,
+  language: 'fr' as const,
   input: { canned: true },
   prompt: { version: 'canned', system: 'canned', user: CANNED_PROMPT },
-  finalize: diagrams.repairDiagrams
+  finalize: diagrams.repairDiagramsFor('fr')
 }
 
 try {
@@ -230,13 +231,17 @@ try {
     )
   )
   const step = 'high_level_design'
-  const stepBuild = prompts.buildProtocolStepLessonGeneration(step, {
-    excerpts: prompts.protocolStepLessonExcerpts(
-      step,
-      (id) => corpus.findExcerpts({ sectionIds: [id], limit: 1 })[0]
-    ),
-    corpusVersion: corpus.data.metadata.commitSha
-  })
+  const stepBuild = prompts.buildProtocolStepLessonGeneration(
+    step,
+    {
+      excerpts: prompts.protocolStepLessonExcerpts(
+        step,
+        (id) => corpus.findExcerpts({ sectionIds: [id], limit: 1 })[0]
+      ),
+      corpusVersion: corpus.data.metadata.commitSha
+    },
+    'fr'
+  )
   samples.push(await run('Protocol Step Lesson: high_level_design', stepBuild))
   if (calls < MAX_CALLS && samples.every((sample) => sample.streamed === sample.final)) {
     samples.push(await run('Repair: crafted lesson with two broken blocks', cannedRequest))

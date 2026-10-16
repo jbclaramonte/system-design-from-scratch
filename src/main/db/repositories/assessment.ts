@@ -1,3 +1,7 @@
+import {
+  DEFAULT_GENERATION_LANGUAGE,
+  type GenerationLanguage
+} from '../../../shared/generationLanguage'
 import type { Database } from '../driver'
 import type { Attempt, AttemptResult, Json, Question, QuestionType, Quiz, Round } from '../types'
 import { fromFlag, fromIdList, fromJson, NOW, TIMESTAMP_COLUMNS, toFlag, toJson } from './mapping'
@@ -14,6 +18,8 @@ export interface NewQuestion {
 
 export interface NewQuiz {
   topicId: number
+  /** Default French (what rows were before the Generation Language existed). */
+  language?: GenerationLanguage
   grounded: boolean
   sourceSections?: string[]
   contentCacheKey?: string | null
@@ -25,7 +31,7 @@ interface QuizRow extends Omit<Quiz, 'grounded' | 'sourceSections'> {
   sourceSections: string
 }
 
-const QUIZ_COLUMNS = `id, topic_id AS topicId, grounded, source_sections AS sourceSections,
+const QUIZ_COLUMNS = `id, topic_id AS topicId, language, grounded, source_sections AS sourceSections,
   content_cache_key AS contentCacheKey, ${TIMESTAMP_COLUMNS}`
 
 const toQuiz = (row: QuizRow): Quiz => ({
@@ -59,11 +65,12 @@ export function createQuiz(db: Database, quiz: NewQuiz): Quiz {
   return db.transaction(() => {
     const { lastInsertRowid: quizId } = db
       .prepare(
-        `INSERT INTO quizzes (topic_id, grounded, source_sections, content_cache_key)
-         VALUES ($topicId, $grounded, $sourceSections, $contentCacheKey)`
+        `INSERT INTO quizzes (topic_id, language, grounded, source_sections, content_cache_key)
+         VALUES ($topicId, $language, $grounded, $sourceSections, $contentCacheKey)`
       )
       .run({
         topicId: quiz.topicId,
+        language: quiz.language ?? DEFAULT_GENERATION_LANGUAGE,
         grounded: toFlag(quiz.grounded),
         sourceSections: toJson(quiz.sourceSections ?? []),
         contentCacheKey: quiz.contentCacheKey ?? null
