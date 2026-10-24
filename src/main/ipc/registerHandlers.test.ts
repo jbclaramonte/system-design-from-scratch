@@ -79,6 +79,8 @@ const handlers: IpcHandlers = {
   'dashboard:get': () => {
     throw new Error('no database')
   },
+  'firstRun:get': () => ({ languageChosen: true, suggestedLanguage: 'fr' }),
+  'firstRun:chooseLanguage': () => ({ languageChosen: true, suggestedLanguage: 'fr' }),
   'settings:get': () => ({
     masteryThreshold: 100,
     roundLimit: 3,
@@ -174,6 +176,8 @@ describe('registerHandlers', () => {
       'design:loadScene',
       'design:openScratchExercise',
       'design:saveScene',
+      'firstRun:chooseLanguage',
+      'firstRun:get',
       'generation:cancel',
       'generation:start',
       'lesson:cancel',

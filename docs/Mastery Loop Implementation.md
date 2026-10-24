@@ -131,6 +131,8 @@ Issue #32 (tokens: [[Design System]]). The topic header (`TopicHeader`) is one l
 | Claude config directory | `claude_config_dir` | `null` (inherit the environment) | absolute path of an existing directory |
 | Course language ([[Generation Language]]) | `generation_language` | `"fr"` (seeded by migration 8) | `fr` or `en` (`generationLanguage` in `AppSettings`, a select on the "Course" card) |
 
+The Course language is first chosen on the first-run screen, not in Settings: see [[Generation Language]] (the marker `generation_language_chosen` is not a field of `AppSettings`, so the Settings screen cannot clear it).
+
 Applied without restart: the Course language is read when a Generation is prepared (it never rewrites stored content, and a Round in progress keeps its quiz's language, see [[Prompts#Generation Language]]); the threshold and limit are read on every action; a CLI path change calls `GenerationService.resetCliPath()`, so the next Generation resolves it again; the Claude config directory is read on every CLI call and passed as `CLAUDE_CONFIG_DIR` ([[Generation Service#Claude profile]]). The path setting wins over the `CLAUDE_CLI_PATH` environment variable, which stays as a fallback for development and tests. "Test" resolves the CLI like a Generation does (configured path first, no silent fallback), runs `claude --version`, then `claude auth status --json` in the configured profile, and shows the login state, auth method, account email and config directory, with what to do when logged out.
 
 `claude_config_dir` was added without a migration (the `settings` table is key/value): `getSettings` reads it as `null` until the first save writes the row (`unseededDefaults` in `src/main/db/repositories/settings.ts`).

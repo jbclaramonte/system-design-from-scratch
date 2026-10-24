@@ -18,8 +18,9 @@
 // separated), for example --disable-dev-shm-usage in a container with a small /dev/shm.
 //
 // Two launches share one scratch user-data folder:
-//   1. fresh folder: window, Learning Path (21 topics), database, Settings (Test button finds the
-//      CLI), About (licenses, fonts), first lesson (fake CLI, Mermaid diagram);
+//   1. fresh folder: window, first-run screen (course language: keyboard choice, saved with its
+//      marker, nothing requested before it), Learning Path (21 topics), database, Settings (Test
+//      button finds the CLI), About (licenses, fonts), first lesson (fake CLI, Mermaid diagram);
 //   2. after every topic is marked mastered in the scratch database: an exercise canvas (React
 //      Flow) where a typed component can be added, and no console error.
 // The App Update check runs against a local fake release server started by this script (the app
@@ -471,6 +472,13 @@ async function connect(port) {
       writeFileSync(file, Buffer.from(response.result.data, 'base64'))
       return file
     },
+    /** A key press (down and up) on the focused element, as the browser would get it. */
+    pressKey: async (key) => {
+      const codes = { Enter: 13, ArrowUp: 38, ArrowDown: 40, ArrowLeft: 37, ArrowRight: 39 }
+      const base = { key, code: key, windowsVirtualKeyCode: codes[key] }
+      await send('Input.dispatchKeyEvent', { type: 'rawKeyDown', ...base })
+      await send('Input.dispatchKeyEvent', { type: 'keyUp', ...base })
+    },
     close: () => socket.close()
   }
   await send('Runtime.enable')
@@ -558,13 +566,65 @@ const EXPECTED_TOPICS = 21
 async function phaseOne() {
   const port = await launchApp({}, { inspect: true })
   let c
-  const opened = await check('window loads and the Learning Path renders', async () => {
-    c = await connect(port)
-    await c.waitFor(`!!${c.testId('learning-path')}`, 'the Learning Path', 60000)
-    const url = await c.evaluate('location.protocol')
-    assert(url === 'file:', `expected a file: page, got ${url}`)
-  })
+  const opened = await check(
+    'window loads and the first-run screen asks for the course language',
+    async () => {
+      c = await connect(port)
+      await c.waitFor(`!!${c.testId('first-run')}`, 'the first-run screen', 60000)
+      const url = await c.evaluate('location.protocol')
+      assert(url === 'file:', `expected a file: page, got ${url}`)
+      // Nothing else runs or shows behind it: no app shell, no banner, no request to GitHub.
+      for (const id of ['app-shell', 'learning-path', 'update-banner']) {
+        assert(!(await c.evaluate(`!!${c.testId(id)}`)), `${id} is on screen behind the first run`)
+      }
+      await sleep(1500)
+      assert(
+        fakeReleaseRequests.length === 0,
+        `${fakeReleaseRequests.length} request(s) to the release API before the choice`
+      )
+      const radios = await c.evaluate(`(() => {
+        const all = [...document.querySelectorAll('input[name="generation-language"]')]
+        const checked = all.find((radio) => radio.checked)
+        return { values: all.map((radio) => radio.value), checked: checked?.value, focused: document.activeElement === checked }
+      })()`)
+      assert(
+        radios.values.join() === 'fr,en' && radios.checked && radios.focused,
+        `radios ${JSON.stringify(radios)}: expected fr and en, one checked and focused`
+      )
+      const db = readOnlyDb()
+      try {
+        const marker = db
+          .prepare("SELECT value FROM settings WHERE key = 'generation_language_chosen'")
+          .get()
+        assert(!marker, 'the language-chosen marker exists before the choice')
+      } finally {
+        db.close()
+      }
+      await c.shot('00-first-run')
+      return `${radios.checked} preselected and focused`
+    }
+  )
   if (!opened) return
+
+  await check('first run: an arrow key changes the choice, Enter saves it once', async () => {
+    const checked = () =>
+      c.evaluate(`document.querySelector('input[name="generation-language"]:checked')?.value`)
+    const before = await checked()
+    await c.pressKey('ArrowDown')
+    const chosen = await checked()
+    assert(chosen && chosen !== before, `ArrowDown kept ${before} selected`)
+    await c.pressKey('Enter')
+    await c.waitFor(`!!${c.testId('learning-path')}`, 'the Learning Path after the choice', 60000)
+    const db = readOnlyDb()
+    try {
+      const value = (key) => db.prepare('SELECT value FROM settings WHERE key = ?').get(key)?.value
+      assert(value('generation_language') === JSON.stringify(chosen), `setting is not ${chosen}`)
+      assert(value('generation_language_chosen') === 'true', 'the marker was not saved')
+    } finally {
+      db.close()
+    }
+    return `${before} -> ${chosen}`
+  })
 
   await check(
     `Learning Path shows ${EXPECTED_TOPICS} topics (corpus read from the package)`,

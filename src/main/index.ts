@@ -14,8 +14,9 @@ import { buildApplicationMenuTemplate } from './menu'
 import { createMasteryIpc, createMasteryService } from './mastery'
 import { createExerciseLockGuard, createLearningPathIpc, createTopicLockGuard } from './path'
 import { createProtocolIpc, createProtocolService, seedDesignExercises } from './protocol'
+import { createFirstRunIpc } from './settings/firstRunIpc'
 import { createSettingsIpc } from './settings/settingsIpc'
-import { getSettings } from './db/repositories/settings'
+import { getSettings, isGenerationLanguageChosen } from './db/repositories/settings'
 import {
   getDismissedUpdateVersion,
   getLastUpdateCheck,
@@ -231,6 +232,14 @@ void app.whenReady().then(() => {
           { allowLockedExercises: !app.isPackaged }
         )
       }),
+      firstRun: createFirstRunIpc(db, {
+        systemLanguages: () => {
+          const preferred = app.getPreferredSystemLanguages()
+          return preferred.length > 0 ? preferred : [app.getLocale()]
+        },
+        // Nothing reaches the network before the choice: the launch check follows it.
+        onLanguageChosen: () => void updates.checkAtLaunch()
+      }),
       settings: createSettingsIpc(db, {
         onCliPathChange: () => generationService.resetCliPath(),
         fallbackCliPath: envCliPath
@@ -272,7 +281,8 @@ void app.whenReady().then(() => {
   })
   installApplicationMenu()
   createMainWindow()
-  void updates.checkAtLaunch()
+  // The first-run screen comes first: a fresh folder checks for updates once the language is chosen.
+  if (isGenerationLanguageChosen(appDb)) void updates.checkAtLaunch()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

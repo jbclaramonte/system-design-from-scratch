@@ -27,6 +27,7 @@ import type {
   TopicMasterySummary
 } from './mastery'
 import type { AppSettings, CliCheck, CliCheckRequest } from './settings'
+import type { ChooseLanguageRequest, FirstRunState } from './firstRun'
 import type {
   FinalReviewView,
   HintView,
@@ -165,6 +166,13 @@ export interface IpcChannels {
   'path:lockAgain': { request: LearningPathStepRequest; response: LearningPath }
   /** Mastery per topic, Notion Map, weak points and attempt history (filtered by topic). */
   'dashboard:get': { request: DashboardRequest; response: Dashboard }
+  /** Whether the Generation Language was chosen (first-run screen), and the language to preselect. */
+  'firstRun:get': { request: void; response: FirstRunState }
+  /**
+   * Saves the first-run choice: the `generationLanguage` setting and the "language chosen" marker
+   * together, once. Later calls change nothing (Settings changes the language afterwards).
+   */
+  'firstRun:chooseLanguage': { request: ChooseLanguageRequest; response: FirstRunState }
   'settings:get': { request: void; response: AppSettings }
   /** Validated, applied at once (no restart). */
   'settings:update': { request: Partial<AppSettings>; response: AppSettings }
@@ -325,6 +333,8 @@ export const apiChannels = {
   forceUnlockStep: 'path:forceUnlock',
   lockStepAgain: 'path:lockAgain',
   getDashboard: 'dashboard:get',
+  getFirstRun: 'firstRun:get',
+  chooseGenerationLanguage: 'firstRun:chooseLanguage',
   getSettings: 'settings:get',
   updateSettings: 'settings:update',
   testCli: 'settings:testCli',

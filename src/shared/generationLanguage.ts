@@ -16,3 +16,16 @@ export const generationLanguageLabels: Record<GenerationLanguage, string> = {
 
 export const isGenerationLanguage = (value: unknown): value is GenerationLanguage =>
   typeof value === 'string' && (generationLanguages as readonly string[]).includes(value)
+
+/**
+ * The language preselected on the first-run screen: French or English when the system language
+ * (the first of the system's preferred languages, such as `fr-FR` or `en_GB`) is one of them,
+ * French otherwise.
+ */
+export function suggestedGenerationLanguage(
+  preferredLanguages: readonly string[]
+): GenerationLanguage {
+  const [first] = preferredLanguages
+  const primary = first?.split(/[-_]/)[0]?.toLowerCase()
+  return isGenerationLanguage(primary) ? primary : DEFAULT_GENERATION_LANGUAGE
+}

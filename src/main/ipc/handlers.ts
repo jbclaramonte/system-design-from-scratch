@@ -7,6 +7,7 @@ import type { LessonQuestionIpc } from '../lessonQuestion'
 import type { MasteryIpc } from '../mastery/masteryIpc'
 import type { LearningPathIpc } from '../path/pathIpc'
 import type { ProtocolIpc } from '../protocol/protocolIpc'
+import type { FirstRunIpc } from '../settings/firstRunIpc'
 import type { SettingsIpc } from '../settings/settingsIpc'
 import type { UpdateIpc } from '../update'
 import type { DesignIpc } from './design'
@@ -24,6 +25,7 @@ export interface HandlerDependencies {
   path: LearningPathIpc
   dashboard: DashboardIpc
   protocol: ProtocolIpc
+  firstRun: FirstRunIpc
   settings: SettingsIpc
   update: UpdateIpc
 }
@@ -39,6 +41,7 @@ export function createHandlers({
   path,
   dashboard,
   protocol,
+  firstRun,
   settings,
   update
 }: HandlerDependencies): IpcHandlers {
@@ -94,6 +97,8 @@ export function createHandlers({
       return result
     },
     'dashboard:get': (request) => dashboard.get(request),
+    'firstRun:get': () => firstRun.get(),
+    'firstRun:chooseLanguage': (request) => firstRun.chooseLanguage(request),
     'settings:get': () => settings.get(),
     'settings:update': (request) => settings.update(request),
     'settings:testCli': (request) => settings.testCli(request),

@@ -55,3 +55,34 @@ export function getGenerationLanguage(db: Database): GenerationLanguage {
   const { generationLanguage } = getSettings(db)
   return isGenerationLanguage(generationLanguage) ? generationLanguage : DEFAULT_GENERATION_LANGUAGE
 }
+
+/**
+ * The "language chosen" marker (key/value row, not part of the Settings screen): set by the
+ * first-run choice, and by migration 9 for an install that predates it. A fresh data folder has
+ * no marker, which is what shows the first-run screen. Distinct from the setting itself, whose
+ * default (French) is a valid value before any choice.
+ */
+const LANGUAGE_CHOSEN_KEY = 'generation_language_chosen'
+
+export function isGenerationLanguageChosen(db: Database): boolean {
+  const row = db
+    .prepare('SELECT value FROM settings WHERE key = $key')
+    .get<{ value: string }>({ key: LANGUAGE_CHOSEN_KEY })
+  return row?.value === 'true'
+}
+
+/**
+ * The first-run choice: the setting and the marker in one transaction. Returns false and changes
+ * nothing when the language was already chosen (the choice is made once; Settings changes it).
+ */
+export function chooseGenerationLanguage(db: Database, language: GenerationLanguage): boolean {
+  return db.transaction(() => {
+    if (isGenerationLanguageChosen(db)) return false
+    updateSettings(db, { generationLanguage: language })
+    db.prepare(
+      `INSERT INTO settings (key, value) VALUES ($key, 'true')
+       ON CONFLICT (key) DO UPDATE SET value = excluded.value, updated_at = ${NOW}`
+    ).run({ key: LANGUAGE_CHOSEN_KEY })
+    return true
+  })
+}

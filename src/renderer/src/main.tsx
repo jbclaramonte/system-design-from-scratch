@@ -7,6 +7,7 @@ import './styles/design-tokens.css'
 import './styles/base.css'
 import './styles/components.css'
 import { App } from './App'
+import { FirstRunGate } from './firstRun/FirstRunGate'
 
 const root = document.getElementById('root')
 if (!root) {
@@ -15,6 +16,8 @@ if (!root) {
 
 createRoot(root).render(
   <StrictMode>
-    <App />
+    <FirstRunGate>
+      <App />
+    </FirstRunGate>
   </StrictMode>
 )

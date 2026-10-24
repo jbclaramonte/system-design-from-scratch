@@ -102,6 +102,7 @@ gantt
 
     section Course language
     #57 Course language, French or English    :done, l1, 2026-10-16, 3d
+    #61 Ask the language at first launch      :done, l2, after l1, 1d
 
     section Website
     #56 GitHub Pages homepage                 :done, w1, after l1, 2d
@@ -176,6 +177,7 @@ gantt
 | #58 | #41, #45 |
 | #59 | #40, #45, #58 |
 | #60 | #58 |
+| #61 | #57 |
 
 ## Conventions
 

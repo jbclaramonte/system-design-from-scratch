@@ -194,7 +194,7 @@ How it runs:
 - The app binary is spawned with `--remote-debugging-port=<free port>`, a scratch `--user-data-dir` (always passed, so the real user data is never opened) and a **minimal environment**: `PATH=/usr/bin:/bin`, no `SHELL`, `HOME` set to a scratch folder, and the two `SDFS_UPDATE_*` variables that point the update check at a local fake release ([[#Updates]]) (on Linux, `DISPLAY` and `XAUTHORITY` are passed through: Chromium needs a display). The real user data and `~/.claude*` are never touched.
 - A fake Claude Code CLI sits in `<scratch HOME>/.local/bin/claude`. It speaks the stream-json protocol the app expects (`--version`, `auth status`, a Notion Outline, a lesson with a Mermaid flowchart) and logs every call. As `claude` is not on PATH, finding it proves the discovery through the common install locations (`commonCliLocations` in `src/main/generation/resolveCli.ts`) and the stream-json plumbing of a packaged app.
 - The page is driven over the Chrome DevTools protocol (the WebSocket built into Node 22+).
-- Two launches share one scratch user-data folder. The first starts on a fresh folder. Then the app is stopped, every topic is marked mastered in the scratch database (with `node:sqlite`; the app cannot be imported here, so the script inserts a passed round per topic, the way the earlier seed scripts did) and the app is launched again, because a packaged app enforces the Learning Path lock and an exercise opens only when its prerequisites are mastered.
+- Two launches share one scratch user-data folder. The first starts on a fresh folder (the first-run screen is answered with the keyboard). Then the app is stopped, every topic is marked mastered in the scratch database (with `node:sqlite`; the app cannot be imported here, so the script inserts a passed round per topic, the way the earlier seed scripts did) and the app is launched again, because a packaged app enforces the Learning Path lock and an exercise opens only when its prerequisites are mastered.
 - The whole process group of the app is killed at the end, also on failure or Ctrl+C. The script exits 1 when a check fails and prints one `PASS`/`FAIL` line per check.
 
 Covered:
@@ -202,6 +202,7 @@ Covered:
 | Check | What it proves |
 |---|---|
 | Window loads, `file:` origin | The packaged renderer starts, the preload bridge works. |
+| First-run screen (fresh folder) | The course language is asked before anything else: no app shell, Learning Path or update banner behind it, no request to the release API, the preselected choice is focused, no marker in the database. An arrow key changes the choice, Enter saves it: `generation_language` and `generation_language_chosen` are written and the Learning Path opens (#61). |
 | Learning Path shows 21 topics | The Source Corpus is read from the package (`resources/corpus/primer.json` in the asar). |
 | Database created and migrated | Scratch folder has `system-design-from-scratch.db` at the latest schema version, 21 topics and the Design Exercises seeded. |
 | Settings, Test button | The screen renders, the CLI is found in `~/.local/bin` without PATH, version and login state shown. |

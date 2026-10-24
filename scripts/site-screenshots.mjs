@@ -734,6 +734,15 @@ async function main() {
   console.log(cli ? `CLI: ${cli} (not the real one)` : 'CLI: the real Claude Code CLI')
   const port = await launchApp()
   cdp = await connect(port)
+  // A fresh data folder asks the course language first: French, as the images have always been.
+  await waitFor(
+    `!!document.querySelector('[data-testid=first-run], [data-testid=learning-path]')`,
+    'the first-run screen or the Learning Path'
+  )
+  if (await evaluate(`!!document.querySelector('[data-testid=first-run]')`)) {
+    await click('[data-testid=first-run-fr]')
+    await click('[data-testid=first-run-confirm]')
+  }
   await waitFor(`!!document.querySelector('[data-testid=learning-path]')`, 'the Learning Path')
   // No animation in the images.
   await cdp.send('Emulation.setFocusEmulationEnabled', { enabled: true })

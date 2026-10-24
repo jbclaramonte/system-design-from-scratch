@@ -20,7 +20,7 @@ Personal desktop app to learn system design from scratch, built around this loop
 ## 2. Audience and language
 
 - Single user (personal tool). Keep the code structure clean enough to open it up later.
-- Course content shown to the user is generated in French or in English, chosen in Settings (the [[Generation Language]], French by default). In French, technical terms stay in English (load balancer, sharding, cache, etc.) because interviews are mostly in English; in English there is no translation rule. The app UI itself is in English. See [[Prompts#Generation Language]].
+- Course content shown to the user is generated in French or in English, chosen at the first launch, before anything is generated, and changeable later in Settings (the [[Generation Language]], French by default for an install that predates the question). In French, technical terms stay in English (load balancer, sharding, cache, etc.) because interviews are mostly in English; in English there is no translation rule. The app UI itself is in English. See [[Prompts#Generation Language]].
 - The repo itself (code, docs, issues) is in English.
 - Starting level: complete beginner.
 

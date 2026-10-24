@@ -117,6 +117,7 @@ Issue #29. `AppShell` (`src/renderer/src/shell/AppShell.tsx`, `shell.css`) wraps
 | `fill` | Topic (and the dev lesson screens) | Centered container; the screen fills the height (`flex: 1; min-height: 0`) and scrolls its own panes. |
 | `canvas` | Design Exercise, dev canvas | Full width and height, no padding or max width, content area does not scroll. The screen uses `flex: 1; min-height: 0` (no `position: fixed`). |
 
+- **First-run screen** (`firstRun/`, #61): shown instead of the whole shell (no header, navigation or banner) until the Generation Language is chosen. A centered `.card` (max 40rem) with a bilingual `h1`, a native radio group of two `.first-run-choice` cards (selected: progress tint and border; the card draws the focus ring through `:has(:focus-visible)`), a bilingual note and a `.btn-primary`. The choices stack under about 30rem. Tokens only.
 - **Footer**: quiet, JetBrains Mono `label-mono`, `text-muted`, shows `Version x` (`data-testid="app-version"`).
 - **Scroll**: the content area scrolls back to the top when the screen changes.
 - **Developer tools** (dev builds only): the `.app-dev` section under the Learning Path, restyled with tokens (dashed border, mono summary).
