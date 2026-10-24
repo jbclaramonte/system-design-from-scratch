@@ -4,6 +4,7 @@ import { app, BrowserWindow, ipcMain, Menu, nativeTheme, session, shell } from '
 import { createAboutIpc, licensesPath } from './about'
 import { createLessonIpc, FOUNDATIONS_TOPICS, seedTopics } from './content'
 import { corpusPath, loadCorpus } from './corpus'
+import { createActivityIpc } from './activity'
 import { createDashboardIpc } from './dashboard'
 import { openAppDatabase, type Database } from './db'
 import { createGenerationIpc, GenerationService } from './generation'
@@ -240,6 +241,7 @@ void app.whenReady().then(() => {
       ),
       path: createLearningPathIpc({ db, corpus }),
       dashboard: createDashboardIpc({ db, corpus }),
+      activity: createActivityIpc(db),
       protocol: createProtocolIpc(masteryDeps, createProtocolService(masteryDeps), {
         allowDevFixture: !app.isPackaged,
         assertExerciseUnlocked: createExerciseLockGuard(

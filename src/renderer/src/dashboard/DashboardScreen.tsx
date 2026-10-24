@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 import type { Dashboard, DashboardTopic, HistoryRound, WeakPoint } from '../../../shared/dashboard'
 import type { TopicStep } from '../../../shared/learningPath'
 import type { TopicMasterySummary } from '../../../shared/mastery'
+import { ActivityCard } from '../activity/ActivityCard'
 import { stepStatusLabels } from '../path/pathText'
 import { errorMessage } from '../quiz/errorMessage'
 import './dashboard.css'
@@ -128,6 +129,9 @@ function Overview({ dashboard }: { dashboard: Dashboard }) {
           </div>
         ))}
       </dl>
+      <div className="dash-activity">
+        <ActivityCard variant="wide" />
+      </div>
       <p className="dash-note">
         Mastery Threshold <span className="label-mono">{dashboard.masteryThreshold}%</span>: notions
         are judged against it today; each round keeps the result it got when it was completed.
@@ -488,7 +492,12 @@ export function DashboardScreen({
       {!dashboard ? (
         !error && <p>Loading the Dashboard...</p>
       ) : isEmptyDashboard(dashboard) ? (
-        <EmptyState onClose={onClose} />
+        <>
+          <div className="dash-activity">
+            <ActivityCard variant="wide" />
+          </div>
+          <EmptyState onClose={onClose} />
+        </>
       ) : (
         <>
           <Overview dashboard={dashboard} />

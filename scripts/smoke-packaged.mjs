@@ -644,6 +644,24 @@ async function phaseOne() {
     }
   )
 
+  await check(
+    'Streak card on a fresh install: "Start your streak", goal of 1 Round, nothing done',
+    async () => {
+      await c.waitFor(`!!${c.testId('activity-card')}`, 'the Streak card')
+      const state = await c.evaluate(`JSON.stringify({
+      headline: ${c.testId('activity-streak')}.innerText,
+      goal: ${c.testId('activity-goal')}.innerText,
+      days: document.querySelectorAll('[data-testid="activity-day"]').length,
+      done: document.querySelectorAll('[data-testid="activity-day"][data-state="done"]').length
+    })`)
+      assert(
+        state ===
+          JSON.stringify({ headline: 'Start your streak', goal: '0 / 1 Round', days: 7, done: 0 }),
+        `Streak card: ${state}`
+      )
+    }
+  )
+
   await check('database is created and migrated in the scratch user data', async () => {
     const dbFile = join(userData, 'system-design-from-scratch.db')
     assert(existsSync(dbFile), 'system-design-from-scratch.db is missing')
@@ -1059,7 +1077,7 @@ function seedMasteredTopics() {
     for (const { id } of db.prepare('SELECT id FROM topics').all()) {
       const quiz = db.prepare('INSERT INTO quizzes (topic_id, grounded) VALUES (?, 0)').run(id)
       db.prepare(
-        "INSERT INTO rounds (topic_id, quiz_id, number, completed_at, score_percent, passed) VALUES (?, ?, 1, datetime('now'), 100, 1)"
+        "INSERT INTO rounds (topic_id, quiz_id, number, completed_at, score_percent, passed) VALUES (?, ?, 1, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), 100, 1)"
       ).run(id, quiz.lastInsertRowid)
     }
   } finally {
@@ -1182,6 +1200,19 @@ async function phaseTwo() {
     assert(
       fakeReleaseRequests.length === requestsAfterFirstLaunch,
       `${fakeReleaseRequests.length - requestsAfterFirstLaunch} new request(s) to the release API`
+    )
+  })
+
+  await check('Streak card counts the seeded Rounds: 1 day streak, Daily Goal met', async () => {
+    await c.waitFor(`!!${c.testId('activity-card')}`, 'the Streak card')
+    const state = await c.evaluate(`JSON.stringify({
+      headline: ${c.testId('activity-streak')}.innerText.replace(/\\s+/g, ' '),
+      goalMet: !!${c.testId('activity-goal-met')},
+      done: document.querySelectorAll('[data-testid="activity-day"][data-state="done"]').length
+    })`)
+    assert(
+      state === JSON.stringify({ headline: '1 day streak', goalMet: true, done: 1 }),
+      `Streak card after seeding: ${state}`
     )
   })
 

@@ -386,7 +386,8 @@ describe('settings', () => {
       claudeConfigDir: null,
       generationLanguage: 'fr',
       checkForUpdatesAtLaunch: true,
-      theme: 'system'
+      theme: 'system',
+      dailyGoalRounds: 1
     }
     expect(getSettings(db)).toEqual(defaults)
     expect(updateSettings(db, { roundLimit: 5 })).toEqual({ ...defaults, roundLimit: 5 })

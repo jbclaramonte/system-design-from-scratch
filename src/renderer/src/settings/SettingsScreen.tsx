@@ -5,6 +5,7 @@ import {
   isGenerationLanguage,
   type GenerationLanguage
 } from '../../../shared/generationLanguage'
+import { DAILY_GOAL_MAX, DAILY_GOAL_MIN } from '../../../shared/activity'
 import {
   settingsErrors,
   settingsLimits,
@@ -30,6 +31,7 @@ interface Draft {
   generationLanguage: GenerationLanguage
   checkForUpdatesAtLaunch: boolean
   theme: Theme
+  dailyGoalRounds: number
 }
 
 const toDraft = (settings: AppSettings): Draft => ({
@@ -40,7 +42,8 @@ const toDraft = (settings: AppSettings): Draft => ({
   claudeConfigDir: settings.claudeConfigDir ?? '',
   generationLanguage: settings.generationLanguage,
   checkForUpdatesAtLaunch: settings.checkForUpdatesAtLaunch,
-  theme: settings.theme
+  theme: settings.theme,
+  dailyGoalRounds: settings.dailyGoalRounds
 })
 
 const fromDraft = (draft: Draft): AppSettings => ({
@@ -51,8 +54,14 @@ const fromDraft = (draft: Draft): AppSettings => ({
   claudeConfigDir: draft.claudeConfigDir.trim() || null,
   generationLanguage: draft.generationLanguage,
   checkForUpdatesAtLaunch: draft.checkForUpdatesAtLaunch,
-  theme: draft.theme
+  theme: draft.theme,
+  dailyGoalRounds: draft.dailyGoalRounds
 })
+
+const dailyGoalChoices = Array.from(
+  { length: DAILY_GOAL_MAX - DAILY_GOAL_MIN + 1 },
+  (_, index) => DAILY_GOAL_MIN + index
+)
 
 /**
  * Theme, course language (Generation Language), Mastery Threshold, Round Limit, questions per quiz, the
@@ -83,7 +92,12 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
   const errors = settingsErrors(values)
   const valid = Object.keys(errors).length === 0
   const edit =
-    (field: Exclude<keyof Draft, 'generationLanguage' | 'checkForUpdatesAtLaunch' | 'theme'>) =>
+    (
+      field: Exclude<
+        keyof Draft,
+        'generationLanguage' | 'checkForUpdatesAtLaunch' | 'theme' | 'dailyGoalRounds'
+      >
+    ) =>
     (value: string) => {
       setStatus(null)
       setDraft({ ...draft, [field]: value })
@@ -318,6 +332,43 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
                 mono
                 short
               />
+            </section>
+
+            <section className="card settings-group" aria-labelledby="settings-goal-title">
+              <h2 id="settings-goal-title">Daily Goal</h2>
+              <p className="settings-group-intro">
+                How many Rounds make a full day. It only fills the goal bar: your streak counts a
+                day with one completed Round or one reviewed Protocol Step.
+              </p>
+              <div className="settings-field">
+                <label htmlFor="daily-goal-rounds">Rounds per day</label>
+                <select
+                  id="daily-goal-rounds"
+                  data-testid="settings-daily-goal-rounds"
+                  className="settings-short"
+                  value={draft.dailyGoalRounds}
+                  onChange={(event) => {
+                    setStatus(null)
+                    setDraft({ ...draft, dailyGoalRounds: Number(event.target.value) })
+                  }}
+                  aria-invalid={errors.dailyGoalRounds !== undefined}
+                  aria-describedby="daily-goal-rounds-help"
+                >
+                  {dailyGoalChoices.map((rounds) => (
+                    <option key={rounds} value={rounds}>
+                      {rounds} {rounds === 1 ? 'Round' : 'Rounds'}
+                    </option>
+                  ))}
+                </select>
+                <small
+                  id="daily-goal-rounds-help"
+                  className={
+                    errors.dailyGoalRounds ? 'settings-help settings-help-error' : 'settings-help'
+                  }
+                >
+                  {errors.dailyGoalRounds ?? 'From 1 to 3 Rounds. Applies at once, to today too.'}
+                </small>
+              </div>
             </section>
 
             <UpdatesSection

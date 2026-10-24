@@ -1,3 +1,4 @@
+import { DEFAULT_DAILY_GOAL_ROUNDS } from '../../../shared/activity'
 import {
   DEFAULT_GENERATION_LANGUAGE,
   isGenerationLanguage,
@@ -17,7 +18,8 @@ const settingKeys = {
   claudeConfigDir: 'claude_config_dir',
   generationLanguage: 'generation_language',
   checkForUpdatesAtLaunch: 'check_for_updates_at_launch',
-  theme: 'theme'
+  theme: 'theme',
+  dailyGoalRounds: 'daily_goal_rounds'
 } as const satisfies Record<keyof Settings, string>
 
 /**
@@ -27,7 +29,8 @@ const settingKeys = {
 const unseededDefaults: Partial<Settings> = {
   claudeConfigDir: null,
   checkForUpdatesAtLaunch: true,
-  theme: DEFAULT_THEME
+  theme: DEFAULT_THEME,
+  dailyGoalRounds: DEFAULT_DAILY_GOAL_ROUNDS
 }
 
 export function getSettings(db: Database): Settings {

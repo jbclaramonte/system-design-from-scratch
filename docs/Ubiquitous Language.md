@@ -42,6 +42,14 @@ Single source of truth for domain terms. Use these exact terms in code, schema, 
 | [[Dashboard]] | Screen with mastery, attempts and weak points. | stats page |
 | [[Weak Point]] | A notion tested in a completed round whose latest score is below the current Mastery Threshold; listed on the Dashboard with why. | weakness, gap, struggle |
 
+## Activity
+
+| Term | Definition | Avoid |
+|---|---|---|
+| [[Activity Day]] | A local calendar day (it changes at local midnight) with at least one completed Round or one reviewed Protocol Step. Opening a Lesson, a Declared Mastery and a Forced Unlock never make one. | study day, active day, session |
+| [[Activity Streak]] | Consecutive Activity Days ending today, or yesterday while today has none yet. One grace day: a single missed day inside a streak does not break it, at most once per 7 days. Derived from the history, never stored; no XP, no notification. | chain, combo, flame, run |
+| [[Daily Goal]] | Rounds to complete per day, 1 to 3 (default 1, the `dailyGoalRounds` setting). Fills a progress bar, never decides the Activity Streak. | quota, target, daily target |
+
 ## Design practice
 
 | Term | Definition | Avoid |

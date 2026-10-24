@@ -1,5 +1,6 @@
 import { app } from 'electron'
 import type { AboutIpc } from '../about'
+import type { ActivityIpc } from '../activity/activityIpc'
 import type { LessonIpc } from '../content/lessonIpc'
 import type { DashboardIpc } from '../dashboard/dashboardIpc'
 import type { GenerationIpc } from '../generation/ipc'
@@ -24,6 +25,7 @@ export interface HandlerDependencies {
   mastery: MasteryIpc
   path: LearningPathIpc
   dashboard: DashboardIpc
+  activity: ActivityIpc
   protocol: ProtocolIpc
   firstRun: FirstRunIpc
   settings: SettingsIpc
@@ -40,6 +42,7 @@ export function createHandlers({
   mastery,
   path,
   dashboard,
+  activity,
   protocol,
   firstRun,
   settings,
@@ -97,6 +100,7 @@ export function createHandlers({
       return result
     },
     'dashboard:get': (request) => dashboard.get(request),
+    'activity:get': (request) => activity.get(request),
     'firstRun:get': () => firstRun.get(),
     'firstRun:chooseLanguage': (request) => firstRun.chooseLanguage(request),
     'settings:get': () => settings.get(),

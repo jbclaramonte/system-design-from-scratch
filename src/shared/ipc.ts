@@ -53,6 +53,7 @@ import type {
   UpdateVersionRequest
 } from './update'
 import type { LearningPath, LearningPathStepRequest } from './learningPath'
+import type { ActivitySummary } from './activity'
 import type { Dashboard, DashboardRequest } from './dashboard'
 import type {
   FreeAnswerGradingOutcome,
@@ -166,6 +167,11 @@ export interface IpcChannels {
   'path:lockAgain': { request: LearningPathStepRequest; response: LearningPath }
   /** Mastery per topic, Notion Map, weak points and attempt history (filtered by topic). */
   'dashboard:get': { request: DashboardRequest; response: Dashboard }
+  /**
+   * Activity Streak, Daily Goal progress and the week strip, from the completed Rounds and the
+   * reviewed Protocol Steps. Local time of the main process; nothing is stored.
+   */
+  'activity:get': { request: void; response: ActivitySummary }
   /** Whether the Generation Language was chosen (first-run screen), and the language to preselect. */
   'firstRun:get': { request: void; response: FirstRunState }
   /**
@@ -333,6 +339,7 @@ export const apiChannels = {
   forceUnlockStep: 'path:forceUnlock',
   lockStepAgain: 'path:lockAgain',
   getDashboard: 'dashboard:get',
+  getActivity: 'activity:get',
   getFirstRun: 'firstRun:get',
   chooseGenerationLanguage: 'firstRun:chooseLanguage',
   getSettings: 'settings:get',

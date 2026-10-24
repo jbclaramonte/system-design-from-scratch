@@ -62,6 +62,18 @@ describe('settingsErrors', () => {
     expect(Object.keys(settingsErrors({ theme: '' as never }))).toEqual(['theme'])
   })
 
+  it('accepts a Daily Goal of 1 to 3 Rounds, nothing else', () => {
+    for (const dailyGoalRounds of [1, 2, 3]) {
+      expect(settingsErrors({ dailyGoalRounds })).toEqual({})
+    }
+    for (const dailyGoalRounds of [0, 4, -1, 1.5, Number.NaN]) {
+      expect(Object.keys(settingsErrors({ dailyGoalRounds }))).toEqual(['dailyGoalRounds'])
+    }
+    expect(Object.keys(settingsErrors({ dailyGoalRounds: '2' as never }))).toEqual([
+      'dailyGoalRounds'
+    ])
+  })
+
   it('accepts an absolute Claude config directory or null', () => {
     expect(settingsErrors({ claudeConfigDir: '/Users/me/.claude-perso' })).toEqual({})
     expect(settingsErrors({ claudeConfigDir: null })).toEqual({})
@@ -90,7 +102,8 @@ describe('settings IPC', () => {
       claudeConfigDir: null,
       generationLanguage: 'fr',
       checkForUpdatesAtLaunch: true,
-      theme: 'system'
+      theme: 'system',
+      dailyGoalRounds: 1
     })
     expect(() => ipc.update({ masteryThreshold: 20 })).toThrow(/between 50 and 100/)
     expect(() => ipc.update({ roundLimit: 3, unknown: 1 } as never)).toThrow()
@@ -111,6 +124,18 @@ describe('settings IPC', () => {
     expect(onCliPathChange).toHaveBeenCalledTimes(2)
     expect(ipc.update({ questionsPerQuiz: 8 }).questionsPerQuiz).toBe(8)
     expect(ipc.update({ questionsPerQuiz: null }).questionsPerQuiz).toBeNull()
+  })
+
+  it('validates and persists the Daily Goal (default 1, read before the first save)', () => {
+    const ipc = createSettingsIpc(db)
+    expect(ipc.get().dailyGoalRounds).toBe(1)
+    expect(() => ipc.update({ dailyGoalRounds: 0 })).toThrow(/between 1 and 3/)
+    expect(() => ipc.update({ dailyGoalRounds: 4 })).toThrow(/between 1 and 3/)
+    expect(() => ipc.update({ dailyGoalRounds: '2' } as never)).toThrow()
+    expect(ipc.get().dailyGoalRounds).toBe(1)
+    expect(ipc.update({ dailyGoalRounds: 3 }).dailyGoalRounds).toBe(3)
+    expect(getSettings(db).dailyGoalRounds).toBe(3)
+    expect(ipc.update({ roundLimit: 4 }).dailyGoalRounds).toBe(3)
   })
 
   it('persists "Check for updates at launch" and refuses anything but a boolean', () => {

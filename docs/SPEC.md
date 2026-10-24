@@ -74,6 +74,7 @@ Small helpers around the text and the quiz, outside the mastery loop: they never
 - Settings:
   - Course language (French or English), for the content generated from then on. Content already generated is kept in its language, mastery never depends on it, and a round in progress finishes in the language of its quiz. See [[Generation Language]].
   - Global mastery threshold in percent, adjustable, 100% by default.
+  - [[Daily Goal]]: Rounds per day, 1 to 3, 1 by default.
   - Guard rail: after N rounds without success (N adjustable), the app offers another angle (concrete example, analogy) or to skip and come back later. See [[Round Limit]].
 - Question types:
   - Single-choice (MCQ).
@@ -114,6 +115,7 @@ The exact order of additions from design 2 onwards is still to be refined while 
 
 - Linear [[Learning Path]]: foundations, topics, then designs. Each step is unlocked by mastering the previous one.
 - [[Notion Map]] and [[Dashboard]]: mastery per notion, attempt history, weak points.
+- [[Activity Streak]] and [[Daily Goal]]: a "Streak" card on the Learning Path and the Dashboard overview with the week strip (Monday to Sunday) and today's progress. An [[Activity Day]] is a local calendar day with a completed Round or a reviewed Protocol Step; one grace day per 7 days keeps a streak alive; the Daily Goal is 1 to 3 Rounds a day (Settings, default 1). Derived from existing data, no XP, no notification, no sound, and a fresh install says "Start your streak" with nothing red.
 
 ## 8. Data
 
@@ -122,7 +124,9 @@ Local SQLite. Everything is recorded:
 - generated lessons, remediation lessons and quizzes ([[Content Cache]]);
 - every [[Attempt]]: date, question, notion, type, result;
 - design scenes (React Flow nodes and edges as JSON) and design feedback;
-- progress and settings (threshold, N rounds).
+- progress and settings (threshold, N rounds, Daily Goal).
+
+The [[Activity Streak]] is not stored: it is computed from the completed Rounds and the reviewed Protocol Step submissions.
 
 Spaced repetition is out of the MVP, but the attempt model must allow it without a migration.
 

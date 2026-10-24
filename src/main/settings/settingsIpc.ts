@@ -24,7 +24,8 @@ const updateRequest = z
     claudeConfigDir: z.string().nullable(),
     generationLanguage: z.enum(generationLanguages),
     checkForUpdatesAtLaunch: z.boolean(),
-    theme: z.enum(themes)
+    theme: z.enum(themes),
+    dailyGoalRounds: z.number()
   })
   .partial()
   .strict()

@@ -79,6 +79,9 @@ const handlers: IpcHandlers = {
   'dashboard:get': () => {
     throw new Error('no database')
   },
+  'activity:get': () => {
+    throw new Error('no database')
+  },
   'firstRun:get': () => ({ languageChosen: true, suggestedLanguage: 'fr' }),
   'firstRun:chooseLanguage': () => ({ languageChosen: true, suggestedLanguage: 'fr' }),
   'settings:get': () => ({
@@ -89,7 +92,8 @@ const handlers: IpcHandlers = {
     claudeConfigDir: null,
     generationLanguage: 'fr',
     checkForUpdatesAtLaunch: true,
-    theme: 'system'
+    theme: 'system',
+    dailyGoalRounds: 1
   }),
   'settings:update': () => {
     throw new Error('invalid')
@@ -170,6 +174,7 @@ describe('registerHandlers', () => {
     registerHandlers(ipc, handlers)
 
     expect([...ipc.listeners.keys()].sort()).toEqual([
+      'activity:get',
       'app:getAbout',
       'app:getVersion',
       'dashboard:get',

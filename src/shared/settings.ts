@@ -2,6 +2,7 @@
  * App settings shared by the main process (stored in the `settings` table) and the Settings
  * screen. Validation lives here so both sides apply the same rules.
  */
+import { DAILY_GOAL_MAX, DAILY_GOAL_MIN } from './activity'
 import type { GenerationErrorInfo } from './generation'
 import { isGenerationLanguage, type GenerationLanguage } from './generationLanguage'
 import { isTheme, type Theme } from './theme'
@@ -32,12 +33,15 @@ export interface AppSettings {
   checkForUpdatesAtLaunch: boolean
   /** Theme: System (follows the operating system, the default), Light or Dark. */
   theme: Theme
+  /** Daily Goal: Rounds to complete per day, 1 to 3 (default 1). */
+  dailyGoalRounds: number
 }
 
 export const settingsLimits = {
   masteryThreshold: { min: 50, max: 100 },
   roundLimit: { min: 1, max: 10 },
-  questionsPerQuiz: { min: 4, max: 20 }
+  questionsPerQuiz: { min: 4, max: 20 },
+  dailyGoalRounds: { min: DAILY_GOAL_MIN, max: DAILY_GOAL_MAX }
 } as const
 
 export type SettingsErrors = Partial<Record<keyof AppSettings, string>>
@@ -57,7 +61,8 @@ export function settingsErrors(changes: Partial<AppSettings>): SettingsErrors {
     claudeCliPath,
     claudeConfigDir,
     generationLanguage,
-    theme
+    theme,
+    dailyGoalRounds
   } = changes
   if (
     masteryThreshold !== undefined &&
@@ -98,6 +103,9 @@ export function settingsErrors(changes: Partial<AppSettings>): SettingsErrors {
   }
   if (theme !== undefined && !isTheme(theme)) {
     errors.theme = 'System, Light or Dark.'
+  }
+  if (dailyGoalRounds !== undefined && !inRange(dailyGoalRounds, settingsLimits.dailyGoalRounds)) {
+    errors.dailyGoalRounds = 'A whole number of Rounds between 1 and 3.'
   }
   return errors
 }

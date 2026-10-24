@@ -252,6 +252,9 @@ Generated rows carry `grounded` and `source_sections` ([[Grounding]]) and an opt
 - `settings`: key/value, values as JSON. Seeded with `mastery_threshold = 100` ([[Mastery Threshold]]), `round_limit = 3` ([[Round Limit]]), `questions_per_quiz = null` (automatic), `claude_cli_path = null` (automatic lookup) and `generation_language = "fr"` ([[Generation Language]]; changing it never touches stored content). The marker `generation_language_chosen = true` says the learner chose the language at the first launch (the first-run screen); it is absent on a fresh folder, set by the choice and by migration 9 for an install that predates it, and is not a Settings screen field: changing the language in Settings never clears it. Edited on the Settings screen ([[Mastery Loop Implementation#Settings]]).
 - `schema_migrations`: applied migrations.
 
+> [!note] Activity Streak and Daily Goal
+> No table: the [[Activity Streak]] and the [[Daily Goal]] progress are derived from `rounds.completed_at` and the `updated_at` of `reviewed` `protocol_step_submissions` ([[Activity Day]]). The only stored value is the `daily_goal_rounds` setting (1 to 3, read as 1 until first saved, no migration).
+
 ## Code
 
 - `src/main/db/driver.ts`: `Database` interface and `openDatabase()`.

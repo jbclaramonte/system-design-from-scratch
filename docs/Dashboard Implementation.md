@@ -35,6 +35,10 @@ Data sources:
 - Accuracy: sum of attempt scores over attempts (scores are all-or-nothing, so the share of correct answers). Null without attempts.
 - Last activity: latest attempt, round start or round completion. The renderer shows it as "2 hours ago".
 
+### Activity
+
+The overview also shows the **Streak** card (the same `ActivityCard` as the Learning Path, `variant="wide"`: streak, week strip and [[Daily Goal]] on one row), under the stat cards and, on a Dashboard with nothing to show yet, above the empty state, so a fresh install reads "Start your streak". It is not part of `dashboard:get`: the card loads `activity:get` itself and reloads on `path:changed`. Rules in [[Activity Streak]] and [[Activity Day]]; the Dashboard's own numbers (rounds, attempts, accuracy) are unchanged.
+
 ### Topics
 
 Per Learning Path topic: status (the path step), rounds (number, status, score, dates), best and latest completed score, the [[Round Limit]] count (completed rounds below the threshold since the last passed one, as in the Mastery Loop), notions mastered over the outline, last practiced (latest attempt or round start).
@@ -107,4 +111,5 @@ Issue #31, on the dark [[Design System]] (tokens and shared classes only, no lit
 ## Related
 
 - [[Dashboard]], [[Notion Map]], [[Weak Point]], [[Attempt]], [[Round]], [[Notion]], [[Mastery Threshold]], [[Round Limit]]
+- [[Activity Streak]], [[Activity Day]], [[Daily Goal]]
 - [[Mastery Loop Implementation]], [[Learning Path Implementation]], [[Quiz Engine]], [[Data Model]]

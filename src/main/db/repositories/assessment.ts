@@ -266,6 +266,14 @@ export function listRoundsByTopic(db: Database, topicId: number): Round[] {
     .map(toRound)
 }
 
+/** `completed_at` of every completed round, oldest first (the Activity Days read it). */
+export function listRoundCompletionTimes(db: Database): string[] {
+  return db
+    .prepare('SELECT completed_at AS at FROM rounds WHERE completed_at IS NOT NULL ORDER BY at')
+    .all<{ at: string }>()
+    .map((row) => row.at)
+}
+
 // Attempts
 
 export interface NewAttempt {

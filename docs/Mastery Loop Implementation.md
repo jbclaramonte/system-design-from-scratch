@@ -130,12 +130,13 @@ Issue #32 (tokens: [[Design System]]). The topic header (`TopicHeader`) is one l
 | Claude Code CLI path | `claude_cli_path` | `null` (automatic lookup) | absolute path |
 | Claude config directory | `claude_config_dir` | `null` (inherit the environment) | absolute path of an existing directory |
 | Course language ([[Generation Language]]) | `generation_language` | `"fr"` (seeded by migration 8) | `fr` or `en` (`generationLanguage` in `AppSettings`, a select on the "Course" card) |
+| Daily Goal ([[Daily Goal]]) | `daily_goal_rounds` | 1 (read as 1 until the first save, no migration) | whole number 1 to 3 (`dailyGoalRounds` in `AppSettings`, a select on the "Daily Goal" card) |
 
 The Course language is first chosen on the first-run screen, not in Settings: see [[Generation Language]] (the marker `generation_language_chosen` is not a field of `AppSettings`, so the Settings screen cannot clear it).
 
 Applied without restart: the Course language is read when a Generation is prepared (it never rewrites stored content, and a Round in progress keeps its quiz's language, see [[Prompts#Generation Language]]); the threshold and limit are read on every action; a CLI path change calls `GenerationService.resetCliPath()`, so the next Generation resolves it again; the Claude config directory is read on every CLI call and passed as `CLAUDE_CONFIG_DIR` ([[Generation Service#Claude profile]]). The path setting wins over the `CLAUDE_CLI_PATH` environment variable, which stays as a fallback for development and tests. "Test" resolves the CLI like a Generation does (configured path first, no silent fallback), runs `claude --version`, then `claude auth status --json` in the configured profile, and shows the login state, auth method, account email and config directory, with what to do when logged out.
 
-`claude_config_dir` was added without a migration (the `settings` table is key/value): `getSettings` reads it as `null` until the first save writes the row (`unseededDefaults` in `src/main/db/repositories/settings.ts`).
+`claude_config_dir` and `daily_goal_rounds` were added without a migration (the `settings` table is key/value): `getSettings` reads it as `null` until the first save writes the row (`unseededDefaults` in `src/main/db/repositories/settings.ts`). The Daily Goal is read on every `activity:get`, so a change applies at once.
 
 "Open Settings": every Generation error display (lesson, Remediation Lesson, quiz preparation, free-answer grading, Protocol Step Lesson and protocol calls, dev Generation panel) is `GenerationErrorView` ([[Generation Service#Error display]]); for `not_logged_in` and `cli_not_found` it shows "Open Settings" next to Retry, which opens the Settings screen (`OpenSettingsContext`, provided by `App`; Back returns to the screen it was opened from).
 

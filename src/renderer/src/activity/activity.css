@@ -1,0 +1,202 @@
+/* Activity Streak and Daily Goal card (#64). Tokens and shared classes (.card, .chip, .progress,
+   .label-caps) come from styles/; this file only lays the card out. */
+
+.activity {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+}
+
+.activity h2,
+.activity h3 {
+  margin: 0;
+}
+
+.activity-headline {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-sm);
+  margin: var(--space-xs) 0 0;
+}
+
+.activity-count,
+.activity-start {
+  font-family: var(--font-mono);
+  font-size: var(--type-headline-xl-size);
+  line-height: var(--type-headline-xl-line);
+  letter-spacing: var(--type-headline-xl-tracking);
+  font-weight: var(--type-headline-xl-weight);
+}
+
+.activity-start {
+  font-family: var(--font-sans);
+  font-size: var(--type-headline-md-size);
+  line-height: var(--type-headline-md-line);
+  letter-spacing: 0;
+}
+
+.activity-unit {
+  color: var(--color-text-secondary);
+}
+
+.activity-detail {
+  margin: var(--space-xs) 0 0;
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-sm-size);
+  line-height: var(--type-body-sm-line);
+}
+
+/* Week strip: seven days, Monday first. Each day writes its letter and draws a glyph (check,
+   dash, lock or an empty ring); the state is also read out by the hidden text. */
+
+.activity-week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--space-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.activity-day {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-xs) 0 calc(var(--space-xs) + 4px);
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+}
+
+.activity-day-initial {
+  font-family: var(--font-mono);
+  font-size: var(--type-label-caps-size);
+  font-weight: var(--type-label-caps-weight);
+  line-height: var(--type-label-caps-line);
+}
+
+.activity-day-ring {
+  stroke: var(--color-border-active);
+  stroke-width: 1.5;
+}
+
+.activity-day-glyph {
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.activity-day-done {
+  color: var(--color-mastered-text);
+}
+
+.activity-day-done .activity-day-ring {
+  fill: var(--color-mastered-fill);
+  stroke: var(--color-mastered);
+}
+
+.activity-day-grace {
+  color: var(--color-progress-text);
+}
+
+.activity-day-grace .activity-day-ring {
+  stroke: var(--color-progress);
+  stroke-dasharray: 3 2.5;
+}
+
+.activity-day-future {
+  color: var(--color-locked-text);
+}
+
+.activity-day-future .activity-day-ring {
+  fill: var(--color-locked-fill);
+  stroke: var(--color-locked-border);
+}
+
+/* Today: a frame and a bar under the letter, so it stands out without color. */
+.activity-day-current {
+  border-color: var(--color-progress);
+  background: var(--color-progress-fill);
+  color: var(--color-text-primary);
+}
+
+.activity-day-current.activity-day-done {
+  color: var(--color-mastered-text);
+}
+
+.activity-day-current::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  width: 12px;
+  height: 2px;
+  border-radius: var(--radius-pill);
+  background: var(--color-progress);
+}
+
+/* Daily Goal */
+
+.activity-goal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--color-border-hairline);
+}
+
+.activity-goal-value {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--type-headline-sm-size);
+  line-height: var(--type-headline-sm-line);
+  font-weight: 600;
+}
+
+.activity-goal .progress {
+  margin-top: var(--space-xs);
+}
+
+/* Wide: the Dashboard overview, three blocks on one row. */
+
+.activity-wide {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.2fr) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-lg);
+}
+
+.activity-wide .activity-goal {
+  padding-top: 0;
+  padding-left: var(--space-lg);
+  border-top: 0;
+  border-left: 1px solid var(--color-border-hairline);
+}
+
+@media (max-width: 760px) {
+  .activity-wide {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .activity-wide .activity-goal {
+    padding-top: var(--space-md);
+    padding-left: 0;
+    border-top: 1px solid var(--color-border-hairline);
+    border-left: 0;
+  }
+}
+
+.activity-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

@@ -8,6 +8,7 @@ import {
   type TopicStep
 } from '../../../shared/learningPath'
 import type { TopicMasterySummary } from '../../../shared/mastery'
+import { ActivityCard } from '../activity/ActivityCard'
 import { DeclareMastery, UndoDeclaration } from '../mastery/DeclaredMastery'
 import { errorMessage } from '../quiz/errorMessage'
 import './path.css'
@@ -535,8 +536,11 @@ export function LearningPathScreen({
     <div className="path-screen" data-testid="learning-path">
       {heading}
       <div className="path-overview">
-        <ProgressHero path={path} />
-        <CurrentPriority path={path} onOpenTopic={onOpenTopic} onOpenExercise={onOpenExercise} />
+        <div className="path-overview-main">
+          <ProgressHero path={path} />
+          <CurrentPriority path={path} onOpenTopic={onOpenTopic} onOpenExercise={onOpenExercise} />
+        </div>
+        <ActivityCard />
       </div>
       <div className="tabs" role="group" aria-label="Filter the Learning Path">
         {pathFilters.map((value) => (

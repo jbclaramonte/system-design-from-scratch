@@ -20,9 +20,17 @@
 }
 
 .path-overview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 19rem;
+  align-items: start;
+  gap: var(--space-md);
+}
+
+.path-overview-main {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
+  min-width: 0;
 }
 
 /* Hero progress card */
@@ -297,6 +305,12 @@
 .path-unlocked {
   margin: 0;
   color: var(--color-mastered-text);
+}
+
+@media (max-width: 900px) {
+  .path-overview {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 @media (max-width: 760px) {

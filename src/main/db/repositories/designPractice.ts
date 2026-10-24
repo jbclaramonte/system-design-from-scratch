@@ -244,6 +244,16 @@ export function listProtocolStepSubmissions(
     .map(toSubmission)
 }
 
+/** When each submission was reviewed (the settle time), oldest first. */
+export function listReviewedSubmissionTimes(db: Database): string[] {
+  return db
+    .prepare(
+      "SELECT updated_at AS at FROM protocol_step_submissions WHERE status = 'reviewed' ORDER BY at"
+    )
+    .all<{ at: string }>()
+    .map((row) => row.at)
+}
+
 // Protocol Step drafts
 
 const DRAFT_COLUMNS = `design_exercise_id AS designExerciseId, protocol_step AS protocolStep, text,

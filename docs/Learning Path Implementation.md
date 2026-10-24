@@ -102,6 +102,7 @@ Data file `src/main/path/designExercisePrerequisites.ts`, checked by a test agai
 |---|---|---|
 | `getLearningPath()` | `path:get` | `LearningPath`: steps, `nextStepKey`, progress |
 | `forceUnlockStep`, `lockStepAgain` | `path:forceUnlock`, `path:lockAgain` | [[#Forced Unlock]] |
+| `getActivity()` | `activity:get` | `ActivitySummary` for the Streak card, see [[#Activity card]] |
 | `onLearningPathChanged(listener)` | `path:changed` | The recomputed path, pushed to the sender after `quiz:completeRound`, `mastery:choose`, `mastery:declare`, `mastery:undoDeclaration`, `path:forceUnlock` and `path:lockAgain` (`src/main/ipc/handlers.ts`) |
 
 ## Lock enforcement
@@ -132,6 +133,14 @@ Tests: `src/main/mastery/service.test.ts` (mastery IPC: locked topic refused wit
 - `TopicScreen` remediation step: a failed round with no missed notion (no Remediation Lesson to read) shows "no missed notion was identified" and a retry button that starts the next round, instead of crashing; `firstRemediationIndex` (`src/renderer/src/mastery/masteryText.ts`, tested) returns null for it.
 - `pathText.ts`: labels and messages, filters, counters (tested).
 
+### Activity card
+
+Issue #64. The overview is a two-column grid (`.path-overview`): the progress hero and the Current priority card stacked on the left, the **Streak** card (`ActivityCard`, `src/renderer/src/activity/`, 19rem) on the right; under 900px it stacks below them. The layout of the sections is unchanged (#67 redraws the path later).
+
+The card shows the [[Activity Streak]] ("5 day streak", a calm line about today, "Grace day used on Thu 22 Oct." when it was used, or "Start your streak" on a fresh install), the week strip and the [[Daily Goal]] ("1 / 2 Rounds", a progress bar, a "Met" chip). Week strip: Monday first, one `<li>` per day with its initial (M T W T F S S: the app UI is English), a glyph (check = done, dashed ring with a dash = grace day, plain ring = no activity, lock = future) and a text alternative read by screen readers ("Wednesday 21 October: done", "...: today, not done yet", "...: locked, not reached yet"; `aria-current="date"` on today). Today also has a frame and a bar under its glyph, so status is never by colour alone; a day without activity is a neutral ring, never red. The goal bar is a `progressbar` with `aria-valuetext` ("1 / 2 Rounds today").
+
+Data: `activity:get` (no request field, validated with zod: `{}` or nothing), `src/main/activity/activityIpc.ts`. It reads `rounds.completed_at` and the `updated_at` of reviewed `protocol_step_submissions` and the `dailyGoalRounds` setting, in the local time of the main process. The card loads it on mount and on every `path:changed`, so it follows a completed Round at once; it does not poll, so a screen left open across midnight updates on the next navigation. Nothing is stored.
+
 ### Visual design
 
 Dark "Terminal Architect" look ([[Design System]]). The hero is an elevated card: mastered count in large mono, percentage in emerald, the indigo-to-emerald `.progress` bar, then four mono-caps counters separated by hairlines (each with a small colored dot, the label carries the meaning). The Current priority card sits under it with an indigo left edge, the step title, what is really known about it (Foundations Module or primer topic, notion count when the Notion Outline exists; the rationale for a Design Exercise), its status chip and the one primary button. The filter tabs (All, Foundations, Primer topics, Design exercises) really filter the sections (`aria-pressed`, underline on the active one). Topic rows are hairline cards: a status circle (check, ring with dot, alert, dash, lock; decorative), title, an "Outside the primer" chip when ungrounded and the status chip with its glowing dot (Mastered, In progress, Not started, Round Limit reached, Locked). A locked row shows why ("Master X first.") and a "Go to X" button when X can be opened; a row at the Round Limit or skipped says what to do. The whole card opens the step (stretched button); focus draws the ring around the card. Design Exercises are cards in a 2-column grid (one column under 760px): title, chip (Ready to start, Locked, In progress, Completed, Coming soon), "3 of 4 prerequisites mastered", the lock reason and the rationale. Nothing is invented: every number comes from the Learning Path model.
@@ -155,7 +164,13 @@ Design Exercises (#15, 2026-10-09): built app, fake CLI, scratch `--user-data-di
 - Tests: `pathIpc.test.ts` (every catalogued exercise after the first is `locked` by the previous one until it is completed, then `available`; the unseeded path lists the whole catalogue as `locked`), `forcedUnlock.test.ts` (the coming soon case injects a smaller implemented list: the catalogue has no slot left), `pathText.test.ts` (the end-of-path text only says "more exercises are coming soon" while a slot is `coming_soon`).
 - Packaged build, scratch user data, fake CLI: the six new exercises `Locked` with 8 to 12 missing prerequisites (and Twitter for the first), opened with "Unlock anyway", played to `Completed`; see [[Design Exercises#Verification of exercises 3 to 8 (#46 to #51, 2026-10-16)]].
 
+## Verification of the Activity card (2026-10-24, #64)
+
+- Tests: `src/main/activity/activity.test.ts` (empty history, today only, yesterday only, gaps of one and two days, grace used twice in 7 days and exactly 7 days apart, chronological stability, day boundaries at local midnight in Europe/Paris and America/New_York, the spring-forward and fall-back days, many Rounds in one day, the week strip), `activityIpc.test.ts` (migrated database: fresh install, Rounds and reviewed Protocol Steps, open, failed and pending ones ignored, a Declared Mastery and two Forced Unlocks adding nothing, the setting, request validation), `src/renderer/src/activity/activityText.test.ts`, `settings.test.ts` (`dailyGoalRounds`).
+- Dev app over the Chrome DevTools protocol, scratch `--user-data-dir` and HOME, `CLAUDE_CLI_PATH` set to a missing file: a fresh install ("Start your streak", "0 / 1 Round", Saturday today, Sunday locked) and a seeded history (a 5 day streak with its grace day on Thursday, a reviewed Protocol Step a week earlier, 1 Round today with a goal of 2 then 3), light and dark, wide and 820px, on the Learning Path and the Dashboard (also its empty state); the Settings control saved 3 and the card read "1 / 3 Rounds". `smoke:packaged` checks the card on a fresh install and after the seeded Rounds.
+
 ## Related
 
+- [[Activity Streak]], [[Activity Day]], [[Daily Goal]]
 - [[Learning Path]], [[Topic]], [[Foundations Module]], [[Design Exercise]], [[Reference Solution]], [[Forced Unlock]], [[Declared Mastery]]
 - [[Mastery Loop Implementation]], [[Lesson View]], [[Corpus]]

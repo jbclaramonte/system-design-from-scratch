@@ -36,6 +36,8 @@ Learning content: [[Topic]], [[Notion]], [[Notion Outline]], [[Lesson]], [[Remed
 
 Assessment: [[Quiz]], [[Question]], [[Question Clarification]], [[Attempt]], [[Round]], [[Mastery Loop]], [[Mastery Threshold]], [[Round Limit]], [[Declared Mastery]], [[Notion Map]], [[Dashboard]], [[Weak Point]]
 
+Activity: [[Activity Day]], [[Activity Streak]], [[Daily Goal]]
+
 Design practice: [[Design Exercise]], [[Interview Protocol]], [[Protocol Step]], [[Protocol Step Lesson]], [[Hint]], [[Reference Solution]], [[Design Canvas]], [[Design Scene]], [[Design Graph]], [[Design Feedback]]
 
 Generation and data: [[Grounding]], [[Source Corpus]], [[Excerpt]], [[Content Cache]], [[Generation]], [[Generation Language]], [[Pre-generation]]
