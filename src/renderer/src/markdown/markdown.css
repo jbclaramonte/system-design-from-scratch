@@ -1,6 +1,6 @@
 /* Mermaid Diagrams in Markdown content (see docs/Mermaid Diagrams.md). The drawing is themed
-   from the design tokens by mermaidTheme.ts: a layer 1 canvas with the dotted matrix grid of
-   docs/DESIGN.md, no light card. */
+   from the design tokens by mermaidTheme.ts, for the Theme shown: the frame below is a layer 1
+   card with the dotted grid of docs/DESIGN.md, the same rules in both themes. */
 
 .diagram {
   margin: var(--space-lg) 0;

@@ -3,6 +3,7 @@
 //
 //   node scripts/site-screenshots.mjs [--user-data-dir <dir>] [--out <dir>] [--app <binary>]
 //                                     [--cli <claude binary>] [--keep] [--only-exercise]
+//                                     [--theme light|dark]
 //
 // It launches the PACKAGED app (so the Learning Path locks apply) with a scratch --user-data-dir
 // (never the real data folder: a directory that looks like it is refused), drives it over the
@@ -28,6 +29,9 @@
 // lesson and after the remediation). Content is French, the default Generation Language. Each run
 // writes different content: keep the images of a run you are happy with. When something fails the
 // script stops and keeps the scratch folder (no retry: a retry would pay for the calls again).
+//
+// The images show the Light theme of the app (the website follows that look); `--theme dark` picks
+// the Dark one instead, chosen in Settings like a learner would (a trial image, or a dark variant).
 //
 // `--only-exercise` runs the last stage again on a scratch folder a previous run left (after a
 // failure there, to avoid paying for the earlier Generations twice).
@@ -116,6 +120,11 @@ if (!appBinary || !existsSync(appBinary)) {
 
 const outDir = resolve(argValue('--out') ?? join(root, 'site', 'assets', 'img'))
 const keep = process.argv.includes('--keep')
+const theme = argValue('--theme') ?? 'light'
+if (theme !== 'light' && theme !== 'dark') {
+  console.error(`site-screenshots: --theme is light or dark, not "${theme}".`)
+  process.exit(2)
+}
 const cli = argValue('--cli') ? resolve(argValue('--cli')) : undefined
 const userData = resolve(argValue('--user-data-dir') ?? mkdtempSync(join(tmpdir(), 'sdfs-site-')))
 
@@ -729,8 +738,26 @@ async function exerciseScreens() {
   await shot('design-feedback', { height: 1000 })
 }
 
+/** The Theme setting, chosen in Settings (the app applies it at once). */
+async function chooseTheme() {
+  await click('[data-testid=open-settings]')
+  await waitFor(`!!document.querySelector('[data-testid=settings-theme]')`, 'the Theme setting')
+  await evaluate(`(() => {
+    const select = document.querySelector('[data-testid=settings-theme]')
+    select.value = ${JSON.stringify(theme)}
+    select.dispatchEvent(new Event('change', { bubbles: true }))
+  })()`)
+  await click('[data-testid=settings-save]')
+  await waitFor(`!!document.querySelector('[data-testid=settings-status]')`, 'the Saved message')
+  await waitFor(
+    `document.documentElement.dataset.theme === ${JSON.stringify(theme)}`,
+    `the ${theme} theme`
+  )
+}
+
 async function main() {
   console.log(`scratch data folder: ${userData}`)
+  console.log(`theme: ${theme}`)
   console.log(cli ? `CLI: ${cli} (not the real one)` : 'CLI: the real Claude Code CLI')
   const port = await launchApp()
   cdp = await connect(port)
@@ -750,6 +777,9 @@ async function main() {
   await cdp.send('Emulation.setEmulatedMedia', {
     features: [{ name: 'prefers-reduced-motion', value: 'reduce' }]
   })
+
+  // Always set, also with --only-exercise: the folder may hold the other theme.
+  await chooseTheme()
 
   if (!onlyExercise) {
     await pathScreens()

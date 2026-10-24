@@ -25,6 +25,7 @@ import {
 } from 'react'
 import { COMPONENT_TYPES } from '../../../../shared/designGraph'
 import { COMPONENT_LOOKS, componentColors, type ComponentType } from '../componentTypes'
+import { useResolvedTheme } from '../../theme/useResolvedTheme'
 import { FlowActionsContext, FlowModeContext, type FlowActions } from './flowContext'
 import {
   copySelection,
@@ -46,6 +47,7 @@ import {
 import { emptyHistory, record, redo, undo, type History } from './history'
 import { edgeTypes } from './LinkEdge'
 import { nodeTypes } from './nodes'
+import { flowModeOfTheme } from './flowTheme'
 import type { Scene } from './scene'
 
 /**
@@ -90,7 +92,9 @@ export function FlowCanvas(props: FlowCanvasProps) {
 }
 
 function FlowEditor({ initialScene, onDirty, handle, paletteNotice }: FlowCanvasProps) {
-  const initial = useMemo(() => toFlow(initialScene, 'dark'), [initialScene])
+  // The canvas follows the theme of the app; the nodes read the mode from the context.
+  const mode = flowModeOfTheme(useResolvedTheme())
+  const [initial] = useState(() => toFlow(initialScene, mode))
   const [nodes, setNodes, onNodesChange] = useNodesState<FlowNode>(initial.nodes)
   const [edges, setEdges, onEdgesChange] = useEdgesState<FlowEdge>(initial.edges)
   const [snapToGrid, setSnapToGrid] = useState(true)
@@ -138,7 +142,7 @@ function FlowEditor({ initialScene, onDirty, handle, paletteNotice }: FlowCanvas
     const pasted = pasteClipboard(
       clipboard.current,
       () => newId('p'),
-      'dark',
+      mode,
       GRID * 2 * pastes.current
     )
     setNodes((current) =>
@@ -164,13 +168,13 @@ function FlowEditor({ initialScene, onDirty, handle, paletteNotice }: FlowCanvas
           current.map((edge) => {
             if (edge.id !== edgeId || !edge.data) return edge
             const data = { ...edge.data, ...patch }
-            return { ...edge, data, ...edgeMarkers(data.direction, 'dark') }
+            return { ...edge, data, ...edgeMarkers(data.direction, mode) }
           })
         )
         onDirty?.()
       }
     }),
-    [takeSnapshot, setNodes, setEdges, onDirty]
+    [takeSnapshot, setNodes, setEdges, onDirty, mode]
   )
 
   // Stable, and valid after unmount: `latest` and the store of `rf` outlive the render tree.
@@ -233,7 +237,7 @@ function FlowEditor({ initialScene, onDirty, handle, paletteNotice }: FlowCanvas
 
   const onConnect = (connection: Connection) => {
     takeSnapshot()
-    setEdges((current) => [...current, createEdge(newId('e'), connection, 'dark')])
+    setEdges((current) => [...current, createEdge(newId('e'), connection, mode)])
     onDirty?.()
   }
 
@@ -280,10 +284,9 @@ function FlowEditor({ initialScene, onDirty, handle, paletteNotice }: FlowCanvas
   }, [])
 
   return (
-    <FlowModeContext value="dark">
+    <FlowModeContext value={mode}>
       <FlowActionsContext value={actions}>
-        {/* Stays dark in the light theme until #63: the nodes are drawn with the dark palette. */}
-        <div className="design-canvas" data-theme="dark" data-testid="design-canvas">
+        <div className="design-canvas" data-testid="design-canvas" data-mode={mode}>
           <aside className="design-palette" data-testid="design-palette" aria-label="Components">
             <p className="design-palette-title label-caps">Components</p>
             {COMPONENT_TYPES.map((type) => (
@@ -292,7 +295,7 @@ function FlowEditor({ initialScene, onDirty, handle, paletteNotice }: FlowCanvas
                 type="button"
                 className="design-palette-button btn-sm"
                 data-testid={`add-${type}`}
-                style={{ '--swatch': componentColors(type, 'dark').stroke } as CSSProperties}
+                style={{ '--swatch': componentColors(type, mode).stroke } as CSSProperties}
                 onClick={() => addComponent(type)}
               >
                 + {COMPONENT_LOOKS[type].label}
@@ -351,7 +354,7 @@ function FlowEditor({ initialScene, onDirty, handle, paletteNotice }: FlowCanvas
               edges={edges}
               nodeTypes={nodeTypes}
               edgeTypes={edgeTypes}
-              colorMode="dark"
+              colorMode={mode === 'dark' ? 'dark' : 'light'}
               defaultViewport={initial.viewport}
               onNodesChange={(changes) => {
                 onNodesChange(changes)

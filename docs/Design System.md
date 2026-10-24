@@ -1,7 +1,7 @@
 ---
 title: Design System
 tags: [ui, architecture]
-issue: [28, 62]
+issue: [28, 62, 63]
 ---
 
 # Design System
@@ -32,7 +32,7 @@ Tokens, fonts and shared base styles of the renderer. The visual spec is `DESIGN
 Geist (UI text of the Dark theme), Plus Jakarta Sans (UI text of the Light theme) and JetBrains Mono (labels, code, numeric metadata, both themes) come from `@fontsource-variable/geist`, `@fontsource-variable/plus-jakarta-sans` and `@fontsource-variable/jetbrains-mono`, imported from `main.tsx` (`wght.css`, variable weight axis). Family names: `Geist Variable`, `Plus Jakarta Sans Variable` and `JetBrains Mono Variable`. `--font-mono` is shared; `--font-sans` is set per theme (Geist in dark, Plus Jakarta Sans in light), each with system fallbacks.
 
 > [!note] Plus Jakarta Sans
-> The Light theme's UI font (issue #62). `@fontsource-variable/plus-jakarta-sans` is imported in `main.tsx` like the other two and inlined as `data:` URLs by the same `assetsInlineLimit` rule; its OFL-1.1 text is in `resources/licenses.json` (About screen). The Mermaid fallback `TOKEN_FALLBACKS['--font-sans']` stays Geist until #63.
+> The Light theme's UI font (issue #62). `@fontsource-variable/plus-jakarta-sans` is imported in `main.tsx` like the other two and inlined as `data:` URLs by the same `assetsInlineLimit` rule; its OFL-1.1 text is in `resources/licenses.json` (About screen). The Mermaid fallbacks (`TOKEN_FALLBACKS`) hold the sans font of each theme (#63), and the website self-hosts the same three fonts ([[Website]]).
 
 ## Tokens
 
@@ -68,7 +68,9 @@ The [[Theme]] setting (`system` | `light` | `dark`, default `system`, `src/share
 
 The Light values follow what the Stitch mock renders (Material surface tokens: peach page `#fff8f5`, containers `#fcf2eb` to `#eae1da`, solid `#f97316` navigation pill), not the greyer named tokens of the Stitch guidelines (`#faf8f5`, `#f4efea`); see `DESIGN.md`, "Light theme: Warm". Only the primary action differs from the mock: dark ink text instead of white, for AA.
 
-An element with its own `data-theme` re-themes its subtree: the Design Canvas root has `data-theme="dark"`, so it stays dark inside the Light theme until #63 (its nodes are drawn with the dark palette).
+An element with its own `data-theme` re-themes its subtree. Only the off-screen host of the Design Export has one (`dark`, `EXPORT_TOKENS_THEME`): its stylesheet rules read tokens (font, sizes, radii) and the PNG must not depend on the Theme of the app (#63). The Design Canvas has none: it follows the Theme.
+
+What takes its colors from JavaScript (Mermaid, the Design Canvas nodes and arrows) reads the active theme with `useResolvedTheme()` (`src/renderer/src/theme/useResolvedTheme.ts`: `data-theme` of the root element, observed, so it changes with `watchTheme`). See [[#Third-party content on a themed app]].
 
 Rules for a style that depends on the theme: never test the theme in a screen stylesheet; add a token to both blocks of `design-tokens.css` (the test fails when the two sets of names differ) and use `var(--...)`. The few rules that differ by token value only (the tactile primary button, the card shadow) are written once in `base.css` against tokens.
 
@@ -163,7 +165,7 @@ To add a screen: add it to the `Screen` union, give it a nav item and a layout i
 
 ## Design Canvas component colors
 
-The component nodes of the Design Canvas (`design/componentTypes.ts`, `COMPONENT_LOOKS` and the dark palette) keep their colors as data: they are the semantic hues of the Design Export (the LLM reads the type from the color too), not theme tokens. The live canvas uses the dark palette (stroke one step lighter than the light stroke, over a deep tint of the same hue); exports use the light one.
+The component nodes of the Design Canvas (`design/componentTypes.ts`, `COMPONENT_LOOKS` and the dark palette) keep their colors as data: they are the semantic hues of the Design Export (the LLM reads the type from the color too), not theme tokens. Three modes (`ComponentColorMode`): `dark` (the live canvas in the Dark theme: stroke one step lighter than the light stroke, over a deep tint of the same hue), `light` (the live canvas in the Light theme) and `export` (the PNG). `light` and `export` share the fills and strokes of the table, so a type keeps its hue and the canvas looks like its PNG; they differ in the label (`export`: the literal `#1d1d1d`; live modes: the `text-primary` token of the theme).
 
 | Type | Light fill | Light stroke | Dark fill | Dark stroke |
 |---|---|---|---|---|
@@ -175,10 +177,10 @@ The component nodes of the Design Canvas (`design/componentTypes.ts`, `COMPONENT
 | `database` | #dcfce7 | #16a34a | #0d2c1d | #34d399 |
 | `queue` | #f3e8ff | #9333ea | #2b1545 | #c084fc |
 
-Labels: `#1d1d1d` on a light fill, the `text-primary` token on the dark canvas. Keep this table in sync with `componentTypes.ts`.
+Keep this table in sync with `componentTypes.ts`; `flowTheme.test.ts` checks the strokes against the canvas of each theme (3:1), the labels against their fills (4.5:1), and that the seven strokes stay apart.
 
 ## Third-party content on a themed app
 
-- Mermaid ([[Mermaid Diagrams]]; light theme in #63): themed for dark (`markdown/mermaidTheme.ts`, mermaid `base` theme with variables from the token values, checked against `design-tokens.css` by a unit test). Diagrams sit on a layer 1 card with the dotted grid.
-- React Flow ([[Design Canvas Integration]]; light theme in #63): `colorMode="dark"` on the design tokens (`flowCanvas.css` maps React Flow's `--xy-*` variables to tokens, edges, notes and groups use `FLOW_PALETTES.dark` with `var(--token)` colors), typed components recolored through `componentColors(type, mode)`. Nothing a node draws takes its color from the stylesheet: the PNG draws the same nodes in the light mode.
-- Design Export PNG stays light on opaque white by design (`export/exportDesignPng.tsx`), independent of the app theme.
+- Mermaid ([[Mermaid Diagrams]]): one theme per Theme (`markdown/mermaidTheme.ts`, mermaid `base` theme with variables from the token values of the Theme shown, checked against both blocks of `design-tokens.css` by a unit test). A diagram is drawn once per Theme and redrawn in place when the Theme changes. Diagrams sit on a layer 1 card with the dotted grid, in both themes.
+- React Flow ([[Design Canvas Integration]]): `colorMode` follows the Theme, and `flowCanvas.css` maps React Flow's `--xy-*` variables to tokens (one mapping serves both themes; only the dotted grid is tuned per theme). Edges, notes and groups use `FLOW_PALETTES.dark` or `.light`, which name tokens (`var(--token)`), so they follow the tokens by themselves; typed components are recolored through `componentColors(type, mode)`, which needs the mode from JavaScript.
+- Design Export PNG stays light on opaque white by design (`export/exportDesignPng.tsx`), independent of the app theme: the `export` mode has literal colors only (`FLOW_PALETTES.export`), and its host is pinned to the dark tokens for the font, sizes and radii its stylesheet reads. Checked in the built app, byte for byte, in both themes (see [[Design Export]]).

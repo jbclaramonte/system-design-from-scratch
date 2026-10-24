@@ -14,7 +14,7 @@ export { COMPONENT_TYPES, isComponentType, type ComponentType } from '../../../s
 export interface ComponentLook {
   /** Default label, also the palette button text. */
   label: string
-  /** Light palette: the Design Export (PNG). */
+  /** Light palette: the live canvas in the Light theme and the Design Export (PNG). */
   fill: string
   stroke: string
   defaultW: number
@@ -50,8 +50,12 @@ export function loadBalancerPoints(w: number, h: number): Array<{ x: number; y: 
   ]
 }
 
-/** `light`: dark text on a pale fill, for the exports. `dark`: the live Design Canvas. */
-export type ComponentColorMode = 'light' | 'dark'
+/**
+ * Where a component is drawn. `dark` and `light` are the live Design Canvas in the Dark and the
+ * Light theme; `export` is the Design Export (PNG): dark strokes on opaque white, literal colors,
+ * the same whatever the theme of the app.
+ */
+export type ComponentColorMode = 'dark' | 'light' | 'export'
 
 export interface ComponentColors {
   fill: string
@@ -74,14 +78,18 @@ const DARK_COLORS: Record<ComponentType, { fill: string; stroke: string }> = {
   queue: { fill: '#2b1545', stroke: '#c084fc' }
 }
 
-/** Text of a component on a light fill (exports), the LLM reads dark strokes on white. */
-export const LIGHT_LABEL_COLOR = '#1d1d1d'
-/** Text of a component on the dark canvas: the `text-primary` token. */
-export const DARK_LABEL_COLOR = 'var(--color-text-primary)'
+/** Text of a component in the Design Export: dark on a pale fill, the LLM reads dark strokes on white. */
+export const EXPORT_LABEL_COLOR = '#1d1d1d'
+/** Text of a component on the live canvas: the `text-primary` token of the theme. */
+export const LIVE_LABEL_COLOR = 'var(--color-text-primary)'
 
-/** Fill, stroke and label color of a component type for a color mode. */
+/**
+ * Fill, stroke and label color of a component type for a color mode. The hue of a type is the
+ * same everywhere: the light palette serves the Light theme and the export, the dark one is the
+ * same hues one step lighter over a deep tint.
+ */
 export function componentColors(type: ComponentType, mode: ComponentColorMode): ComponentColors {
-  if (mode === 'dark') return { ...DARK_COLORS[type], text: DARK_LABEL_COLOR }
+  if (mode === 'dark') return { ...DARK_COLORS[type], text: LIVE_LABEL_COLOR }
   const { fill, stroke } = COMPONENT_LOOKS[type]
-  return { fill, stroke, text: LIGHT_LABEL_COLOR }
+  return { fill, stroke, text: mode === 'export' ? EXPORT_LABEL_COLOR : LIVE_LABEL_COLOR }
 }

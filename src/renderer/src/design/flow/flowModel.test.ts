@@ -33,10 +33,10 @@ describe('flow model', () => {
 
   it('derives the arrowheads from the direction, in the color of the mode', () => {
     expect(edgeMarkers('none', 'dark')).toEqual({ markerStart: undefined, markerEnd: undefined })
-    expect(edgeMarkers('forward', 'light').markerEnd).toMatchObject({ color: '#334155' })
-    expect(edgeMarkers('forward', 'light').markerStart).toBeUndefined()
-    expect(edgeMarkers('backward', 'light').markerEnd).toBeUndefined()
-    expect(edgeMarkers('backward', 'light').markerStart).toBeDefined()
+    expect(edgeMarkers('forward', 'export').markerEnd).toMatchObject({ color: '#334155' })
+    expect(edgeMarkers('forward', 'export').markerStart).toBeUndefined()
+    expect(edgeMarkers('backward', 'export').markerEnd).toBeUndefined()
+    expect(edgeMarkers('backward', 'export').markerStart).toBeDefined()
     const both = edgeMarkers('both', 'dark')
     expect(both.markerStart && both.markerEnd).toBeTruthy()
     const edge = createEdge('e', { source: 'a', target: 'b' }, 'dark', {
@@ -168,7 +168,7 @@ describe('flow model', () => {
     it('pastes with new ids, an offset, new edges between the copies and a fresh selection', () => {
       const { edges } = flow()
       const clip = copySelection(select(['client', 'lb']), edges)
-      const pasted = pasteClipboard(clip, ids(), 'light')
+      const pasted = pasteClipboard(clip, ids(), 'export')
       expect(pasted.nodes.map((n) => [n.id, n.position, n.selected])).toEqual([
         ['copy-1', { x: 32, y: 132 }, true],
         ['copy-2', { x: 232, y: 132 }, true]

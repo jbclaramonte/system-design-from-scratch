@@ -30,7 +30,7 @@ function Handles() {
  * New notes and groups start empty (an empty note is left out of the Design Graph). The hint that
  * says what to type is for the live canvas only: the PNG must not show text the graph lacks.
  */
-const livePlaceholder = (mode: FlowMode, hint: string) => (mode === 'dark' ? hint : undefined)
+const livePlaceholder = (mode: FlowMode, hint: string) => (mode === 'export' ? undefined : hint)
 
 export function ComponentNode({ id, data, selected, width, height }: NodeProps<ComponentFlowNode>) {
   const mode = useFlowMode()
@@ -49,7 +49,7 @@ export function ComponentNode({ id, data, selected, width, height }: NodeProps<C
       <svg className="flow-component-body" width={w} height={h}>
         <ComponentBody type={data.componentType} w={w} h={h} mode={mode} />
       </svg>
-      {/* The label color is the mode's, inline: a stylesheet color would follow the dark theme into the export. */}
+      {/* The label color is the mode's, inline: a stylesheet color would follow the theme into the export. */}
       <EditableText
         className="flow-component-label"
         color={componentColors(data.componentType, mode).text}

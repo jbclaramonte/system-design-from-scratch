@@ -8,6 +8,7 @@ import {
   useState,
   type CSSProperties
 } from 'react'
+import type { ResolvedTheme } from '../../../shared/theme'
 import {
   cssSafeId,
   diagramLabel,
@@ -25,6 +26,7 @@ import {
   renderIdOf,
   type RenderResult
 } from './mermaidRenderer'
+import { useResolvedTheme } from '../theme/useResolvedTheme'
 import './markdown.css'
 
 export interface MermaidDiagramProps {
@@ -86,20 +88,28 @@ function DrawnDiagram({
   onError: (error: DiagramError) => void
 }) {
   const instanceId = `diagram-${cssSafeId(useId())}-${diagramKey}`
-  const [result, setResult] = useState<RenderResult | undefined>(() =>
-    peekRenderedDiagram(diagramKey)
+  const theme = useResolvedTheme()
+  // The drawing and the theme it was drawn for. After a theme switch the previous drawing stays
+  // on screen until the new one is ready (no loading flash, no jump).
+  const [drawn, setDrawn] = useState<{ theme: ResolvedTheme; result: RenderResult } | undefined>(
+    () => {
+      const cached = peekRenderedDiagram(diagramKey, theme)
+      return cached && { theme, result: cached }
+    }
   )
+  const result = drawn?.result
 
   useEffect(() => {
-    if (result) return
+    // A failure is the same in both themes (it comes from the source): draw it once.
+    if (drawn && (drawn.theme === theme || !drawn.result.ok)) return
     let active = true
-    void renderDiagram(source, diagramKey).then((rendered) => {
-      if (active) setResult(rendered)
+    void renderDiagram(source, diagramKey, theme).then((rendered) => {
+      if (active) setDrawn({ theme, result: rendered })
     })
     return () => {
       active = false
     }
-  }, [result, source, diagramKey])
+  }, [drawn, theme, source, diagramKey])
 
   useEffect(() => {
     if (result && !result.ok) onError(result.error)
@@ -122,6 +132,7 @@ function DrawnDiagram({
         tabIndex={0}
         data-testid="diagram-svg"
         data-type={type}
+        data-drawn-theme={drawn!.theme}
         style={minWidth ? ({ '--diagram-min-width': `${minWidth}px` } as CSSProperties) : undefined}
         // Sanitized by mermaid (securityLevel strict, DOMPurify); the CSP blocks inline scripts.
         dangerouslySetInnerHTML={{ __html: svg! }}

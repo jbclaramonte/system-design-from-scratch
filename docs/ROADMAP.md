@@ -114,7 +114,7 @@ gantt
 
     section Look and gamification
     #62 Light Warm theme and theme setting    :done, t1, 2026-10-24, 2d
-    #63 Theme Mermaid, canvas, exports, site  :t2, after t1, 1d
+    #63 Theme Mermaid, canvas, exports, site  :done, t2, after t1, 1d
     #64 Activity Streak and Daily Goal        :t3, after t2, 2d
     #65 XP, Levels and Badges                 :t4, after t3, 4d
     #66 Celebrations                          :t5, after t4, 1d

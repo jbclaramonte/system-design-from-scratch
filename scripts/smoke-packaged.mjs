@@ -22,10 +22,11 @@
 //      marker, nothing requested before it), Learning Path (21 topics), database, Settings (Test
 //      button finds the CLI), About (licenses, fonts), first lesson (fake CLI, Mermaid diagram),
 //      Theme (the Light theme from Settings applies at once, reaches the native theme and the
-//      database; the main screens are captured in both themes, see --shots);
+//      database; the main screens are captured in both themes, see --shots; the lesson's
+//      Mermaid diagram is redrawn when the theme changes);
 //   2. after every topic is marked mastered in the scratch database: the Light theme survives the
 //      restart (data-theme and the canvas color at first paint), an exercise canvas (React Flow)
-//      where a typed component can be added, and no console error.
+//      where a typed component can be added and the canvas follows the theme, and no console error.
 // The App Update check runs against a local fake release server started by this script (the app
 // gets its address through SDFS_UPDATE_API_URL and SDFS_UPDATE_DOWNLOAD_BASE_URL): the real GitHub
 // API is never called. On macOS no update is installed. On Linux a third launch runs the whole
@@ -999,6 +1000,48 @@ async function phaseOne() {
     }
   )
 
+  await check('Mermaid diagrams are redrawn when the theme changes', async () => {
+    // The lesson with its diagram is on screen in the Light theme. A change of `data-theme` is what
+    // the main process causes when the setting changes, so flipping it stands in for that here
+    // (the Settings round trip is checked above): the drawing must follow, in place.
+    const nodeFill = () =>
+      c.evaluate(
+        `(() => {
+          const shape = document.querySelector('[data-testid="diagram-svg"] svg .node rect, [data-testid="diagram-svg"] svg .node polygon, [data-testid="diagram-svg"] svg .node path')
+          return shape ? getComputedStyle(shape).fill : null
+        })()`
+      )
+    const drawnTheme = () => c.evaluate(`${c.testId('diagram-svg')}.dataset.drawnTheme`)
+    const setTheme = (theme) =>
+      c.evaluate(`(document.documentElement.dataset.theme = ${JSON.stringify(theme)}, true)`)
+    assert((await drawnTheme()) === 'light', `drawn for ${await drawnTheme()} in the Light theme`)
+    const light = await nodeFill()
+    assert(light === 'rgb(252, 242, 235)', `light node fill ${light}`)
+    try {
+      await setTheme('dark')
+      await c.waitFor(
+        `${c.testId('diagram-svg')}.dataset.drawnTheme === 'dark'`,
+        'a Dark drawing',
+        15000
+      )
+      const dark = await nodeFill()
+      assert(dark === 'rgb(17, 24, 39)', `dark node fill ${dark}`)
+      await c.evaluate(`${c.testId('diagram-svg')}.scrollIntoView(), true`)
+      await sleep(300)
+      await c.shot('16-diagram-switched-to-dark')
+    } finally {
+      await setTheme('light')
+    }
+    await c.waitFor(
+      `${c.testId('diagram-svg')}.dataset.drawnTheme === 'light'`,
+      'a Light drawing',
+      15000
+    )
+    const back = await nodeFill()
+    assert(back === light, `node fill after the way back ${back}`)
+    return `${light} <-> rgb(17, 24, 39)`
+  })
+
   await check('no console errors (first launch)', async () => {
     assert(consoleProblems.length === 0, consoleProblems.join(' | '))
   })
@@ -1024,10 +1067,90 @@ function seedMasteredTopics() {
   }
 }
 
+/**
+ * A drawing in Exercise 1 (the app is stopped): the seven kinds of node a learner meets except the
+ * cache (a check adds one), a group with two services in it, a note and labeled arrows, so the
+ * canvas is captured with everything the theme has to color.
+ */
+function seedDesignScene() {
+  const component = (id, componentType, label, x, y, parentId) => ({
+    id,
+    type: 'component',
+    position: { x, y },
+    width: 160,
+    height: 90,
+    data: { componentType, label },
+    ...(parentId ? { parentId } : {})
+  })
+  const edge = (
+    id,
+    source,
+    target,
+    [sourceHandle, targetHandle],
+    label = '',
+    direction = 'forward'
+  ) => ({
+    id,
+    source,
+    target,
+    sourceHandle,
+    targetHandle,
+    data: { label, direction }
+  })
+  const scene = {
+    version: 1,
+    nodes: [
+      {
+        id: 'backend',
+        type: 'group',
+        position: { x: 0, y: 280 },
+        width: 520,
+        height: 200,
+        data: { label: 'Backend' }
+      },
+      component('client', 'client', 'Client', 100, 0),
+      component('cdn', 'cdn', 'CDN', 340, 0),
+      component('lb', 'load-balancer', 'Load balancer', 220, 140),
+      component('svc-a', 'service', 'Service A', 20, 60, 'backend'),
+      component('svc-b', 'service', 'Service B', 340, 60, 'backend'),
+      component('db', 'database', 'Users', 0, 540),
+      component('queue', 'queue', 'Jobs', 200, 540),
+      {
+        id: 'note',
+        type: 'note',
+        position: { x: 400, y: 540 },
+        width: 200,
+        height: 100,
+        data: { text: 'Reads are about 100x writes' }
+      }
+    ],
+    edges: [
+      edge('e1', 'client', 'lb', ['bottom', 'top'], 'HTTPS'),
+      edge('e2', 'cdn', 'client', ['left', 'right'], 'static', 'backward'),
+      edge('e3', 'lb', 'svc-a', ['bottom', 'top']),
+      edge('e4', 'lb', 'svc-b', ['bottom', 'top']),
+      edge('e5', 'svc-a', 'db', ['bottom', 'top'], 'SQL', 'both'),
+      edge('e6', 'svc-b', 'queue', ['bottom', 'top'], 'enqueue')
+    ],
+    viewport: { x: 30, y: 20, zoom: 0.62 }
+  }
+  const db = new DatabaseSync(join(userData, 'system-design-from-scratch.db'))
+  try {
+    const exercise = db.prepare("SELECT id FROM design_exercises WHERE slug = 'pastebin'").get()
+    assert(exercise, 'no pastebin design exercise in the scratch database')
+    db.prepare(
+      'INSERT OR REPLACE INTO design_scenes (design_exercise_id, snapshot) VALUES (?, ?)'
+    ).run(exercise.id, JSON.stringify(scene))
+  } finally {
+    db.close()
+  }
+}
+
 async function phaseTwo() {
   consoleProblems = []
   const seeded = await check('scratch database seeded with every topic mastered', async () => {
     seedMasteredTopics()
+    seedDesignScene()
     const db = readOnlyDb()
     try {
       const passed = db
@@ -1081,6 +1204,10 @@ async function phaseTwo() {
     await c.waitFor(`!!${c.testId('protocol-canvas')}`, 'the canvas panel')
     await c.waitFor(`!!${c.testId('design-palette')}`, 'the component palette')
     await c.waitFor(`!!document.querySelector('.react-flow__renderer')`, 'the React Flow canvas')
+    await c.waitFor(
+      `document.querySelectorAll('.react-flow__node').length === 9 && document.querySelectorAll('.react-flow__edge').length === 6`,
+      'the seeded drawing (9 nodes, 6 arrows)'
+    )
   })
   if (!canvasOpened) return
 
@@ -1092,15 +1219,72 @@ async function phaseTwo() {
     )
     await sleep(500)
     await c.shot('03-design-canvas-component')
-    // The canvas is a dark island until #63: its own data-theme keeps the dark tokens.
-    const island = await c.evaluate(
-      `getComputedStyle(${c.testId('design-canvas')}).backgroundColor`
-    )
-    assert(island === 'rgb(6, 8, 13)', `the canvas is ${island} in the Light theme`)
     const faces = await c.evaluate(
       `(async () => { await document.fonts.ready; return [...document.fonts].filter((f) => f.status === 'loaded').length })()`
     )
     assert(faces >= 2, `${faces} fonts loaded`)
+  })
+
+  await check('the Design Canvas follows the theme, in place', async () => {
+    const look = () =>
+      c.evaluate(`(() => {
+        const body = document.querySelector('.react-flow__node [data-component="cache"] rect')
+        const style = getComputedStyle(body)
+        return JSON.stringify({
+          canvas: getComputedStyle(${c.testId('design-canvas')}).backgroundColor,
+          mode: ${c.testId('design-canvas')}.dataset.mode,
+          fill: style.fill,
+          stroke: style.stroke
+        })
+      })()`)
+    const setTheme = (theme) =>
+      c.evaluate(`(document.documentElement.dataset.theme = ${JSON.stringify(theme)}, true)`)
+    const selectArrow = async () => {
+      await c.evaluate(
+        `document.querySelector('.react-flow__edge').dispatchEvent(new MouseEvent('click', { bubbles: true })), true`
+      )
+      await c.waitFor(`!!document.querySelector('.react-flow__edge.selected')`, 'a selected arrow')
+      await sleep(300)
+    }
+    const light = JSON.parse(await look())
+    assert(
+      light.canvas === 'rgb(255, 248, 245)' && light.mode === 'light',
+      `the canvas is ${light.canvas} (${light.mode}) in the Light theme`
+    )
+    // The cache keeps its orange hue: terracotta stroke on a pale peach fill in the Light theme.
+    assert(
+      light.stroke === 'rgb(234, 88, 12)' && light.fill === 'rgb(255, 237, 213)',
+      JSON.stringify(light)
+    )
+    try {
+      await setTheme('dark')
+      await c.waitFor(
+        `${c.testId('design-canvas')}.dataset.mode === 'dark'`,
+        'the dark canvas',
+        5000
+      )
+      const dark = JSON.parse(await look())
+      assert(dark.canvas === 'rgb(6, 8, 13)', `the canvas is ${dark.canvas} in the Dark theme`)
+      assert(
+        dark.stroke === 'rgb(251, 146, 60)' && dark.fill === 'rgb(52, 32, 15)',
+        JSON.stringify(dark)
+      )
+      await sleep(300)
+      await c.shot('04-design-canvas-switched-to-dark')
+      // An arrow selected: its color, its label field and the direction buttons.
+      await selectArrow()
+      await c.shot('05-design-canvas-arrow-selected-dark')
+    } finally {
+      await setTheme('light')
+    }
+    await c.waitFor(
+      `${c.testId('design-canvas')}.dataset.mode === 'light'`,
+      'the light canvas',
+      5000
+    )
+    await sleep(300)
+    await c.shot('05-design-canvas-arrow-selected-light')
+    return 'light and dark palettes of the Cache'
   })
 
   await check('no console errors (exercise canvas)', async () => {

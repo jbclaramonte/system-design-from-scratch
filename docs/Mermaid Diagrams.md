@@ -1,7 +1,7 @@
 ---
 title: Mermaid Diagrams
 tags: [learning-content, architecture, ui]
-issue: 22
+issue: [22, 63]
 mermaid-version: 12.0.0
 ---
 
@@ -26,7 +26,7 @@ flowchart TD
 
 - `src/renderer/src/markdown/MarkdownContent.tsx`: `MarkdownContent`, the one Markdown renderer (GFM, no raw HTML via `skipHtml`, http(s) links only, images shown as their alt, tables in a scroll wrapper). Its `pre` component, `MarkdownCodeBlock`, is the code block hook: a `mermaid` block becomes a `MermaidDiagram`, any other block stays `<pre><code>`. `LessonMarkdown` (`src/renderer/src/lesson/`) is `MarkdownContent` plus the source chips and notion anchors.
 - `src/renderer/src/markdown/MermaidDiagram.tsx`: `MermaidDiagram`, `DiagramLoading`.
-- `src/renderer/src/markdown/mermaidRenderer.ts`: lazy `import('mermaid')`, initialization, render queue, timeout, session cache.
+- `src/renderer/src/markdown/mermaidRenderer.ts`: lazy `import('mermaid')`, initialization per Theme, render queue, timeout, session cache per Theme.
 - `src/renderer/src/markdown/diagramSource.ts`: pure helpers (fence detection, source checks and limits, render plan, memo keys, labels, error messages). Tested in `markdown.test.ts`.
 - `src/renderer/src/dev/DiagramDevScreen.tsx` and `diagramFixtures.ts`: **Diagrams (dev)** under Developer tools on the home screen (dev builds only). One fixture per supported type, the failing cases, a stream simulator (slider plus a "streaming" checkbox) and the list of `onDiagramError` events. No Claude call.
 
@@ -40,7 +40,7 @@ flowchart TD
 
 - Memo key: FNV-1a hash of the normalized source (line endings, trailing spaces, outer blank lines) plus its length (`diagramKey`). The render cache (one result per key for the session) and the ids use it.
 - mermaid renders with id `mermaid-<key>`; each instance on the page rewrites it to `diagram-<React useId>-<key>`, so two identical Diagrams on a page keep unique, deterministic ids.
-- `MermaidDiagram` is memoized on its props and `MarkdownContent` keeps its components stable, so a streamed delta re-renders the Markdown but never re-draws a Diagram whose source did not change. A remounted Diagram shows its cached SVG at once.
+- `MermaidDiagram` is memoized on its props and `MarkdownContent` keeps its components stable, so a streamed delta re-renders the Markdown but never re-draws a Diagram whose source did not change. A remounted Diagram shows its cached SVG at once (for the Theme being shown).
 
 ## Streaming
 
@@ -90,12 +90,13 @@ Then mermaid itself: `parse_error` (`mermaid.parse`), `render_error` (`mermaid.r
 
 ## Visual design
 
-Issue #32. The diagrams are drawn for the dark surface of [[Design System]]: no light card any more.
+Issue #32 (dark), #63 (light). The diagrams are drawn for the surface of the Theme shown ([[Design System]], [[Theme]]): no light card in either.
 
-- **Theme**: mermaid theme `base` with `themeVariables` built by `mermaidThemeVariables()` (`src/renderer/src/markdown/mermaidTheme.ts`) from the design tokens, read from the CSS custom properties when mermaid loads (`getComputedStyle`), with constants as fallbacks (`TOKEN_FALLBACKS`, checked against `design-tokens.css` by `mermaidTheme.test.ts`). Mermaid derives its shades from the colors, so only solid hex tokens are used. Nodes are `surface-elevated` with a `text-muted` border and `text-primary` labels, lines and arrows `text-secondary`, clusters and edge labels `surface-base`, sequence notes and activations use the indigo accent, ER rows alternate `surface-elevated` and `surface-base`, no drop shadow. The font is the UI font (Geist); the renderer waits for it (`document.fonts.load`) before the first render so labels are measured with the final glyphs.
+- **Theme**: mermaid theme `base` with `themeVariables` built by `mermaidThemeVariables(theme)` (`src/renderer/src/markdown/mermaidTheme.ts`) from the design tokens of the Theme shown, one set for Dark and one for Light. The tokens are read from the CSS custom properties (`getComputedStyle`) while the page shows that Theme; otherwise, and in tests, constants are used (`TOKEN_FALLBACKS`, one table per Theme, checked against the matching block of `design-tokens.css` by `mermaidTheme.test.ts`). Mermaid derives its shades from the colors, so only solid hex tokens are used. Nodes are `surface-elevated` with a `text-muted` border and `text-primary` labels, lines and arrows `text-secondary`, clusters and edge labels `surface-base`, sequence notes and activations use the in-progress accent (indigo in Dark, terracotta in Light), ER rows alternate `surface-elevated` and `surface-base`, no drop shadow, `darkMode` set for Dark only. The font is the UI font of the Theme (Geist, Plus Jakarta Sans); the renderer waits for it (`document.fonts.load`) before rendering so labels are measured with the final glyphs.
+- **Theme changes**: `mermaidRenderer.ts` configures mermaid for a Theme (`initialize` again when the Theme differs from the last one drawn; renders run one at a time, so none sees the other config) and caches per source and Theme (`renderDiagram(source, key, theme)`, `peekRenderedDiagram(key, theme)`). `MermaidDiagram` reads the Theme with `useResolvedTheme()` and draws again when it changes, keeping the previous drawing on screen until the new one is ready (no loading flash); the drawn Theme is on the container as `data-drawn-theme`. A failed diagram is not retried for the other Theme (the source is at fault). Going back to a Theme already drawn is instant.
 - **Frame**: `.diagram-scroll` is a layer 1 card (`surface-base`, hairline border, 8px radius) with the dotted matrix grid of `DESIGN.md` as background. `securityLevel: 'strict'`, labels as SVG text and the `secure` list are unchanged, and so is the `MermaidDiagram` API (the quiz scenario diagram uses it as is).
 - **Fallback**: the failure note is an amber attention note, the source a shared `pre`; "Diagram source" is a mono summary.
-- **Checked** (built app, scratch profile, a generated-style lesson with the five dev fixtures): flowchart, sequenceDiagram, classDiagram, stateDiagram-v2 and erDiagram are legible on dark (labels, edge labels, arrow heads, cylinder and note shapes, ER attribute rows).
+- **Checked** (built app, scratch profile, a generated-style lesson with the five dev fixtures): flowchart, sequenceDiagram, classDiagram, stateDiagram-v2 and erDiagram are legible on dark (labels, edge labels, arrow heads, cylinder and note shapes, ER attribute rows). #63: the flowchart of the smoke test lesson in both themes, and redrawn in place when the theme flips (`smoke:packaged`: node fill `#fcf2eb` in Light, `#111827` in Dark, then back). The other four types in Light were not looked at one by one: they use the same variables.
 
 ## Generation side (#23)
 

@@ -2,7 +2,7 @@ import { createContext, useContext } from 'react'
 import type { EdgeDirection } from '../../../../shared/designGraph'
 import type { FlowMode } from './flowTheme'
 
-/** Color mode of the canvas being drawn: `dark` live, `light` for the PNG export. */
+/** Color mode of the canvas being drawn: `dark` or `light` live, `export` for the PNG export. */
 export const FlowModeContext = createContext<FlowMode>('dark')
 export const useFlowMode = () => useContext(FlowModeContext)
 

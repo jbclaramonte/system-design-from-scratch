@@ -1,4 +1,4 @@
-/* Design Canvas on React Flow (docs/Design Canvas Integration.md). Tokens only; the light export colors live in flowTheme.ts. */
+/* Design Canvas on React Flow (docs/Design Canvas Integration.md). Tokens only, so the canvas follows the theme it sits in; the colors of the export live in flowTheme.ts. */
 
 .design-canvas {
   display: flex;
@@ -50,7 +50,9 @@
   position: relative;
 }
 
-/* React Flow variables (names from @xyflow/react/dist/style.css) mapped to the design tokens. */
+/* React Flow variables (names from @xyflow/react/dist/style.css) mapped to the design tokens. A
+   token has a value per theme, so one mapping serves both; only the dotted grid is tuned per
+   theme (white dots on the dark canvas, warm brown dots on the peach one). */
 .design-surface .react-flow {
   --xy-background-color: var(--color-canvas);
   --xy-background-pattern-color: var(--color-border-active);
@@ -68,6 +70,10 @@
   --xy-controls-button-border-color: var(--color-border-control);
   --xy-attribution-background-color: var(--color-surface-overlay);
   font-family: var(--font-sans);
+}
+
+[data-theme='light'] .design-surface .react-flow {
+  --xy-background-pattern-color: var(--color-border-control);
 }
 
 .design-surface .react-flow__attribution a {
@@ -227,7 +233,9 @@
   background: var(--color-progress-fill);
 }
 
-/* PNG export: an off-screen light canvas, never shown. ---------------------------------------- */
+/* PNG export: an off-screen light canvas, never shown. Its host is pinned to the dark tokens
+   (exportDesignPng.tsx), so the font, sizes and radii this stylesheet reads are the same
+   whatever the theme of the app. ---------------------------------------------------------- */
 
 .flow-export-host {
   position: fixed;

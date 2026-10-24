@@ -1,7 +1,7 @@
 ---
 title: Design Canvas Integration
 tags: [design-practice, architecture]
-issue: 12
+issue: [12, 63]
 react-flow-version: "@xyflow/react 12.12.0"
 scene-version: 1
 ---
@@ -26,7 +26,7 @@ All under `src/renderer/src/design/` unless stated otherwise.
 | `flow/FlowCanvas.tsx` | The editor: `<ReactFlow>`, palette bar, undo and redo, copy and paste, snap to grid. `FlowCanvasHandle.getScene()` is all a host can ask. |
 | `flow/flowModel.ts` | Pure functions around the nodes and edges (scene conversion, group membership after a drag, copy and paste). |
 | `flow/nodes.tsx`, `flow/ComponentBody.tsx`, `flow/LinkEdge.tsx`, `flow/EditableText.tsx` | Component, note and group nodes (one drawing per component type), the connection edge (direction, label), plain-text label editing. |
-| `flow/flowTheme.ts`, `flow/flowContext.ts`, `flow/flowCanvas.css` | `dark` (live, design tokens) and `light` (export) palettes, the color mode and editor actions contexts, styles. |
+| `flow/flowTheme.ts`, `flow/flowContext.ts`, `flow/flowCanvas.css` | `dark` and `light` (live, design tokens) and `export` (PNG, literal colors) palettes, the color mode and editor actions contexts, styles. |
 | `flow/history.ts` | Undo and redo stack (React Flow has none). |
 | `componentTypes.ts` | Catalogue of component types: labels, default sizes, colors (`componentColors(type, mode)`). The type list itself lives in `src/shared/designGraph.ts`. |
 | `legacy/tldrawScene.ts` | Pure converter of a stored tldraw snapshot to a scene. No `tldraw` import. |
@@ -102,11 +102,13 @@ Validated in the [[react-flow|spike]] and checked again in the production canvas
 
 ## Visual design
 
-Issue #34, in the dark theme of [[Design System]]:
+Issue #34 (dark), #63 (light). The canvas follows the Theme of [[Design System]] ([[Theme]]):
 
-- The canvas runs in React Flow's `colorMode="dark"` on the design tokens: `flowCanvas.css` maps React Flow's `--xy-*` variables to tokens, and `FLOW_PALETTES.dark` gives nodes and edges `var(--token)` colors (marker colors accept them too).
-- `componentColors(type, mode)` in `componentTypes.ts` gives fill, stroke and label color per mode. In dark mode each type keeps its hue, one step lighter, over an opaque deep tint, with `text-primary` labels; the strokes stay distinct per type (tested).
-- **Rule: nothing a node draws takes its color from the stylesheet.** Every color of a node is inline, from the mode (`FlowModeContext`): the PNG export draws the same nodes in the `light` mode, and a color from a stylesheet rule would resolve in the dark theme (the first capture of the spike had unreadable labels for that reason).
+- **Mode**: `FlowEditor` takes the mode from the active theme (`useResolvedTheme()`, `flowModeOfTheme`) and provides it with `FlowModeContext`, passes it to React Flow's `colorMode` and to everything it creates (arrowheads of new, pasted and edited connections). The root has no `data-theme` of its own. A switch of Theme re-renders the nodes with the other mode: no reload, no change to the stored scene.
+- **Three modes** (`FlowMode`): `dark` and `light` for the live canvas, `export` for the PNG. Colors of edges, labels, notes and groups are in `FLOW_PALETTES[mode]`. The live palettes name tokens (`var(--token)`, marker colors accept them too), so they follow the tokens of the theme without a state change: the edge and selected-edge colors are the same strings in both (`text-secondary`, `border-focus`: slate and indigo in dark, brown and cobalt in light), which keeps the arrowheads stored in the edges valid across a switch (tested). `light` notes are an opaque honey tint (`color-mix` of `attention` over `surface-base`) with an `attention` border, groups the `hover` overlay with a dashed `border-active`, label chips white. The `export` palette is the literal one the PNG always had.
+- **Stylesheet**: `flowCanvas.css` maps React Flow's `--xy-*` variables to tokens. Tokens have a value per theme, so one mapping serves both; handles are the in-progress color (indigo, terracotta) with a canvas-colored ring, the selection box is its tint, and the dotted grid is `border-active` in dark and the lighter `border-control` in light (a warm brown dot on the peach canvas).
+- `componentColors(type, mode)` in `componentTypes.ts` gives fill, stroke and label color per mode. `dark`: each type keeps its hue, one step lighter, over an opaque deep tint, with `text-primary` labels. `light`: the fills and strokes of the PNG (pale tint, saturated stroke) with `text-primary` labels. `export`: the same with the literal `#1d1d1d`. The strokes stay distinct per type, readable on the canvas of their theme (3:1) and the labels on their fills (4.5:1): `flowTheme.test.ts`, from the values of `design-tokens.css`.
+- **Rule: nothing a node draws takes its color from a stylesheet rule.** Every color of a node is inline, from the mode (`FlowModeContext`): the PNG export draws the same nodes in the `export` mode, and a color from a stylesheet rule would follow the theme of the app into it (the first capture of the spike had unreadable labels for that reason).
 - The persisted scene stores no color: it comes from the node type.
 - A small "React Flow" attribution chip stays in a corner of the live canvas (`proOptions` is not set; MIT does not require it, it is a courtesy). It is left out of the PNG.
 

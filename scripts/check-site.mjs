@@ -162,6 +162,64 @@ for (const file of cssFiles(site)) {
   }
 }
 
+// Colors follow the app: the base (light) block of the page's custom properties repeats the Light
+// "Warm" tokens of the app, and the dark media block the Dark ones (docs/Design System.md).
+const tokensCss = readFileSync(
+  join(root, 'src', 'renderer', 'src', 'styles', 'design-tokens.css'),
+  'utf8'
+)
+const declarations = (css) =>
+  new Map([...css.matchAll(/(--[a-z-]+):\s*([^;]+);/g)].map((match) => [match[1], match[2].trim()]))
+const appThemes = {
+  dark: declarations(/\[data-theme='dark'\]\s*\{([^}]*)\}/.exec(tokensCss)?.[1] ?? ''),
+  light: declarations(/\[data-theme='light'\]\s*\{([^}]*)\}/.exec(tokensCss)?.[1] ?? '')
+}
+const styleCss = readFileSync(join(site, 'assets', 'style.css'), 'utf8')
+const siteBase = declarations(/\n:root \{([^}]*)\}/.exec(styleCss)?.[1] ?? '')
+const siteDark = declarations(
+  /prefers-color-scheme: dark\) \{\s*:root \{([^}]*)\}/.exec(styleCss)?.[1] ?? ''
+)
+const colorMap = {
+  '--canvas': '--color-canvas',
+  '--surface': '--color-surface-base',
+  '--surface-strong': '--color-surface-elevated',
+  '--text': '--color-text-primary',
+  '--text-secondary': '--color-text-secondary',
+  '--link': '--color-link',
+  '--accent': '--color-action',
+  '--on-accent': '--color-on-primary',
+  '--focus': '--color-border-focus'
+}
+for (const [theme, site] of [
+  ['light', siteBase],
+  ['dark', siteDark]
+]) {
+  for (const [name, token] of Object.entries(colorMap)) {
+    const expected = appThemes[theme].get(token)
+    // The page's dark link and accent are lighter tints chosen for the page; only the base theme
+    // and the surfaces are held to the app's values.
+    if (theme === 'dark' && ['--link', '--focus', '--text-secondary'].includes(name)) continue
+    if (site.get(name) !== expected) {
+      fail(`style.css: ${theme} ${name} is ${site.get(name)}, the app's ${token} is ${expected}`)
+    }
+  }
+}
+
+// Fonts: each self-hosted font comes with its license, linked from the page's attribution.
+const fontsDir = join(site, 'assets', 'fonts')
+if (existsSync(fontsDir)) {
+  const pageHtml = pages.map((page) => readFileSync(join(site, page), 'utf8')).join('\n')
+  for (const name of readdirSync(fontsDir).filter((file) => file.endsWith('.woff2'))) {
+    const family = name.replace(/-latin-wght-normal\.woff2$/, '')
+    const license = `assets/fonts/LICENSE-${family}.txt`
+    if (!existsSync(join(site, license))) fail(`${name} has no ${license}`)
+    else if (!pageHtml.includes(license)) fail(`the page does not link ${license}`)
+    if (!styleCss.includes(`fonts/${name}`)) fail(`style.css does not use fonts/${name}`)
+  }
+  if (!existsSync(join(fontsDir, 'plus-jakarta-sans-latin-wght-normal.woff2')))
+    fail('the Light theme font Plus Jakarta Sans is not in assets/fonts')
+}
+
 // Screenshots are small and every one is used.
 const imgDir = join(site, 'assets', 'img')
 if (existsSync(imgDir)) {
