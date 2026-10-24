@@ -385,7 +385,8 @@ describe('settings', () => {
       claudeCliPath: null,
       claudeConfigDir: null,
       generationLanguage: 'fr',
-      checkForUpdatesAtLaunch: true
+      checkForUpdatesAtLaunch: true,
+      theme: 'system'
     }
     expect(getSettings(db)).toEqual(defaults)
     expect(updateSettings(db, { roundLimit: 5 })).toEqual({ ...defaults, roundLimit: 5 })

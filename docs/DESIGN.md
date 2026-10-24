@@ -142,6 +142,8 @@ spacing:
 
 ## Brand & Style
 
+> This is the Dark theme. The app also has a Light theme, "Warm": see [[#Themes]] at the end of this note.
+
 This design system channels an authoritative, developer-native aesthetic inspired by the precision engineering of Linear, the tactile utility of Raycast, and the clarity of Stripe’s technical documentation. It addresses senior software engineers, distributed systems architects, and technical interview candidates who demand high-density information without visual noise.
 
 The visual style blends **Technical Minimalism** with **Tactile Utility**:
@@ -239,3 +241,44 @@ Pill geometry is reserved exclusively for progress indicator tracks and active s
 
 ### System Diagram Canvas & Telemetry Blocks
 - Custom canvas containers feature dark dotted matrix grid backgrounds (`radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px) 16px 16px`), interactive hover inspection tools, and synchronized step-by-step latency telemetry tags.
+
+## Themes
+
+The app has two themes, chosen in Settings as **Theme**: System (the default, follows the operating system), Light, or Dark. Everything above is the **Dark** theme, "Terminal Architect". The **Light** theme, "Warm", comes from the owner's Stitch design system "Luminous Architect" (screen "Parcours d'Architecture, Warm Edition") and keeps the structure, the status meanings and the shared classes: only tokens change (see `Design System.md`, "Tokens"). The Learning Path layout of the mock-up (sidebar, streak, daily goals) is out of scope here.
+
+## Light theme: Warm
+
+Same method as the dark theme (tonal layers, hairline structure, color carries meaning), warmer and rounder, with soft warm shadows instead of luminous glows.
+
+### Colors
+
+> [!note] The mock is not its guidelines
+> The named tokens of the Stitch guidelines (`#faf8f5` canvas, `#f4efea` recessed, ink `#1c1917`, `#f97316` as a text-bearing fill) are greyer and cooler than what the mock actually renders. The mock uses the Material surface tokens of the Luminous Architect design system: page `#fff8f5` (peach), containers `#fcf2eb` / `#f6ece6` / `#f0e6e0` / `#eae1da`, cards `#ffffff`, text `#1f1b17` and `#584237`, an active navigation pill of solid `#f97316`, soft tinted icon tiles. The app follows the mock, with the changes AA requires.
+
+- **Surfaces:** `canvas` `#fff8f5` (peach), `surface-base` `#ffffff` (cards), `surface-elevated` `#fcf2eb` (recessed wells: notices, code blocks, inset folds), `surface-raised` `#ffffff` (layer 2 cards, with a stronger shadow), `surface-subtle` `#f6ece6` (hover, troughs), `track` `#f0e6e0`.
+- **Structure:** `border-card` `#ecdfd5`; the other borders are warm brown alphas `rgba(88, 66, 55, ...)`. The input border is `#8a7461` (3.8:1 or more on every surface): a field has no label inside its boundary, so it needs a visible one. Focus is cobalt `#2563eb` with a `rgba(37, 99, 235, 0.3)` spread.
+- **Text:** `text-primary` `#1f1b17`, `text-secondary` `#584237`, `text-muted` `#6f5a4d`. All three reach AA (4.5:1) on every surface, so unlike the dark theme `text-muted` may carry real text.
+- **Semantic accents** (the meanings do not change; the colors are remapped):
+  - **Mastered:** sage `#10b981` (dots, rings, fills), text `#05694b`.
+  - **In progress and primary action:** terracotta, solid `#ea580c` (marks, tab underline) and `#f97316` (action, active navigation, gradient start); text and links `#a83208`.
+  - **Attention (trade-offs, flags, Skipped):** honey `#f59e0b`, text `#92400e`.
+  - **Errors and Round Limit:** coral `#e5484d`, text `#be123c`.
+  - **Locked:** `#b0a196`, text `#6f5a4d`.
+- **Primary button:** bright terracotta `#f97316` with dark ink text `#1f1b17` (6.2:1; white on `#f97316` is only 2.8:1, so white text never sits on it), hover `#fb923c`, pressed `#ea580c`, a 2px bottom edge `#c2410c` that shrinks to 1px while the button sinks 1px.
+- **Active navigation item:** solid `#f97316`, border `#ea580c`, ink text.
+- **Icon tiles:** soft tinted squares with a glyph, as tokens `color-tile-<role>-fill` and `-glyph`: mastered mint `#d8f3e6` / `#05694b`, in progress peach `#ffe5d4` / `#a83208`, attention honey `#fdebc4` / `#92400e`, neutral `#f6ece6` / `#6f5a4d` (glyph 3:1 or more on the tile). The Dark theme has the same tokens as translucent tints.
+
+### Typography
+
+**Plus Jakarta Sans** for UI text and **JetBrains Mono** for labels, code and numbers. Same type scale as the dark theme. The font file is bundled like the others (never fetched).
+
+### Shapes and elevation
+
+- Radii: micro 8px, standard 10px, cards 14px, modals 16px (dark: 4, 6, 8, 12). Pills stay for progress tracks.
+- Layer 1 cards: `border-card` plus `0 1px 2px` and `0 6px 18px -6px` shadows of `rgba(124, 66, 30, ...)`. Layer 2 (`card-elevated`): white with a stronger warm shadow. Layer 3: `0 20px 40px -12px rgba(124, 66, 30, 0.3)` on a white 88 percent fill with the same blur.
+- Glows are softer (10px, 22 to 25 percent).
+- Progress fill: bright terracotta to sage.
+
+### Contrast
+
+Documented text and surface pairs are computed in `src/renderer/src/styles/contrast.test.ts` (4.5:1 for text, 3:1 for large text, the focus ring, the selected-tab underline and the light input border). The dark theme is frozen: its documented exception is `text-muted`.

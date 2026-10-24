@@ -1,6 +1,6 @@
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { app, BrowserWindow, ipcMain, Menu, session, shell } from 'electron'
+import { app, BrowserWindow, ipcMain, Menu, nativeTheme, session, shell } from 'electron'
 import { createAboutIpc, licensesPath } from './about'
 import { createLessonIpc, FOUNDATIONS_TOPICS, seedTopics } from './content'
 import { corpusPath, loadCorpus } from './corpus'
@@ -16,7 +16,7 @@ import { createExerciseLockGuard, createLearningPathIpc, createTopicLockGuard } 
 import { createProtocolIpc, createProtocolService, seedDesignExercises } from './protocol'
 import { createFirstRunIpc } from './settings/firstRunIpc'
 import { createSettingsIpc } from './settings/settingsIpc'
-import { getSettings, isGenerationLanguageChosen } from './db/repositories/settings'
+import { getSettings, getTheme, isGenerationLanguageChosen } from './db/repositories/settings'
 import {
   getDismissedUpdateVersion,
   getLastUpdateCheck,
@@ -44,6 +44,7 @@ import {
   relaunchEnvironment
 } from './update'
 import { isAllowedPermission, isExternalWebUrl } from './security'
+import { themeWindowBackground, type Theme } from '../shared/theme'
 
 // The userData folder (database, caches) is named after the package name, never the productName of
 // the packaged app ("System Design from Scratch"), so dev, preview and the packaged app share one
@@ -63,11 +64,27 @@ function openExternally(url: string): void {
   }
 }
 
+const openWindows = () => BrowserWindow.getAllWindows().filter((window) => !window.isDestroyed())
+
+/** Background of the native window: the canvas of the theme in use (no flash while loading). */
+const windowBackground = () =>
+  themeWindowBackground[nativeTheme.shouldUseDarkColors ? 'dark' : 'light']
+
+/**
+ * Applies the Theme to the native theme: `prefers-color-scheme` of the renderer, and the native
+ * parts (menus, title bar, scrollbars), follow it. System follows the operating system.
+ */
+function applyTheme(theme: Theme): void {
+  nativeTheme.themeSource = theme
+  for (const window of openWindows()) window.setBackgroundColor(windowBackground())
+}
+
 function createMainWindow(): BrowserWindow {
   const window = new BrowserWindow({
     width: 1200,
     height: 800,
     show: false,
+    backgroundColor: windowBackground(),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
@@ -104,8 +121,6 @@ function createMainWindow(): BrowserWindow {
 app.on('web-contents-created', (_event, contents) => {
   contents.on('will-attach-webview', (event) => event.preventDefault())
 })
-
-const openWindows = () => BrowserWindow.getAllWindows().filter((window) => !window.isDestroyed())
 
 let db: Database | undefined
 let generation: GenerationService | undefined
@@ -242,6 +257,7 @@ void app.whenReady().then(() => {
       }),
       settings: createSettingsIpc(db, {
         onCliPathChange: () => generationService.resetCliPath(),
+        onThemeChange: applyTheme,
         fallbackCliPath: envCliPath
       }),
       update: createUpdateIpc(updates)
@@ -280,6 +296,8 @@ void app.whenReady().then(() => {
     window.once('closed', installApplicationMenu)
   })
   installApplicationMenu()
+  // Before the window exists: the page starts in the right theme, no flash.
+  applyTheme(getTheme(appDb))
   createMainWindow()
   // The first-run screen comes first: a fresh folder checks for updates once the language is chosen.
   if (isGenerationLanguageChosen(appDb)) void updates.checkAtLaunch()

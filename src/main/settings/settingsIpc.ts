@@ -4,6 +4,7 @@ import { statSync } from 'node:fs'
 import { z } from 'zod'
 import type { Database } from '../db'
 import { generationLanguages } from '../../shared/generationLanguage'
+import { themes, type Theme } from '../../shared/theme'
 import { getSettings, updateSettings } from '../db/repositories/settings'
 import {
   settingsErrors,
@@ -22,7 +23,8 @@ const updateRequest = z
     claudeCliPath: z.string().nullable(),
     claudeConfigDir: z.string().nullable(),
     generationLanguage: z.enum(generationLanguages),
-    checkForUpdatesAtLaunch: z.boolean()
+    checkForUpdatesAtLaunch: z.boolean(),
+    theme: z.enum(themes)
   })
   .partial()
   .strict()
@@ -44,6 +46,8 @@ export interface SettingsIpc {
 export interface SettingsIpcOptions {
   /** Called when the CLI path setting changes (the Generation service resolves it again). */
   onCliPathChange?: () => void
+  /** Called with the Theme when it changes (the native theme follows it). */
+  onThemeChange?: (theme: Theme) => void
   /** Path used when the setting is empty (the `CLAUDE_CLI_PATH` environment variable). */
   fallbackCliPath?: string
 }
@@ -77,6 +81,7 @@ export function createSettingsIpc(db: Database, options: SettingsIpcOptions = {}
       const before = getSettings(db).claudeCliPath
       const updated = updateSettings(db, changes)
       if (updated.claudeCliPath !== before) options.onCliPathChange?.()
+      if (changes.theme !== undefined) options.onThemeChange?.(updated.theme)
       return updated
     },
 

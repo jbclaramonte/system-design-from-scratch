@@ -8,7 +8,7 @@ import { migrate } from '../db/migrate'
 import { migrations } from '../db/migrations'
 import { putCachedContent } from '../db/repositories/contentCache'
 import { createLesson, createTopic } from '../db/repositories/learningContent'
-import { getGenerationLanguage, getSettings } from '../db/repositories/settings'
+import { getGenerationLanguage, getSettings, getTheme } from '../db/repositories/settings'
 import { checkCli, parseAuthStatus } from './checkCli'
 import { createSettingsIpc } from './settingsIpc'
 
@@ -54,6 +54,14 @@ describe('settingsErrors', () => {
     ])
   })
 
+  it('accepts System, Light and Dark as the Theme, nothing else', () => {
+    for (const theme of ['system', 'light', 'dark'] as const) {
+      expect(settingsErrors({ theme })).toEqual({})
+    }
+    expect(Object.keys(settingsErrors({ theme: 'sepia' as never }))).toEqual(['theme'])
+    expect(Object.keys(settingsErrors({ theme: '' as never }))).toEqual(['theme'])
+  })
+
   it('accepts an absolute Claude config directory or null', () => {
     expect(settingsErrors({ claudeConfigDir: '/Users/me/.claude-perso' })).toEqual({})
     expect(settingsErrors({ claudeConfigDir: null })).toEqual({})
@@ -81,7 +89,8 @@ describe('settings IPC', () => {
       claudeCliPath: null,
       claudeConfigDir: null,
       generationLanguage: 'fr',
-      checkForUpdatesAtLaunch: true
+      checkForUpdatesAtLaunch: true,
+      theme: 'system'
     })
     expect(() => ipc.update({ masteryThreshold: 20 })).toThrow(/between 50 and 100/)
     expect(() => ipc.update({ roundLimit: 3, unknown: 1 } as never)).toThrow()
@@ -143,6 +152,51 @@ describe('settings IPC', () => {
     expect(stored()).toEqual(before)
     expect(ipc.update({ generationLanguage: 'fr' }).generationLanguage).toBe('fr')
     expect(stored()).toEqual(before)
+  })
+
+  it('validates and persists the Theme, System by default, and tells main when it changes', () => {
+    const onThemeChange = vi.fn()
+    const ipc = createSettingsIpc(db, { onThemeChange })
+    expect(ipc.get().theme).toBe('system')
+    expect(getTheme(db)).toBe('system')
+    expect(() => ipc.update({ theme: 'warm' } as never)).toThrow()
+    expect(() => ipc.update({ theme: 1 } as never)).toThrow()
+    expect(getSettings(db).theme).toBe('system')
+    expect(onThemeChange).not.toHaveBeenCalled()
+
+    expect(ipc.update({ theme: 'light' }).theme).toBe('light')
+    expect(onThemeChange).toHaveBeenLastCalledWith('light')
+    expect(ipc.update({ theme: 'dark' }).theme).toBe('dark')
+    expect(getTheme(db)).toBe('dark')
+    // An unrelated change does not announce a Theme change.
+    onThemeChange.mockClear()
+    ipc.update({ roundLimit: 4 })
+    expect(onThemeChange).not.toHaveBeenCalled()
+    expect(ipc.update({ theme: 'system' }).theme).toBe('system')
+  })
+
+  it('reads an unknown stored Theme as System', () => {
+    db.prepare("INSERT INTO settings (key, value) VALUES ('theme', '\"sepia\"')").run()
+    expect(getTheme(db)).toBe('system')
+  })
+
+  it('keeps the Theme after the app restarts (a new connection on the same file)', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'theme-setting-'))
+    try {
+      const file = join(dir, 'app.sqlite')
+      const first = openDatabase(file)
+      migrate(first, migrations)
+      createSettingsIpc(first).update({ theme: 'light' })
+      first.close()
+
+      const second = openDatabase(file)
+      migrate(second, migrations)
+      expect(createSettingsIpc(second).get().theme).toBe('light')
+      expect(getTheme(second)).toBe('light')
+      second.close()
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 
   it('keeps the Generation Language after the app restarts (a new connection on the same file)', () => {

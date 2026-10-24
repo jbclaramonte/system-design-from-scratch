@@ -282,7 +282,8 @@ function FlowEditor({ initialScene, onDirty, handle, paletteNotice }: FlowCanvas
   return (
     <FlowModeContext value="dark">
       <FlowActionsContext value={actions}>
-        <div className="design-canvas" data-testid="design-canvas">
+        {/* Stays dark in the light theme until #63: the nodes are drawn with the dark palette. */}
+        <div className="design-canvas" data-theme="dark" data-testid="design-canvas">
           <aside className="design-palette" data-testid="design-palette" aria-label="Components">
             <p className="design-palette-title label-caps">Components</p>
             {COMPONENT_TYPES.map((type) => (

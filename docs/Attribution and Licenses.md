@@ -31,13 +31,13 @@ The Design Canvas runs on React Flow (`@xyflow/react` and `@xyflow/system`, both
 
 ## Fonts
 
-The UI fonts are self-hosted, never fetched: Geist (`@fontsource-variable/geist`) and JetBrains Mono (`@fontsource-variable/jetbrains-mono`), both under the SIL Open Font License 1.1 (OFL-1.1). They are production `dependencies`, so they are listed in the third-party licenses below with their `LICENSE` text (the OFL requires keeping the copyright and license notice). Vite inlines the `.woff2` files as `data:` URLs (`electron.vite.config.ts`), which the CSP allows (`font-src 'self' data:`). See [[Design System#Fonts]].
+The UI fonts are self-hosted, never fetched: Geist (`@fontsource-variable/geist`, UI text of the Dark theme), Plus Jakarta Sans (`@fontsource-variable/plus-jakarta-sans`, UI text of the Light theme, copyright the Plus Jakarta Sans Project Authors) and JetBrains Mono (`@fontsource-variable/jetbrains-mono`), all under the SIL Open Font License 1.1 (OFL-1.1). They are production `dependencies`, so they are listed in the third-party licenses below with their `LICENSE` text (the OFL requires keeping the copyright and license notice). Vite inlines the `.woff2` files as `data:` URLs (`electron.vite.config.ts`), which the CSP allows (`font-src 'self' data:`). See [[Design System#Fonts]].
 
 ## Third-party license list
 
 `resources/licenses.json`, written by `scripts/build-licenses.ts` (logic in `src/main/about/licenses.ts`).
 
-**Rule**: every package that `package-lock.json` does not mark `dev` (the production dependency tree of `dependencies`: react, react-dom, react-markdown, remark-gfm, mermaid, @xyflow/react, html-to-image, dompurify, zod, the two `@fontsource-variable` font packages and their transitive dependencies), plus `electron`, a devDependency that is the app's runtime (its own dependencies are install-time only). It is a superset of what the bundles contain, chosen because it is checkable from the lockfile alone. Duplicates (same name and version) are listed once.
+**Rule**: every package that `package-lock.json` does not mark `dev` (the production dependency tree of `dependencies`: react, react-dom, react-markdown, remark-gfm, mermaid, @xyflow/react, html-to-image, dompurify, zod, the three `@fontsource-variable` font packages and their transitive dependencies), plus `electron`, a devDependency that is the app's runtime (its own dependencies are install-time only). It is a superset of what the bundles contain, chosen because it is checkable from the lockfile alone. Duplicates (same name and version) are listed once.
 
 - License id: the lockfile `license` field (SPDX).
 - Texts: files named `LICENSE*`, `LICENCE*`, `COPYING*`, `NOTICE*` in the installed package, line endings normalized. A package without such a file (for example `react-remove-scroll-bar`) shows its declared license only.

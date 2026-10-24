@@ -73,9 +73,9 @@
 }
 
 .shell-nav-item[aria-current='page'] {
-  border-color: var(--color-border-control);
-  background: var(--color-hover);
-  color: var(--color-text-primary);
+  border-color: var(--color-nav-active-border);
+  background: var(--color-nav-active-fill);
+  color: var(--color-nav-active-text);
 }
 
 .shell-content {

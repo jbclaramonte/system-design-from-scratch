@@ -1,16 +1,104 @@
 /*
  * Design tokens of the renderer (docs/DESIGN.md, vault note docs/Design System.md).
- * Dark theme only. This file is the only source of colors, sizes, radii and shadows: screen
- * styles use `var(--...)` and never hard-code a value.
+ * Two themes: Dark ("Terminal Architect", the default here) and Light ("Warm"). `data-theme` on the
+ * root element picks one (theme-init.js sets it before the first paint, watchTheme.ts keeps it);
+ * an element with its own `data-theme` re-themes its subtree. This file is the only source of
+ * colors, sizes, radii and shadows: screen styles use `var(--...)` and never hard-code a value.
+ * The dark block comes first: tests read the first declaration of a token as its dark value.
  */
 
+/* Both themes: sizes, spacing, type scale, motion, layout. */
+
 :root {
+  /* Spacing (8pt grid). */
+  --space-2xs: 0.125rem;
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2.5rem;
+  --gutter: 1.5rem;
+  --gutter-sm: 1rem;
+  --margin: 2rem;
+
+  /* App shell: content container width and header height; reading column of the quiz screens. */
+  --layout-max-width: 1100px;
+  --layout-header-height: 3.5rem;
+  --layout-reading-width: 48rem;
+
+  /* Mono font (labels, code, numeric metadata), the same on both themes. */
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* Typography scale: size / line height / letter spacing / weight. */
+  --type-headline-xl-size: 2.5rem;
+  --type-headline-xl-line: 3rem;
+  --type-headline-xl-tracking: -0.03em;
+  --type-headline-xl-weight: 600;
+  --type-headline-lg-size: 1.75rem;
+  --type-headline-lg-line: 2.25rem;
+  --type-headline-lg-tracking: -0.02em;
+  --type-headline-lg-weight: 600;
+  --type-headline-md-size: 1.375rem;
+  --type-headline-md-line: 1.875rem;
+  --type-headline-md-tracking: -0.015em;
+  --type-headline-md-weight: 600;
+  --type-headline-sm-size: 1.125rem;
+  --type-headline-sm-line: 1.625rem;
+  --type-headline-sm-tracking: -0.01em;
+  --type-headline-sm-weight: 500;
+  --type-body-lg-size: 1rem;
+  --type-body-lg-line: 1.625rem;
+  --type-body-lg-tracking: -0.005em;
+  --type-body-lg-weight: 400;
+  --type-body-md-size: 0.875rem;
+  --type-body-md-line: 1.375rem;
+  --type-body-md-tracking: 0em;
+  --type-body-md-weight: 400;
+  --type-body-sm-size: 0.75rem;
+  --type-body-sm-line: 1.125rem;
+  --type-body-sm-tracking: 0.01em;
+  --type-body-sm-weight: 400;
+  --type-code-inline-size: 0.8125rem;
+  --type-code-inline-line: 1.25rem;
+  --type-code-inline-tracking: -0.01em;
+  --type-code-inline-weight: 400;
+  --type-code-block-size: 0.8125rem;
+  --type-code-block-line: 1.375rem;
+  --type-code-block-tracking: 0em;
+  --type-code-block-weight: 400;
+  --type-label-mono-size: 0.6875rem;
+  --type-label-mono-line: 1rem;
+  --type-label-mono-tracking: 0.04em;
+  --type-label-mono-weight: 500;
+  --type-label-caps-size: 0.625rem;
+  --type-label-caps-line: 0.875rem;
+  --type-label-caps-tracking: 0.08em;
+  --type-label-caps-weight: 600;
+
+  /* Blur of layer 3 (floating menus). */
+  --blur-layer-3: blur(16px);
+
+  /* Motion. */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 120ms;
+  --duration-slow: 600ms;
+
+  /* Progress bar. */
+  --progress-height: 4px;
+  --radius-pill: 9999px;
+}
+
+/* Dark theme: Terminal Architect. */
+
+:root,
+[data-theme='dark'] {
   color-scheme: dark;
 
   /* Surfaces (layers 0 to 2). */
   --color-canvas: #06080d;
   --color-surface-base: #0b0f19;
   --color-surface-elevated: #111827;
+  --color-surface-raised: #111827;
   --color-surface-subtle: #1f2937;
   --color-surface-overlay: rgba(11, 15, 25, 0.85);
   --color-track: #1e293b;
@@ -61,6 +149,21 @@
   --color-error-fill: rgba(248, 113, 113, 0.12);
   --color-error-border: rgba(248, 113, 113, 0.28);
 
+  /* Icon tiles: a soft tinted square with a glyph, one per role. */
+  --color-tile-mastered-fill: rgba(16, 185, 129, 0.12);
+  --color-tile-mastered-glyph: #10b981;
+  --color-tile-progress-fill: rgba(99, 102, 241, 0.12);
+  --color-tile-progress-glyph: #818cf8;
+  --color-tile-attention-fill: rgba(245, 158, 11, 0.12);
+  --color-tile-attention-glyph: #fbbf24;
+  --color-tile-neutral-fill: rgba(255, 255, 255, 0.04);
+  --color-tile-neutral-glyph: #94a3b8;
+
+  /* Active navigation item: a raised hairline pill. */
+  --color-nav-active-fill: rgba(255, 255, 255, 0.06);
+  --color-nav-active-border: rgba(255, 255, 255, 0.12);
+  --color-nav-active-text: #f8fafc;
+
   /* Links. */
   --color-link: #818cf8;
   --color-link-hover: #a5b4fc;
@@ -89,90 +192,164 @@
   --radius-md: 6px;
   --radius-lg: 8px;
   --radius-xl: 12px;
-  --radius-pill: 9999px;
-
-  /* Spacing (8pt grid). */
-  --space-2xs: 0.125rem;
-  --space-xs: 0.25rem;
-  --space-sm: 0.5rem;
-  --space-md: 1rem;
-  --space-lg: 1.5rem;
-  --space-xl: 2.5rem;
-  --gutter: 1.5rem;
-  --gutter-sm: 1rem;
-  --margin: 2rem;
-
-  /* App shell: content container width and header height; reading column of the quiz screens. */
-  --layout-max-width: 1100px;
-  --layout-header-height: 3.5rem;
-  --layout-reading-width: 48rem;
 
   /* Fonts (self-hosted by @fontsource-variable, see main.tsx). */
   --font-sans: 'Geist Variable', ui-sans-serif, system-ui, -apple-system, sans-serif;
-  --font-mono: 'JetBrains Mono Variable', ui-monospace, 'SF Mono', Menlo, monospace;
-
-  /* Typography scale: size / line height / letter spacing / weight. */
-  --type-headline-xl-size: 2.5rem;
-  --type-headline-xl-line: 3rem;
-  --type-headline-xl-tracking: -0.03em;
-  --type-headline-xl-weight: 600;
-  --type-headline-lg-size: 1.75rem;
-  --type-headline-lg-line: 2.25rem;
-  --type-headline-lg-tracking: -0.02em;
-  --type-headline-lg-weight: 600;
-  --type-headline-md-size: 1.375rem;
-  --type-headline-md-line: 1.875rem;
-  --type-headline-md-tracking: -0.015em;
-  --type-headline-md-weight: 600;
-  --type-headline-sm-size: 1.125rem;
-  --type-headline-sm-line: 1.625rem;
-  --type-headline-sm-tracking: -0.01em;
-  --type-headline-sm-weight: 500;
-  --type-body-lg-size: 1rem;
-  --type-body-lg-line: 1.625rem;
-  --type-body-lg-tracking: -0.005em;
-  --type-body-lg-weight: 400;
-  --type-body-md-size: 0.875rem;
-  --type-body-md-line: 1.375rem;
-  --type-body-md-tracking: 0em;
-  --type-body-md-weight: 400;
-  --type-body-sm-size: 0.75rem;
-  --type-body-sm-line: 1.125rem;
-  --type-body-sm-tracking: 0.01em;
-  --type-body-sm-weight: 400;
-  --type-code-inline-size: 0.8125rem;
-  --type-code-inline-line: 1.25rem;
-  --type-code-inline-tracking: -0.01em;
-  --type-code-inline-weight: 400;
-  --type-code-block-size: 0.8125rem;
-  --type-code-block-line: 1.375rem;
-  --type-code-block-tracking: 0em;
-  --type-code-block-weight: 400;
-  --type-label-mono-size: 0.6875rem;
-  --type-label-mono-line: 1rem;
-  --type-label-mono-tracking: 0.04em;
-  --type-label-mono-weight: 500;
-  --type-label-caps-size: 0.625rem;
-  --type-label-caps-line: 0.875rem;
-  --type-label-caps-tracking: 0.08em;
-  --type-label-caps-weight: 600;
 
   /* Elevation: layer 1 cards use a hairline border only; layers 2 and 3 add shadows. */
+  --shadow-card: none;
   --shadow-layer-2: inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
   --shadow-layer-3: 0 20px 40px -12px rgba(0, 0, 0, 0.7);
-  --blur-layer-3: blur(16px);
 
   /* Glow accents (12px halo at 20 percent of the semantic color). */
   --glow-mastered: 0 0 12px rgba(16, 185, 129, 0.2);
   --glow-progress: 0 0 12px rgba(99, 102, 241, 0.2);
   --glow-attention: 0 0 12px rgba(245, 158, 11, 0.2);
 
-  /* Motion. */
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --duration-fast: 120ms;
-  --duration-slow: 600ms;
-
-  /* Progress bar. */
-  --progress-height: 4px;
+  /* Progress bar fill. */
   --progress-gradient: linear-gradient(90deg, #6366f1, #10b981);
+
+  /* Primary button: solid light on the dark canvas, flat (hover and press only dim it). */
+  --color-action: #f8fafc;
+  --color-action-hover: #f8fafc;
+  --color-action-active: #f8fafc;
+  --action-opacity-hover: 0.92;
+  --action-opacity-active: 0.85;
+  --shadow-action: 0 0 0 0 transparent;
+  --shadow-action-pressed: 0 0 0 0 transparent;
+  --action-press-shift: 0px;
+}
+
+/* Light theme: Warm. Surfaces follow the Material tokens the Stitch mock renders (peach canvas
+   #fff8f5, containers #fcf2eb to #eae1da), not the greyer named tokens of its guidelines. */
+
+:root[data-theme='light'],
+[data-theme='light'] {
+  color-scheme: light;
+
+  /* Surfaces: peach canvas, white cards, recessed wells (notices, code, inset folds). */
+  --color-canvas: #fff8f5;
+  --color-surface-base: #ffffff;
+  --color-surface-elevated: #fcf2eb;
+  --color-surface-raised: #ffffff;
+  --color-surface-subtle: #f6ece6;
+  --color-surface-overlay: rgba(255, 255, 255, 0.88);
+  --color-track: #f0e6e0;
+
+  /* Structural boundaries: warm brown alphas. The input border is the one control boundary that
+     carries meaning without a label, so it reaches 3:1 (see contrast.test.ts). */
+  --color-border-hairline: rgba(88, 66, 55, 0.1);
+  --color-border-card: #ecdfd5;
+  --color-border-control: rgba(88, 66, 55, 0.22);
+  --color-border-input: #8a7461;
+  --color-border-active: rgba(88, 66, 55, 0.32);
+  --color-border-elevated: rgba(88, 66, 55, 0.16);
+  --color-border-focus: #2563eb;
+  --color-focus-ring: rgba(37, 99, 235, 0.3);
+
+  /* Interaction overlays on any surface. */
+  --color-hover: rgba(88, 66, 55, 0.05);
+  --color-pressed: rgba(88, 66, 55, 0.09);
+  --color-selection: rgba(249, 115, 22, 0.25);
+  --color-scrollbar: rgba(88, 66, 55, 0.25);
+  --color-scrollbar-hover: rgba(88, 66, 55, 0.4);
+
+  /* Text: Material on-surface and on-surface-variant, muted a step lighter (all AA). */
+  --color-text-primary: #1f1b17;
+  --color-text-secondary: #584237;
+  --color-text-muted: #6f5a4d;
+  --color-on-primary: #1f1b17;
+
+  /* Semantic accents. Solid colors are for dots, fills and rings next to a label; the -text
+     colors carry words and reach AA on their fill and on the surfaces. */
+  --color-mastered: #10b981;
+  --color-mastered-text: #05694b;
+  --color-mastered-fill: rgba(16, 185, 129, 0.12);
+  --color-mastered-border: rgba(16, 185, 129, 0.35);
+  --color-progress: #ea580c;
+  --color-progress-text: #a83208;
+  --color-progress-fill: rgba(249, 115, 22, 0.12);
+  --color-progress-border: rgba(249, 115, 22, 0.38);
+  --color-attention: #f59e0b;
+  --color-attention-text: #92400e;
+  --color-attention-fill: rgba(245, 158, 11, 0.16);
+  --color-attention-border: rgba(217, 119, 6, 0.4);
+  --color-locked: #b0a196;
+  --color-locked-text: #6f5a4d;
+  --color-locked-fill: rgba(88, 66, 55, 0.05);
+  --color-locked-border: rgba(88, 66, 55, 0.12);
+  --color-error: #e5484d;
+  --color-error-text: #be123c;
+  --color-error-fill: rgba(229, 72, 77, 0.1);
+  --color-error-border: rgba(229, 72, 77, 0.35);
+
+  /* Icon tiles: a soft tinted square with a glyph, one per role. */
+  --color-tile-mastered-fill: #d8f3e6;
+  --color-tile-mastered-glyph: #05694b;
+  --color-tile-progress-fill: #ffe5d4;
+  --color-tile-progress-glyph: #a83208;
+  --color-tile-attention-fill: #fdebc4;
+  --color-tile-attention-glyph: #92400e;
+  --color-tile-neutral-fill: #f6ece6;
+  --color-tile-neutral-glyph: #6f5a4d;
+
+  /* Active navigation item: the bright terracotta pill of the mock. */
+  --color-nav-active-fill: #f97316;
+  --color-nav-active-border: #ea580c;
+  --color-nav-active-text: #1f1b17;
+
+  /* Links. */
+  --color-link: #a83208;
+  --color-link-hover: #7c2d12;
+
+  /* Code surfaces. */
+  --color-code-inline: rgba(88, 66, 55, 0.07);
+
+  /* Notion Map heat grid: same Okabe-Ito cells, light untested cells. */
+  --color-heat-mastered: #0072b2;
+  --color-heat-mastered-text: #ffffff;
+  --color-heat-partial: #f0e442;
+  --color-heat-partial-text: #1a1a1a;
+  --color-heat-low: #c2570a;
+  --color-heat-low-text: #ffffff;
+  --color-heat-untested-a: #fcf2eb;
+  --color-heat-untested-b: #f0e6e0;
+  --color-heat-untested-text: #584237;
+
+  /* Light "paper": the same on both themes. */
+  --color-paper: #ffffff;
+  --color-paper-text: #1a1a1a;
+
+  /* Radii: rounder than the dark theme. */
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 16px;
+
+  /* Plus Jakarta Sans for UI text. */
+  --font-sans: 'Plus Jakarta Sans Variable', ui-sans-serif, system-ui, -apple-system, sans-serif;
+
+  /* Elevation: warm brown shadows instead of hairlines alone. */
+  --shadow-card: 0 1px 2px rgba(124, 66, 30, 0.05), 0 6px 18px -6px rgba(124, 66, 30, 0.1);
+  --shadow-layer-2: 0 2px 4px rgba(124, 66, 30, 0.06), 0 12px 28px -8px rgba(124, 66, 30, 0.16);
+  --shadow-layer-3: 0 20px 40px -12px rgba(124, 66, 30, 0.3);
+
+  /* Glow accents: softer on a light surface. */
+  --glow-mastered: 0 0 10px rgba(16, 185, 129, 0.25);
+  --glow-progress: 0 0 10px rgba(249, 115, 22, 0.25);
+  --glow-attention: 0 0 10px rgba(245, 158, 11, 0.25);
+
+  /* Progress bar fill. */
+  --progress-gradient: linear-gradient(90deg, #f97316, #10b981);
+
+  /* Primary button: bright terracotta with dark ink text (6.2:1; white on #f97316 is only 2.8:1),
+     a bottom edge, pressed 1px. Hover brightens, press deepens (ink stays above 4.5:1). */
+  --color-action: #f97316;
+  --color-action-hover: #fb923c;
+  --color-action-active: #ea580c;
+  --action-opacity-hover: 1;
+  --action-opacity-active: 1;
+  --shadow-action: 0 2px 0 0 #c2410c;
+  --shadow-action-pressed: 0 1px 0 0 #c2410c;
+  --action-press-shift: 1px;
 }

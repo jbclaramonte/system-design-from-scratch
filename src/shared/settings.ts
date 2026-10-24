@@ -4,6 +4,7 @@
  */
 import type { GenerationErrorInfo } from './generation'
 import { isGenerationLanguage, type GenerationLanguage } from './generationLanguage'
+import { isTheme, type Theme } from './theme'
 
 export interface AppSettings {
   /** Mastery Threshold in percent, 50 to 100 (default 100). */
@@ -29,6 +30,8 @@ export interface AppSettings {
    * "Check for updates" button works whatever its value.
    */
   checkForUpdatesAtLaunch: boolean
+  /** Theme: System (follows the operating system, the default), Light or Dark. */
+  theme: Theme
 }
 
 export const settingsLimits = {
@@ -53,7 +56,8 @@ export function settingsErrors(changes: Partial<AppSettings>): SettingsErrors {
     questionsPerQuiz,
     claudeCliPath,
     claudeConfigDir,
-    generationLanguage
+    generationLanguage,
+    theme
   } = changes
   if (
     masteryThreshold !== undefined &&
@@ -91,6 +95,9 @@ export function settingsErrors(changes: Partial<AppSettings>): SettingsErrors {
   }
   if (generationLanguage !== undefined && !isGenerationLanguage(generationLanguage)) {
     errors.generationLanguage = 'French or English.'
+  }
+  if (theme !== undefined && !isTheme(theme)) {
+    errors.theme = 'System, Light or Dark.'
   }
   return errors
 }

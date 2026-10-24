@@ -3,6 +3,7 @@ import {
   isGenerationLanguage,
   type GenerationLanguage
 } from '../../../shared/generationLanguage'
+import { DEFAULT_THEME, isTheme, type Theme } from '../../../shared/theme'
 import type { Database } from '../driver'
 import type { Settings } from '../types'
 import { NOW } from './mapping'
@@ -15,14 +16,19 @@ const settingKeys = {
   claudeCliPath: 'claude_cli_path',
   claudeConfigDir: 'claude_config_dir',
   generationLanguage: 'generation_language',
-  checkForUpdatesAtLaunch: 'check_for_updates_at_launch'
+  checkForUpdatesAtLaunch: 'check_for_updates_at_launch',
+  theme: 'theme'
 } as const satisfies Record<keyof Settings, string>
 
 /**
  * Defaults of settings added without a migration (the table is key/value): read until the first
  * save writes the row.
  */
-const unseededDefaults: Partial<Settings> = { claudeConfigDir: null, checkForUpdatesAtLaunch: true }
+const unseededDefaults: Partial<Settings> = {
+  claudeConfigDir: null,
+  checkForUpdatesAtLaunch: true,
+  theme: DEFAULT_THEME
+}
 
 export function getSettings(db: Database): Settings {
   const rows = db.prepare('SELECT key, value FROM settings').all<{ key: string; value: string }>()
@@ -54,6 +60,12 @@ export function updateSettings(db: Database, changes: Partial<Settings>): Settin
 export function getGenerationLanguage(db: Database): GenerationLanguage {
   const { generationLanguage } = getSettings(db)
   return isGenerationLanguage(generationLanguage) ? generationLanguage : DEFAULT_GENERATION_LANGUAGE
+}
+
+/** The Theme setting; an unknown stored value reads as the default (System). */
+export function getTheme(db: Database): Theme {
+  const { theme } = getSettings(db)
+  return isTheme(theme) ? theme : DEFAULT_THEME
 }
 
 /**

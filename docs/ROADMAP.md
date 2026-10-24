@@ -8,7 +8,7 @@ status: live
 
 Gantt chart of the GitHub issues of `jbclaramonte/system-design-from-scratch`. Dependencies in the chart mirror the "Depends on" section of each issue. Dates and durations are estimates (solo, part-time pace not accounted for).
 
-Last updated: 2026-10-16.
+Last updated: 2026-10-24.
 
 ```mermaid
 gantt
@@ -87,7 +87,7 @@ gantt
     #45 macOS signature, install script       :done, m4, after m3, 1d
 
     section Design exercises 3 to 8
-    #46 Exercise 3, query cache               :done, e3, 2026-10-16, 1d
+    #46 Exercise 3, query cache               :done, e3, 2026-10-24, 1d
     #47 Exercise 4, web crawler               :done, e4, after e3, 1d
     #48 Exercise 5, social graph              :done, e5, after e4, 1d
     #49 Exercise 6, sales rank                :done, e6, after e5, 1d
@@ -101,16 +101,24 @@ gantt
     #55 Declared Mastery, mark a topic known  :done, a4, after a3, 2d
 
     section Course language
-    #57 Course language, French or English    :done, l1, 2026-10-16, 3d
+    #57 Course language, French or English    :done, l1, 2026-10-24, 3d
     #61 Ask the language at first launch      :done, l2, after l1, 1d
 
     section Website
     #56 GitHub Pages homepage                 :done, w1, after l1, 2d
 
     section Updates
-    #58 In-app update check and install       :done, u1, 2026-10-16, 1d
+    #58 In-app update check and install       :done, u1, 2026-10-24, 1d
     #59 Linux AppImage update, install.sh     :done, u2, after u1, 1d
     #60 Check for updates in the app menu     :done, u3, after u2, 1d
+
+    section Look and gamification
+    #62 Light Warm theme and theme setting    :done, t1, 2026-10-24, 2d
+    #63 Theme Mermaid, canvas, exports, site  :t2, after t1, 1d
+    #64 Activity Streak and Daily Goal        :t3, after t2, 2d
+    #65 XP, Levels and Badges                 :t4, after t3, 4d
+    #66 Celebrations                          :t5, after t4, 1d
+    #67 Learning Path as a roadmap of nodes   :t6, after t5, 3d
 ```
 
 ## Dependency table
@@ -178,6 +186,12 @@ gantt
 | #59 | #40, #45, #58 |
 | #60 | #58 |
 | #61 | #57 |
+| #62 | #28, #29, #36 |
+| #63 | #62, #22, #34, #13, #56 |
+| #64 | #62, #11, #14, #18, #55 |
+| #65 | #64, #11, #14, #55 |
+| #66 | #65, #62 |
+| #67 | #62, #30, #17 |
 
 ## Conventions
 

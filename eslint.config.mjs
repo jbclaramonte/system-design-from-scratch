@@ -26,5 +26,10 @@ export default defineConfig(
       }
     }
   },
+  {
+    // Classic scripts of the renderer (theme-init.js), run by the page itself.
+    files: ['src/renderer/public/**/*.js'],
+    languageOptions: { globals: { document: 'readonly', window: 'readonly' } }
+  },
   prettier
 )

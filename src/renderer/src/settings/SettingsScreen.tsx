@@ -12,6 +12,7 @@ import {
   type CliAuthStatus,
   type CliCheck
 } from '../../../shared/settings'
+import { isTheme, themeLabels, themes, type Theme } from '../../../shared/theme'
 import { errorMessage } from '../quiz/errorMessage'
 import { UpdatesSection } from '../update/UpdatesSection'
 import './settings.css'
@@ -28,6 +29,7 @@ interface Draft {
   claudeConfigDir: string
   generationLanguage: GenerationLanguage
   checkForUpdatesAtLaunch: boolean
+  theme: Theme
 }
 
 const toDraft = (settings: AppSettings): Draft => ({
@@ -37,7 +39,8 @@ const toDraft = (settings: AppSettings): Draft => ({
   claudeCliPath: settings.claudeCliPath ?? '',
   claudeConfigDir: settings.claudeConfigDir ?? '',
   generationLanguage: settings.generationLanguage,
-  checkForUpdatesAtLaunch: settings.checkForUpdatesAtLaunch
+  checkForUpdatesAtLaunch: settings.checkForUpdatesAtLaunch,
+  theme: settings.theme
 })
 
 const fromDraft = (draft: Draft): AppSettings => ({
@@ -47,11 +50,12 @@ const fromDraft = (draft: Draft): AppSettings => ({
   claudeCliPath: draft.claudeCliPath.trim() || null,
   claudeConfigDir: draft.claudeConfigDir.trim() || null,
   generationLanguage: draft.generationLanguage,
-  checkForUpdatesAtLaunch: draft.checkForUpdatesAtLaunch
+  checkForUpdatesAtLaunch: draft.checkForUpdatesAtLaunch,
+  theme: draft.theme
 })
 
 /**
- * Course language (Generation Language), Mastery Threshold, Round Limit, questions per quiz, the
+ * Theme, course language (Generation Language), Mastery Threshold, Round Limit, questions per quiz, the
  * Claude Code CLI path and the Claude config directory (profile).
  */
 export function SettingsScreen({ onClose }: { onClose: () => void }) {
@@ -79,7 +83,7 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
   const errors = settingsErrors(values)
   const valid = Object.keys(errors).length === 0
   const edit =
-    (field: Exclude<keyof Draft, 'generationLanguage' | 'checkForUpdatesAtLaunch'>) =>
+    (field: Exclude<keyof Draft, 'generationLanguage' | 'checkForUpdatesAtLaunch' | 'theme'>) =>
     (value: string) => {
       setStatus(null)
       setDraft({ ...draft, [field]: value })
@@ -204,6 +208,36 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
           </section>
 
           <div className="settings-column">
+            <section className="card settings-group" aria-labelledby="settings-appearance-title">
+              <h2 id="settings-appearance-title">Appearance</h2>
+              <div className="settings-field">
+                <label htmlFor="theme">Theme</label>
+                <select
+                  id="theme"
+                  data-testid="settings-theme"
+                  className="settings-short"
+                  value={draft.theme}
+                  onChange={(event) => {
+                    const theme = event.target.value
+                    if (!isTheme(theme)) return
+                    setStatus(null)
+                    setDraft({ ...draft, theme })
+                  }}
+                  aria-describedby="theme-help"
+                >
+                  {themes.map((theme) => (
+                    <option key={theme} value={theme}>
+                      {themeLabels[theme]}
+                    </option>
+                  ))}
+                </select>
+                <small id="theme-help" className="settings-help">
+                  System follows the light or dark appearance of your operating system. Applied when
+                  you save.
+                </small>
+              </div>
+            </section>
+
             <section className="card settings-group" aria-labelledby="settings-course-title">
               <h2 id="settings-course-title">Course</h2>
               <p className="settings-group-intro">

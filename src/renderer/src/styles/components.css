@@ -497,6 +497,7 @@
   border: 1px solid var(--color-border-card);
   border-radius: var(--radius-lg);
   background: var(--color-surface-base);
+  box-shadow: var(--shadow-card);
 }
 
 .card-disclosure > summary {

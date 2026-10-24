@@ -88,7 +88,8 @@ const handlers: IpcHandlers = {
     claudeCliPath: null,
     claudeConfigDir: null,
     generationLanguage: 'fr',
-    checkForUpdatesAtLaunch: true
+    checkForUpdatesAtLaunch: true,
+    theme: 'system'
   }),
   'settings:update': () => {
     throw new Error('invalid')
