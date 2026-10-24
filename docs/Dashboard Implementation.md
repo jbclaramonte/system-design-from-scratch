@@ -39,6 +39,10 @@ Data sources:
 
 The overview also shows the **Streak** card (the same `ActivityCard` as the Learning Path, `variant="wide"`: streak, week strip and [[Daily Goal]] on one row), under the stat cards and, on a Dashboard with nothing to show yet, above the empty state, so a fresh install reads "Start your streak". It is not part of `dashboard:get`: the card loads `activity:get` itself and reloads on `path:changed`. Rules in [[Activity Streak]] and [[Activity Day]]; the Dashboard's own numbers (rounds, attempts, accuracy) are unchanged.
 
+### Level and Badges
+
+The overview shows the **Level** card (`LevelCard`, `variant="wide"`, above the Streak card; also in the empty state) and a **Badges** section follows it (`BadgesSection`): every [[Badge]] with its icon tile, rule and status in words, earned with its date or "Locked". Like the Streak card they load `rewards:get` themselves and reload on `path:changed`; `dashboard:get` is unchanged. Rules in [[Rewards Implementation]].
+
 ### Topics
 
 Per Learning Path topic: status (the path step), rounds (number, status, score, dates), best and latest completed score, the [[Round Limit]] count (completed rounds below the threshold since the last passed one, as in the Mastery Loop), notions mastered over the outline, last practiced (latest attempt or round start).

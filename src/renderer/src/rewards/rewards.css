@@ -1,0 +1,159 @@
+/* Level, XP, Badges and the XP line of a Round (#65). Tokens and shared classes (.card, .chip,
+   .progress, .label-caps, .icon-tile) come from styles/; this file only lays the cards out. */
+
+.level {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+}
+
+.level h2 {
+  margin: 0;
+}
+
+.level-figure {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-sm);
+  margin: var(--space-xs) 0 0;
+}
+
+.level-number {
+  font-family: var(--font-mono);
+  font-size: var(--type-headline-lg-size);
+  line-height: var(--type-headline-lg-line);
+  font-weight: var(--type-headline-lg-weight);
+  letter-spacing: var(--type-headline-lg-tracking);
+}
+
+.level-name {
+  color: var(--color-text-secondary);
+  font-size: var(--type-headline-sm-size);
+  font-weight: 500;
+}
+
+.level-progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.level-xp {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--type-headline-sm-size);
+  line-height: var(--type-headline-sm-line);
+  font-weight: 600;
+}
+
+.level-detail {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-sm-size);
+  line-height: var(--type-body-sm-line);
+}
+
+.level-wide {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr);
+  align-items: center;
+  gap: var(--space-lg);
+}
+
+@media (max-width: 760px) {
+  .level-wide {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Badges: a grid of cards, an icon tile, the title, the rule and the status in words. */
+
+.badges {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-md);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.badge {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-md);
+  padding: var(--space-md);
+}
+
+.badge-locked {
+  background: var(--color-canvas);
+}
+
+.badge-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+.badge-text p {
+  margin: 0;
+}
+
+.badge-title {
+  font-weight: 600;
+}
+
+.badge-rule {
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-sm-size);
+  line-height: var(--type-body-sm-line);
+}
+
+.badge-status {
+  margin-top: var(--space-xs);
+}
+
+.badge-status .chip {
+  gap: var(--space-xs);
+}
+
+@media (max-width: 900px) {
+  .badges {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .badges {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* The XP line under a Round's score. */
+
+.round-xp {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: var(--space-md) var(--space-lg);
+  border-left: 2px solid var(--color-mastered);
+}
+
+.round-xp h3 {
+  margin: 0;
+}
+
+.round-xp-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--font-mono);
+  font-size: var(--type-body-md-size);
+}
+
+.round-xp-total {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-sm-size);
+}

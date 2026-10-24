@@ -11,6 +11,7 @@ import type { TopicMasterySummary } from '../../../shared/mastery'
 import { ActivityCard } from '../activity/ActivityCard'
 import { DeclareMastery, UndoDeclaration } from '../mastery/DeclaredMastery'
 import { errorMessage } from '../quiz/errorMessage'
+import { LevelCard } from '../rewards/LevelCard'
 import './path.css'
 import {
   actionLabel,
@@ -540,7 +541,10 @@ export function LearningPathScreen({
           <ProgressHero path={path} />
           <CurrentPriority path={path} onOpenTopic={onOpenTopic} onOpenExercise={onOpenExercise} />
         </div>
-        <ActivityCard />
+        <div className="path-aside">
+          <LevelCard />
+          <ActivityCard />
+        </div>
       </div>
       <div className="tabs" role="group" aria-label="Filter the Learning Path">
         {pathFilters.map((value) => (

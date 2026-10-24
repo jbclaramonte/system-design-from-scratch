@@ -27,6 +27,7 @@ Local SQLite database of the app, owned by the Electron main process. Table name
 | 7 | `declared-masteries` | Table `declared_masteries` (#55). |
 | 8 | `generation-language` | Column `language` (`fr` or `en`, default `fr`, checked) on `content_cache`, `lessons`, `quizzes` and `remediation_lessons`, backfilled to French by the default; indexes on `(topic_id, language)` and `(notion_id, language)`; setting `generation_language = "fr"` (#57). No table is rebuilt. |
 | 9 | `language-chosen-marker` | Setting row `generation_language_chosen = true` (the "language chosen" marker), inserted only when the data folder already holds learner data: a row in `content_cache`, `lessons`, `quizzes`, `remediation_lessons`, `rounds`, `attempts`, `round_limit_choices`, `forced_unlocks`, `declared_masteries`, `protocol_step_submissions`, `protocol_step_drafts`, `protocol_step_encounters`, `design_scenes` or `design_feedback`, or a setting the learner saved (any `settings` row other than the seeded ones and the `update_*` memory, or a seeded one changed since it was seeded). A fresh folder gets no marker (#61). |
+| 10 | `celebrated-badges` | Table `celebrated_badges` (#65). |
 | 4 | `interview-protocol` | `content_cache` rebuilt to accept the `protocol_step_lesson` kind (the `content_cache_key` of lessons, quizzes and remediation lessons are saved and restored around the rebuild); `design_exercises.problem_statement`; tables `protocol_step_submissions`, `protocol_step_drafts`, `protocol_step_encounters` (#14). |
 
 ## Diagram
@@ -144,6 +145,11 @@ erDiagram
     int topic_id PK
     text created_at "time of the declaration"
   }
+  celebrated_badges {
+    text badge_id PK "id of BADGES, not a foreign key"
+    text unlocked_at
+    int celebrated "0 or 1"
+  }
   forced_unlocks {
     text step_key PK "topic:slug or design_exercise:slug"
     text created_at
@@ -245,6 +251,10 @@ Generated rows carry `grounded` and `source_sections` ([[Grounding]]) and an opt
 ### Learning Path
 
 - `forced_unlocks`: one row per [[Forced Unlock]]: the key of the [[Learning Path]] step opened without mastering what comes before it (`topic:<slug>` or `design_exercise:<slug>`, the `key` of `LearningPathStep`) and `created_at` (no `updated_at`: inserted or deleted, never changed). The key is not a foreign key: the path is computed, not stored, so a key that matches no step is ignored. Read by `getLearningPath`; written by `path:forceUnlock` and removed by `path:lockAgain`. See [[Learning Path Implementation#Forced Unlock]].
+
+### Rewards
+
+- `celebrated_badges`: the [[Badge]]s the learner unlocked and whether their celebration (#66) already played: `badge_id` (the id of `BADGES` in `src/shared/rewards.ts`, not a foreign key: the list is code), `unlocked_at` (ISO time of the event that unlocked it), `celebrated` (0 or 1). Rows are inserted when `rewards:get` finds a Badge earned and never changed except by marking them celebrated (`src/main/db/repositories/badges.ts`). [[XP]] and [[Level]] have no table: they are derived from `rounds`, `protocol_step_submissions` and `design_feedback` ([[Rewards Implementation]]).
 
 ### Generation and data
 

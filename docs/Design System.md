@@ -127,6 +127,8 @@ Issue #36. All in `components.css`. Tones are named after the status colors: `ma
 
 Focus on a heading set by script (`tabindex="-1"` on a screen, question or panel heading, for screen readers) gets a thin 1px focus-colored outline at 4px offset without the glow; it only shows when the focus came from the keyboard. Buttons, links and fields keep the full ring.
 
+`.icon-tile` (components.css) is a 2.5rem rounded square with a glyph, one tone per role from the `color-tile-*` tokens (`-mastered`, `-progress`, `-attention`, neutral by default): the Badges of the Dashboard. `level-*`, `badge-*` and `round-xp-*` classes belong to the rewards UI (`src/renderer/src/rewards/`: the [[Level]] card, the [[Badge]] grid and the XP line of a Round); a locked Badge is a neutral card with a lock and the word "Locked", never red.
+
 `activity-*` classes belong to the Activity card (`src/renderer/src/activity/`, shared by the Learning Path and the Dashboard): the [[Activity Streak]] headline, the week strip and the [[Daily Goal]] bar, built on `.card`, `.chip`, `.progress` and tokens only. Each day of the strip draws a glyph (check, dashed ring, ring, lock) and carries a text alternative, so status is never by color alone.
 
 `lesson-*` classes belong to the Lesson: `.lesson-screen`, `.lesson-header`, `.lesson-notions`, `.lesson-sources` for the Lesson screen, and the prose classes `.lesson-body`, `.lesson-scroll`, `.lesson-table`, `.lesson-notion-anchor`, used wherever a Lesson text is shown (topic screen panel, Remediation Lesson, Protocol Step Lesson).

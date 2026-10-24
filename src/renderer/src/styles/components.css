@@ -271,6 +271,36 @@
   line-height: var(--type-body-sm-line);
 }
 
+/* Icon tile: a soft tinted square with a glyph, one tone per role (mastered, progress, attention,
+   neutral). Decorative: the text next to it says the same in words. Badges. */
+
+.icon-tile {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-lg);
+  background: var(--color-tile-neutral-fill);
+  color: var(--color-tile-neutral-glyph);
+}
+
+.icon-tile-mastered {
+  background: var(--color-tile-mastered-fill);
+  color: var(--color-tile-mastered-glyph);
+}
+
+.icon-tile-progress {
+  background: var(--color-tile-progress-fill);
+  color: var(--color-tile-progress-glyph);
+}
+
+.icon-tile-attention {
+  background: var(--color-tile-attention-fill);
+  color: var(--color-tile-attention-glyph);
+}
+
 /* Chip row: chips (and small controls) on one wrapping line. */
 
 .chip-row {

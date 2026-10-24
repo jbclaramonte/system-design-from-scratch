@@ -107,7 +107,7 @@ interface StreakRun {
 }
 
 /** Walks the Activity Days in order, bridging one missed day when the grace day is free. */
-function walk(days: readonly number[]): StreakRun {
+function walk(days: readonly number[], onDay?: (day: number, length: number) => void): StreakRun {
   let length = 0
   let graceDays: number[] = []
   let lastGrace: number | null = null
@@ -129,6 +129,7 @@ function walk(days: readonly number[]): StreakRun {
       }
     }
     previous = day
+    onDay?.(day, length)
   }
   return { length, graceDays, lastGrace, lastDay: previous }
 }
@@ -158,6 +159,24 @@ export function activityStreak(
     graceAvailable: graceFree(today, run.lastGrace),
     graceDays
   }
+}
+
+/**
+ * The first day on which a streak counted `length` Activity Days (the grace rule applies), or
+ * null when none ever did. A reached length stays reached when the streak later ends: the 7-day
+ * Activity Streak Badge uses it. Days after `today` are ignored.
+ */
+export function streakReachedOn(
+  days: readonly number[],
+  length: number,
+  today: number
+): number | null {
+  const sorted = [...new Set(days)].filter((day) => day <= today).sort((a, b) => a - b)
+  let reached: number | null = null
+  walk(sorted, (day, run) => {
+    if (reached === null && run >= length) reached = day
+  })
+  return reached
 }
 
 /** Rounds completed on `today`, against the Daily Goal. */

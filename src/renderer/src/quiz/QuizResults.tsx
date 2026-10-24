@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import type { RoundResult } from '../../../shared/quiz'
 import { OutsidePrimerBadge } from '../lesson/OutsidePrimerBadge'
+import { RoundXp } from '../rewards/RoundXp'
 import { formatPercent } from './progress'
 import { QuestionFeedbackView } from './QuestionFeedbackView'
 import './quiz.css'
@@ -82,6 +83,8 @@ export function QuizResults({
           </p>
         )}
       </div>
+
+      <RoundXp roundId={round.id} />
 
       <section className="quiz-stack" aria-labelledby="quiz-by-notion">
         <h3 id="quiz-by-notion">By notion</h3>

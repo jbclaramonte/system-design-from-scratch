@@ -140,6 +140,10 @@ Applied without restart: the Course language is read when a Generation is prepar
 
 "Open Settings": every Generation error display (lesson, Remediation Lesson, quiz preparation, free-answer grading, Protocol Step Lesson and protocol calls, dev Generation panel) is `GenerationErrorView` ([[Generation Service#Error display]]); for `not_logged_in` and `cli_not_found` it shows "Open Settings" next to Retry, which opens the Settings screen (`OpenSettingsContext`, provided by `App`; Back returns to the screen it was opened from).
 
+## Rewards
+
+A completed Round pays [[XP]] (its score divided by 5, plus 10 when passed) and the first passed Round of a Topic pays the Topic's mastery (+50); the results screen says what the Round paid ("+30 XP: Round passed") through `rewards:getRound`. The state machine is unchanged: rewards only read rounds, never write them. A [[Declared Mastery]] pays nothing, and a declared Topic's first passed Round still pays the mastery. See [[Rewards Implementation]].
+
 ## Data
 
 Migration 3 `mastery-loop` ([[Data Model]]): table `round_limit_choices (round_id PK, choice)` (repository `src/main/db/repositories/mastery.ts`), settings `questions_per_quiz` and `claude_cli_path`. Migration 7 `declared-masteries`: table `declared_masteries (topic_id PK, created_at)`, same repository. Remediation Lesson prompt version `remediation-lesson-2` (two new angles, `usedAngles`).

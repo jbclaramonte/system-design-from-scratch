@@ -662,6 +662,23 @@ async function phaseOne() {
     }
   )
 
+  await check(
+    'Level card on a fresh install: Level 1, Novice, 0 XP, a goal to reach Level 2',
+    async () => {
+      await c.waitFor(`!!${c.testId('level-card')}`, 'the Level card')
+      const state = await c.evaluate(`JSON.stringify({
+      name: ${c.testId('level-name')}.innerText.replace(/\\s+/g, ' '),
+      xp: ${c.testId('level-xp')}.innerText,
+      next: ${c.testId('level-progress-text')}.innerText
+    })`)
+      assert(
+        state ===
+          JSON.stringify({ name: 'Level 1 Novice', xp: '0 XP', next: '0 / 100 XP to Apprentice' }),
+        `Level card: ${state}`
+      )
+    }
+  )
+
   await check('database is created and migrated in the scratch user data', async () => {
     const dbFile = join(userData, 'system-design-from-scratch.db')
     assert(existsSync(dbFile), 'system-design-from-scratch.db is missing')
@@ -1215,6 +1232,46 @@ async function phaseTwo() {
       `Streak card after seeding: ${state}`
     )
   })
+
+  await check(
+    'Level and Badges count the seeded history: Level 6, 3 Badges earned, 3 locked',
+    async () => {
+      await c.waitFor(`!!${c.testId('level-card')}`, 'the Level card')
+      // 21 passed Rounds at 100%: 21 x (20 + 10 + 50) XP.
+      const level = await c.evaluate(`JSON.stringify({
+      name: ${c.testId('level-name')}.innerText.replace(/\\s+/g, ' '),
+      xp: ${c.testId('level-xp')}.innerText
+    })`)
+      assert(
+        level === JSON.stringify({ name: 'Level 6 Senior Engineer', xp: '1680 XP' }),
+        `Level card after seeding: ${level}`
+      )
+      await c.click('open-dashboard')
+      await c.waitFor(`!!${c.testId('badges-section')}`, 'the Badges section')
+      const badges = await c.evaluate(`JSON.stringify(
+      [...document.querySelectorAll('[data-testid="badge-card"]')].map((li) => [li.dataset.badge, li.dataset.earned])
+    )`)
+      assert(
+        badges ===
+          JSON.stringify([
+            ['first-topic-mastered', 'true'],
+            ['foundations-completed', 'true'],
+            ['perfect-round', 'true'],
+            ['comeback', 'false'],
+            ['streak-7', 'false'],
+            ['first-design-exercise', 'false']
+          ]),
+        `Badges: ${badges}`
+      )
+      const locked = await c.evaluate(`document.querySelector('[data-badge="comeback"]').innerText`)
+      assert(
+        /locked/i.test(locked) && /Pass a Round on a Topic/.test(locked),
+        `locked Badge: ${locked}`
+      )
+      await c.click('open-learning-path')
+      await c.waitFor(`!!${c.testId('path-continue')}`, 'the Learning Path again')
+    }
+  )
 
   await check('the Light theme survives the restart, at first paint', async () => {
     const state = await c.evaluate(`JSON.stringify({

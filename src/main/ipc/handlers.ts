@@ -8,6 +8,7 @@ import type { LessonQuestionIpc } from '../lessonQuestion'
 import type { MasteryIpc } from '../mastery/masteryIpc'
 import type { LearningPathIpc } from '../path/pathIpc'
 import type { ProtocolIpc } from '../protocol/protocolIpc'
+import type { RewardsIpc } from '../rewards/rewardsIpc'
 import type { FirstRunIpc } from '../settings/firstRunIpc'
 import type { SettingsIpc } from '../settings/settingsIpc'
 import type { UpdateIpc } from '../update'
@@ -26,6 +27,7 @@ export interface HandlerDependencies {
   path: LearningPathIpc
   dashboard: DashboardIpc
   activity: ActivityIpc
+  rewards: RewardsIpc
   protocol: ProtocolIpc
   firstRun: FirstRunIpc
   settings: SettingsIpc
@@ -43,6 +45,7 @@ export function createHandlers({
   path,
   dashboard,
   activity,
+  rewards,
   protocol,
   firstRun,
   settings,
@@ -101,6 +104,8 @@ export function createHandlers({
     },
     'dashboard:get': (request) => dashboard.get(request),
     'activity:get': (request) => activity.get(request),
+    'rewards:get': (request) => rewards.get(request),
+    'rewards:getRound': (request) => rewards.getRound(request),
     'firstRun:get': () => firstRun.get(),
     'firstRun:chooseLanguage': (request) => firstRun.chooseLanguage(request),
     'settings:get': () => settings.get(),

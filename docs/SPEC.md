@@ -115,6 +115,7 @@ The exact order of additions from design 2 onwards is still to be refined while 
 
 - Linear [[Learning Path]]: foundations, topics, then designs. Each step is unlocked by mastering the previous one.
 - [[Notion Map]] and [[Dashboard]]: mastery per notion, attempt history, weak points.
+- [[XP]], [[Level]] and [[Badge]]s **reward mastery only**: a completed Round, a Topic's first mastery, a passed Protocol Step and a completed Design Exercise pay XP; a Declared Mastery, a Forced Unlock, reading a Lesson, asking a question and re-reading pay nothing, and the same event never pays twice. No tokens, no currency, no leaderboard, no notification. The Level and XP show in the Learning Path side panel and the Dashboard, the Badges (earned with date, locked with their rule) on the Dashboard, and the XP of a Round with its reason on its results screen. All derived from the history; see [[Rewards Implementation]].
 - [[Activity Streak]] and [[Daily Goal]]: a "Streak" card on the Learning Path and the Dashboard overview with the week strip (Monday to Sunday) and today's progress. An [[Activity Day]] is a local calendar day with a completed Round or a reviewed Protocol Step; one grace day per 7 days keeps a streak alive; the Daily Goal is 1 to 3 Rounds a day (Settings, default 1). Derived from existing data, no XP, no notification, no sound, and a fresh install says "Start your streak" with nothing red.
 
 ## 8. Data
@@ -126,7 +127,7 @@ Local SQLite. Everything is recorded:
 - design scenes (React Flow nodes and edges as JSON) and design feedback;
 - progress and settings (threshold, N rounds, Daily Goal).
 
-The [[Activity Streak]] is not stored: it is computed from the completed Rounds and the reviewed Protocol Step submissions.
+The [[Activity Streak]], [[XP]], [[Level]] and [[Badge]]s are not stored: they are computed from the completed Rounds, the reviewed Protocol Step submissions and the final reviews of Design Exercises. Only the Badges already celebrated are remembered.
 
 Spaced repetition is out of the MVP, but the attempt model must allow it without a migration.
 

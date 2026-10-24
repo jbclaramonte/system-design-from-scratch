@@ -54,6 +54,7 @@ import type {
 } from './update'
 import type { LearningPath, LearningPathStepRequest } from './learningPath'
 import type { ActivitySummary } from './activity'
+import type { RewardsSummary, RoundXp, RoundXpRequest } from './rewards'
 import type { Dashboard, DashboardRequest } from './dashboard'
 import type {
   FreeAnswerGradingOutcome,
@@ -172,6 +173,13 @@ export interface IpcChannels {
    * reviewed Protocol Steps. Local time of the main process; nothing is stored.
    */
   'activity:get': { request: void; response: ActivitySummary }
+  /**
+   * XP, Level and Badges derived from the history (completed Rounds, reviewed Protocol Steps,
+   * Design Exercises). Also remembers the Badges earned so far (`celebrated_badges`).
+   */
+  'rewards:get': { request: void; response: RewardsSummary }
+  /** What one completed Round paid, with the reason ("+30 XP: Round passed"). */
+  'rewards:getRound': { request: RoundXpRequest; response: RoundXp }
   /** Whether the Generation Language was chosen (first-run screen), and the language to preselect. */
   'firstRun:get': { request: void; response: FirstRunState }
   /**
@@ -340,6 +348,8 @@ export const apiChannels = {
   lockStepAgain: 'path:lockAgain',
   getDashboard: 'dashboard:get',
   getActivity: 'activity:get',
+  getRewards: 'rewards:get',
+  getRoundXp: 'rewards:getRound',
   getFirstRun: 'firstRun:get',
   chooseGenerationLanguage: 'firstRun:chooseLanguage',
   getSettings: 'settings:get',

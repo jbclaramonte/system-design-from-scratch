@@ -50,6 +50,10 @@ Single source of truth for domain terms. Use these exact terms in code, schema, 
 | [[Activity Streak]] | Consecutive Activity Days ending today, or yesterday while today has none yet. One grace day: a single missed day inside a streak does not break it, at most once per 7 days. Derived from the history, never stored; no XP, no notification. | chain, combo, flame, run |
 | [[Daily Goal]] | Rounds to complete per day, 1 to 3 (default 1, the `dailyGoalRounds` setting). Fills a progress bar, never decides the Activity Streak. | quota, target, daily target |
 
+| [[XP]] | Points that grow only with mastery: a completed Round (by score, plus a bonus when passed), a Topic's first mastery, a Protocol Step passed, a Design Exercise completed. Never paid for a Declared Mastery, a Forced Unlock, reading a Lesson, asking a question or re-reading, and never twice for the same event. Derived from the history; not a currency. | points, coins, tokens, score (the Round's score is a percent) |
+| [[Level]] | A named step of total XP (Novice to Architect), shown with the progress to the next one. | rank, tier, grade |
+| [[Badge]] | A mark of a mastery milestone with a clear unlock rule (First Topic mastered, Foundations complete, Perfect Round, Comeback, 7-day Activity Streak, First Design Exercise completed); earned with its date or locked with its rule. | achievement, trophy, medal |
+
 ## Design practice
 
 | Term | Definition | Avoid |

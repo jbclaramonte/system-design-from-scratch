@@ -5,6 +5,8 @@ import type { TopicMasterySummary } from '../../../shared/mastery'
 import { ActivityCard } from '../activity/ActivityCard'
 import { stepStatusLabels } from '../path/pathText'
 import { errorMessage } from '../quiz/errorMessage'
+import { BadgesSection } from '../rewards/BadgesSection'
+import { LevelCard } from '../rewards/LevelCard'
 import './dashboard.css'
 import {
   isEmptyDashboard,
@@ -130,6 +132,7 @@ function Overview({ dashboard }: { dashboard: Dashboard }) {
         ))}
       </dl>
       <div className="dash-activity">
+        <LevelCard variant="wide" />
         <ActivityCard variant="wide" />
       </div>
       <p className="dash-note">
@@ -494,6 +497,7 @@ export function DashboardScreen({
       ) : isEmptyDashboard(dashboard) ? (
         <>
           <div className="dash-activity">
+            <LevelCard variant="wide" />
             <ActivityCard variant="wide" />
           </div>
           <EmptyState onClose={onClose} />
@@ -501,6 +505,7 @@ export function DashboardScreen({
       ) : (
         <>
           <Overview dashboard={dashboard} />
+          <BadgesSection />
           <WeakPoints weakPoints={dashboard.weakPoints} steps={steps} onOpenTopic={onOpenTopic} />
           <section className="dash-section" aria-labelledby="dash-map">
             <h2 id="dash-map">Notion Map</h2>

@@ -82,6 +82,12 @@ const handlers: IpcHandlers = {
   'activity:get': () => {
     throw new Error('no database')
   },
+  'rewards:get': () => {
+    throw new Error('no database')
+  },
+  'rewards:getRound': () => {
+    throw new Error('no database')
+  },
   'firstRun:get': () => ({ languageChosen: true, suggestedLanguage: 'fr' }),
   'firstRun:chooseLanguage': () => ({ languageChosen: true, suggestedLanguage: 'fr' }),
   'settings:get': () => ({
@@ -224,6 +230,8 @@ describe('registerHandlers', () => {
       'quiz:startRound',
       'quiz:submitAnswer',
       'quiz:submitFreeAnswer',
+      'rewards:get',
+      'rewards:getRound',
       'settings:get',
       'settings:testCli',
       'settings:update',
