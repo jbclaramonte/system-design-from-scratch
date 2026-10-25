@@ -36,6 +36,25 @@ export function BadgeIcon({ name }: { name: BadgeIconName }) {
   )
 }
 
+/** Two chevrons up: a Level reached (the Celebration card). */
+export function LevelGlyph() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="22"
+      height="22"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M7 11l5-5 5 5M7 18l5-5 5 5" />
+    </svg>
+  )
+}
+
 /** The lock drawn on a locked Badge. */
 export function LockGlyph() {
   return (

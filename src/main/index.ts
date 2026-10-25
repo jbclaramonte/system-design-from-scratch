@@ -216,6 +216,14 @@ void app.whenReady().then(() => {
     },
     log: (message) => console.log(message)
   })
+  const rewards = createRewardsIpc(db)
+  try {
+    // Takes the rewards baseline at launch, before anything new can be earned: an existing
+    // history never replays its past in the Celebrations.
+    rewards.get()
+  } catch (error) {
+    console.error('Could not read the rewards at launch', error)
+  }
   registerHandlers(
     ipcMain,
     createHandlers({
@@ -243,7 +251,7 @@ void app.whenReady().then(() => {
       path: createLearningPathIpc({ db, corpus }),
       dashboard: createDashboardIpc({ db, corpus }),
       activity: createActivityIpc(db),
-      rewards: createRewardsIpc(db),
+      rewards,
       protocol: createProtocolIpc(masteryDeps, createProtocolService(masteryDeps), {
         allowDevFixture: !app.isPackaged,
         assertExerciseUnlocked: createExerciseLockGuard(

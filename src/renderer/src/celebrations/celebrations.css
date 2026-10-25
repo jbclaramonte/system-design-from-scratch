@@ -1,0 +1,135 @@
+/* Celebrations (#66): the card of a Badge earned or a Level reached, and the XP of a passed Round
+   ticking up. CSS only: keyframes and one registered custom property, no script timers drive the
+   motion, no sound. Colors come from the semantic tokens, so both themes work. With reduced
+   motion nothing moves: the same content shows still. */
+
+@property --xp-tick {
+  syntax: '<integer>';
+  initial-value: 0;
+  inherits: false;
+}
+
+/* The card sits at the bottom corner, above the content, and only the card catches the pointer. */
+
+.celebration {
+  position: fixed;
+  right: var(--space-lg);
+  bottom: var(--space-lg);
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  width: min(26rem, calc(100vw - 2 * var(--space-lg)));
+  padding: var(--space-md) var(--space-lg);
+  animation:
+    celebration-in 480ms cubic-bezier(0.2, 0.8, 0.2, 1) both,
+    celebration-glow 1600ms ease-out 300ms both;
+}
+
+.celebration-mastered {
+  --celebration-glow: var(--glow-mastered);
+  border-color: var(--color-mastered-border);
+}
+
+.celebration-progress {
+  --celebration-glow: var(--glow-progress);
+  border-color: var(--color-progress-border);
+}
+
+.celebration-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+.celebration-text p {
+  margin: 0;
+}
+
+.celebration-title {
+  font-weight: 600;
+}
+
+.celebration-detail {
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-sm-size);
+  line-height: var(--type-body-sm-line);
+}
+
+.celebration-dismiss {
+  flex: none;
+  align-self: flex-start;
+}
+
+@keyframes celebration-in {
+  from {
+    opacity: 0;
+    transform: translateX(2rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes celebration-glow {
+  from {
+    box-shadow: 0 0 0 0 transparent;
+  }
+  to {
+    box-shadow: var(--celebration-glow);
+  }
+}
+
+/* The XP of a passed Round: the figure counts up from 0 to the total, then the card glows. */
+
+.round-xp-celebrate {
+  --celebration-glow: var(--glow-mastered);
+  box-shadow: var(--celebration-glow);
+  animation: celebration-glow 1600ms ease-out both;
+}
+
+.round-xp-ticker {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--type-headline-md-size);
+  line-height: var(--type-headline-md-line);
+  font-weight: 600;
+  color: var(--color-mastered-text);
+}
+
+.xp-count {
+  --xp-tick: var(--xp-total);
+  animation: xp-tick 900ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  counter-reset: xp var(--xp-tick);
+}
+
+.xp-count::after {
+  content: counter(xp);
+}
+
+@keyframes xp-tick {
+  from {
+    --xp-tick: 0;
+  }
+  to {
+    --xp-tick: var(--xp-total);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .celebration {
+    animation: none;
+    box-shadow: var(--celebration-glow);
+  }
+
+  .round-xp-celebrate {
+    animation: none;
+  }
+
+  .xp-count {
+    animation: none;
+  }
+}

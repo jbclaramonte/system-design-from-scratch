@@ -103,7 +103,8 @@ describe('settings IPC', () => {
       generationLanguage: 'fr',
       checkForUpdatesAtLaunch: true,
       theme: 'system',
-      dailyGoalRounds: 1
+      dailyGoalRounds: 1,
+      celebrations: true
     })
     expect(() => ipc.update({ masteryThreshold: 20 })).toThrow(/between 50 and 100/)
     expect(() => ipc.update({ roundLimit: 3, unknown: 1 } as never)).toThrow()
@@ -145,6 +146,16 @@ describe('settings IPC', () => {
     expect(ipc.update({ checkForUpdatesAtLaunch: false }).checkForUpdatesAtLaunch).toBe(false)
     expect(ipc.get().checkForUpdatesAtLaunch).toBe(false)
     expect(ipc.update({ checkForUpdatesAtLaunch: true }).checkForUpdatesAtLaunch).toBe(true)
+  })
+
+  it('persists Celebrations (default on, read before the first save) and refuses anything but a boolean', () => {
+    const ipc = createSettingsIpc(db)
+    expect(ipc.get().celebrations).toBe(true)
+    expect(() => ipc.update({ celebrations: 'off' } as never)).toThrow()
+    expect(ipc.update({ celebrations: false }).celebrations).toBe(false)
+    expect(getSettings(db).celebrations).toBe(false)
+    expect(ipc.update({ roundLimit: 4 }).celebrations).toBe(false)
+    expect(ipc.update({ celebrations: true }).celebrations).toBe(true)
   })
 
   it('validates, persists and applies the Generation Language without touching stored content', () => {

@@ -1210,6 +1210,56 @@ async function phaseTwo() {
   })
   if (!opened) return
 
+  await check(
+    'Celebrations: the history earned after the first launch plays once, in order, then nothing',
+    async () => {
+      // The first launch (empty folder) took the baseline, so the seeded history is new: three
+      // Badges, then Level 6, one card at a time. Each card is flagged once it was shown.
+      const seen = []
+      for (let index = 0; index < 4; index++) {
+        await c.waitFor(`!!${c.testId('celebration')}`, `celebration ${index + 1}`, 15000)
+        seen.push(
+          await c.evaluate(`JSON.stringify([
+          ${c.testId('celebration')}.dataset.kind,
+          ${c.testId('celebration-title')}.innerText,
+          ${c.testId('celebration-live')}.innerText
+        ])`)
+        )
+        if (index === 0) await c.shot('19-celebration-badge')
+        await c.click('celebration-dismiss')
+        await c.waitFor(
+          `!${c.testId('celebration')} || ${c.testId('celebration-title')}.innerText !== ${JSON.stringify(JSON.parse(seen[index])[1])}`,
+          'the next card'
+        )
+      }
+      const kinds = seen.map((entry) => JSON.parse(entry)[0])
+      assert(
+        JSON.stringify(kinds) === JSON.stringify(['badge', 'badge', 'badge', 'level']),
+        `order: ${kinds}`
+      )
+      const titles = seen.map((entry) => JSON.parse(entry)[1])
+      assert(
+        JSON.stringify(titles.slice(0, 3).sort()) ===
+          JSON.stringify(['First Topic mastered', 'Foundations complete', 'Perfect Round']),
+        `Badges: ${titles}`
+      )
+      assert(titles[3] === 'Level 6: Senior Engineer', `Level: ${titles[3]}`)
+      assert(
+        /^Badge earned: /.test(JSON.parse(seen[0])[2]),
+        `live region: ${JSON.parse(seen[0])[2]}`
+      )
+      // Changing screen reloads what is pending: nothing replays.
+      await c.click('open-dashboard')
+      await c.waitFor(`!!${c.testId('badges-section')}`, 'the Badges section')
+      await sleep(1000)
+      assert(!(await c.evaluate(`!!${c.testId('celebration')}`)), 'a celebration replayed')
+      await c.click('open-learning-path')
+      await c.waitFor(`!!${c.testId('path-continue')}`, 'the Learning Path again')
+      await sleep(500)
+      assert(!(await c.evaluate(`!!${c.testId('celebration')}`)), 'a celebration replayed')
+    }
+  )
+
   await check('the dismissed update is not announced again, without a second request', async () => {
     // The Learning Path is on screen: a banner would be visible by now.
     await sleep(1500)

@@ -387,7 +387,8 @@ describe('settings', () => {
       generationLanguage: 'fr',
       checkForUpdatesAtLaunch: true,
       theme: 'system',
-      dailyGoalRounds: 1
+      dailyGoalRounds: 1,
+      celebrations: true
     }
     expect(getSettings(db)).toEqual(defaults)
     expect(updateSettings(db, { roundLimit: 5 })).toEqual({ ...defaults, roundLimit: 5 })
@@ -405,6 +406,15 @@ describe('settings', () => {
       '/Users/me/.claude-perso'
     )
     expect(updateSettings(db, { claudeConfigDir: null }).claudeConfigDir).toBeNull()
+  })
+
+  it('celebrates by default, until the setting is saved (no migration)', () => {
+    expect(
+      db.prepare("SELECT COUNT(*) AS n FROM settings WHERE key = 'celebrations'").get()
+    ).toEqual({ n: 0 })
+    expect(getSettings(db).celebrations).toBe(true)
+    expect(updateSettings(db, { celebrations: false }).celebrations).toBe(false)
+    expect(getSettings(db).celebrations).toBe(false)
   })
 
   it('checks for updates at launch by default, until the setting is saved (no migration)', () => {

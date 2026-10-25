@@ -106,6 +106,8 @@ export function createHandlers({
     'activity:get': (request) => activity.get(request),
     'rewards:get': (request) => rewards.get(request),
     'rewards:getRound': (request) => rewards.getRound(request),
+    'rewards:getCelebrations': (request) => rewards.getCelebrations(request),
+    'rewards:markCelebrated': (request) => rewards.markCelebrated(request),
     'firstRun:get': () => firstRun.get(),
     'firstRun:chooseLanguage': (request) => firstRun.chooseLanguage(request),
     'settings:get': () => settings.get(),

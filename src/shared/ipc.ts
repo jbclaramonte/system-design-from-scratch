@@ -54,7 +54,13 @@ import type {
 } from './update'
 import type { LearningPath, LearningPathStepRequest } from './learningPath'
 import type { ActivitySummary } from './activity'
-import type { RewardsSummary, RoundXp, RoundXpRequest } from './rewards'
+import type {
+  MarkCelebratedRequest,
+  PendingCelebrations,
+  RewardsSummary,
+  RoundXp,
+  RoundXpRequest
+} from './rewards'
 import type { Dashboard, DashboardRequest } from './dashboard'
 import type {
   FreeAnswerGradingOutcome,
@@ -180,6 +186,13 @@ export interface IpcChannels {
   'rewards:get': { request: void; response: RewardsSummary }
   /** What one completed Round paid, with the reason ("+30 XP: Round passed"). */
   'rewards:getRound': { request: RoundXpRequest; response: RoundXp }
+  /**
+   * The Badges and the Level that unlocked since the last celebration (#66), in unlock order.
+   * What was earned before the first read is never pending.
+   */
+  'rewards:getCelebrations': { request: void; response: PendingCelebrations }
+  /** Remembers the Badges and the Level that a celebration showed, so they play once. */
+  'rewards:markCelebrated': { request: MarkCelebratedRequest; response: void }
   /** Whether the Generation Language was chosen (first-run screen), and the language to preselect. */
   'firstRun:get': { request: void; response: FirstRunState }
   /**
@@ -350,6 +363,8 @@ export const apiChannels = {
   getActivity: 'activity:get',
   getRewards: 'rewards:get',
   getRoundXp: 'rewards:getRound',
+  getCelebrations: 'rewards:getCelebrations',
+  markCelebrated: 'rewards:markCelebrated',
   getFirstRun: 'firstRun:get',
   chooseGenerationLanguage: 'firstRun:chooseLanguage',
   getSettings: 'settings:get',

@@ -35,6 +35,11 @@ export interface AppSettings {
   theme: Theme
   /** Daily Goal: Rounds to complete per day, 1 to 3 (default 1). */
   dailyGoalRounds: number
+  /**
+   * Celebrations: the short animation when a Round is passed, a Level reached or a Badge earned
+   * (default on). Off keeps the XP line and the Badges and only drops the animation.
+   */
+  celebrations: boolean
 }
 
 export const settingsLimits = {

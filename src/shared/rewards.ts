@@ -187,3 +187,25 @@ export interface RoundXp {
 export interface RoundXpRequest {
   roundId: number
 }
+
+// Celebrations (#66)
+
+/** A Level reached and not celebrated yet. Several Levels gained at once are one celebration. */
+export interface LevelReached {
+  level: number
+  name: string
+  /** The Level celebrated before (or the Level at the baseline). */
+  previousLevel: number
+}
+
+/** What unlocked since the last celebration, in unlock order. Nothing here is a past achievement. */
+export interface PendingCelebrations {
+  badges: BadgeStatus[]
+  level: LevelReached | null
+}
+
+/** What was shown: the Badges and the Level to remember as celebrated. */
+export interface MarkCelebratedRequest {
+  badgeIds: string[]
+  level: number | null
+}

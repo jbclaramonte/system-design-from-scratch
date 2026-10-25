@@ -25,7 +25,8 @@ const updateRequest = z
     generationLanguage: z.enum(generationLanguages),
     checkForUpdatesAtLaunch: z.boolean(),
     theme: z.enum(themes),
-    dailyGoalRounds: z.number()
+    dailyGoalRounds: z.number(),
+    celebrations: z.boolean()
   })
   .partial()
   .strict()

@@ -32,6 +32,7 @@ interface Draft {
   checkForUpdatesAtLaunch: boolean
   theme: Theme
   dailyGoalRounds: number
+  celebrations: boolean
 }
 
 const toDraft = (settings: AppSettings): Draft => ({
@@ -43,7 +44,8 @@ const toDraft = (settings: AppSettings): Draft => ({
   generationLanguage: settings.generationLanguage,
   checkForUpdatesAtLaunch: settings.checkForUpdatesAtLaunch,
   theme: settings.theme,
-  dailyGoalRounds: settings.dailyGoalRounds
+  dailyGoalRounds: settings.dailyGoalRounds,
+  celebrations: settings.celebrations
 })
 
 const fromDraft = (draft: Draft): AppSettings => ({
@@ -55,7 +57,8 @@ const fromDraft = (draft: Draft): AppSettings => ({
   generationLanguage: draft.generationLanguage,
   checkForUpdatesAtLaunch: draft.checkForUpdatesAtLaunch,
   theme: draft.theme,
-  dailyGoalRounds: draft.dailyGoalRounds
+  dailyGoalRounds: draft.dailyGoalRounds,
+  celebrations: draft.celebrations
 })
 
 const dailyGoalChoices = Array.from(
@@ -95,7 +98,11 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
     (
       field: Exclude<
         keyof Draft,
-        'generationLanguage' | 'checkForUpdatesAtLaunch' | 'theme' | 'dailyGoalRounds'
+        | 'generationLanguage'
+        | 'checkForUpdatesAtLaunch'
+        | 'theme'
+        | 'dailyGoalRounds'
+        | 'celebrations'
       >
     ) =>
     (value: string) => {
@@ -367,6 +374,34 @@ export function SettingsScreen({ onClose }: { onClose: () => void }) {
                   }
                 >
                   {errors.dailyGoalRounds ?? 'From 1 to 3 Rounds. Applies at once, to today too.'}
+                </small>
+              </div>
+            </section>
+
+            <section className="card settings-group" aria-labelledby="settings-celebrations-title">
+              <h2 id="settings-celebrations-title">Celebrations</h2>
+              <p className="settings-group-intro">
+                A short animation when you pass a Round, reach a Level or earn a Badge. It never
+                blocks anything and makes no sound.
+              </p>
+              <div className="settings-field">
+                <label htmlFor="celebrations" className="settings-checkbox">
+                  <input
+                    id="celebrations"
+                    type="checkbox"
+                    data-testid="settings-celebrations"
+                    checked={draft.celebrations}
+                    onChange={(event) => {
+                      setStatus(null)
+                      setDraft({ ...draft, celebrations: event.target.checked })
+                    }}
+                    aria-describedby="celebrations-help"
+                  />
+                  Celebrate Rounds passed, Levels and Badges
+                </label>
+                <small id="celebrations-help" className="settings-help">
+                  Off keeps the XP line and your Badges and only drops the animation. Your system
+                  setting for reduced motion is always respected.
                 </small>
               </div>
             </section>

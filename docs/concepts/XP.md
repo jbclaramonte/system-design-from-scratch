@@ -15,6 +15,7 @@ Pays nothing: a [[Declared Mastery]], a [[Forced Unlock]], reading a [[Lesson]],
 ## Related
 
 - [[Level]], [[Badge]], [[Activity Streak]] (a streak is not XP)
+- [[Celebration]] (a Badge earned, a Level reached and a passed Round are celebrated once)
 - [[Mastery Loop]], [[Mastery Threshold]] (decides "passed")
 
 ## In code

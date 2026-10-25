@@ -88,6 +88,12 @@ const handlers: IpcHandlers = {
   'rewards:getRound': () => {
     throw new Error('no database')
   },
+  'rewards:getCelebrations': () => {
+    throw new Error('no database')
+  },
+  'rewards:markCelebrated': () => {
+    throw new Error('no database')
+  },
   'firstRun:get': () => ({ languageChosen: true, suggestedLanguage: 'fr' }),
   'firstRun:chooseLanguage': () => ({ languageChosen: true, suggestedLanguage: 'fr' }),
   'settings:get': () => ({
@@ -99,7 +105,8 @@ const handlers: IpcHandlers = {
     generationLanguage: 'fr',
     checkForUpdatesAtLaunch: true,
     theme: 'system',
-    dailyGoalRounds: 1
+    dailyGoalRounds: 1,
+    celebrations: true
   }),
   'settings:update': () => {
     throw new Error('invalid')
@@ -231,7 +238,9 @@ describe('registerHandlers', () => {
       'quiz:submitAnswer',
       'quiz:submitFreeAnswer',
       'rewards:get',
+      'rewards:getCelebrations',
       'rewards:getRound',
+      'rewards:markCelebrated',
       'settings:get',
       'settings:testCli',
       'settings:update',

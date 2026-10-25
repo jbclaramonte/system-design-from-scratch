@@ -116,6 +116,7 @@ The exact order of additions from design 2 onwards is still to be refined while 
 - Linear [[Learning Path]]: foundations, topics, then designs. Each step is unlocked by mastering the previous one.
 - [[Notion Map]] and [[Dashboard]]: mastery per notion, attempt history, weak points.
 - [[XP]], [[Level]] and [[Badge]]s **reward mastery only**: a completed Round, a Topic's first mastery, a passed Protocol Step and a completed Design Exercise pay XP; a Declared Mastery, a Forced Unlock, reading a Lesson, asking a question and re-reading pay nothing, and the same event never pays twice. No tokens, no currency, no leaderboard, no notification. The Level and XP show in the Learning Path side panel and the Dashboard, the Badges (earned with date, locked with their rule) on the Dashboard, and the XP of a Round with its reason on its results screen. All derived from the history; see [[Rewards Implementation]].
+- [[Celebration]]s: a passed Round makes the XP total of its results tick up with a soft glow; a [[Badge]] earned or a [[Level]] reached slides a card in at the corner, one at a time, in order, dismissible and gone by itself. CSS only, no sound, never blocking, plays once per unlock, never for a failed Round and never for what was earned before the first launch with the feature. Nothing red; unlocks are announced politely to screen readers; with reduced motion the same content shows still; the "Celebrations" setting (default on) turns the animation off while the XP line and the Badges stay. See [[Rewards Implementation#Celebrations]].
 - [[Activity Streak]] and [[Daily Goal]]: a "Streak" card on the Learning Path and the Dashboard overview with the week strip (Monday to Sunday) and today's progress. An [[Activity Day]] is a local calendar day with a completed Round or a reviewed Protocol Step; one grace day per 7 days keeps a streak alive; the Daily Goal is 1 to 3 Rounds a day (Settings, default 1). Derived from existing data, no XP, no notification, no sound, and a fresh install says "Start your streak" with nothing red.
 
 ## 8. Data
@@ -127,7 +128,7 @@ Local SQLite. Everything is recorded:
 - design scenes (React Flow nodes and edges as JSON) and design feedback;
 - progress and settings (threshold, N rounds, Daily Goal).
 
-The [[Activity Streak]], [[XP]], [[Level]] and [[Badge]]s are not stored: they are computed from the completed Rounds, the reviewed Protocol Step submissions and the final reviews of Design Exercises. Only the Badges already celebrated are remembered.
+The [[Activity Streak]], [[XP]], [[Level]] and [[Badge]]s are not stored: they are computed from the completed Rounds, the reviewed Protocol Step submissions and the final reviews of Design Exercises. Only the Badges already celebrated and the Level celebrated so far are remembered (the baseline and the celebrations, see [[Celebration]]).
 
 Spaced repetition is out of the MVP, but the attempt model must allow it without a migration.
 

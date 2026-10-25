@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import type { RoundResult } from '../../../shared/quiz'
 import { OutsidePrimerBadge } from '../lesson/OutsidePrimerBadge'
+import { useRoundOnScreen } from '../celebrations/CelebrationProvider'
 import { RoundXp } from '../rewards/RoundXp'
 import { formatPercent } from './progress'
 import { QuestionFeedbackView } from './QuestionFeedbackView'
@@ -28,6 +29,7 @@ export function QuizResults({
   const headingRef = useRef<HTMLHeadingElement>(null)
   const score = round.scorePercent ?? 0
   const passed = round.passed === true
+  useRoundOnScreen(passed)
 
   useEffect(() => {
     headingRef.current?.focus()
@@ -84,7 +86,7 @@ export function QuizResults({
         )}
       </div>
 
-      <RoundXp roundId={round.id} />
+      <RoundXp roundId={round.id} passed={passed} />
 
       <section className="quiz-stack" aria-labelledby="quiz-by-notion">
         <h3 id="quiz-by-notion">By notion</h3>

@@ -2,7 +2,15 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { openDatabase, type Database } from './driver'
 import { migrate } from './migrate'
 import { migrations } from './migrations'
-import { listBadgeUnlocks, markBadgeCelebrated, recordBadgeUnlocks } from './repositories/badges'
+import { getSettings } from './repositories/settings'
+import {
+  getCelebratedLevel,
+  listBadgeUnlocks,
+  markBadgeCelebrated,
+  raiseCelebratedLevel,
+  recordBadgeUnlocks,
+  takeRewardsBaseline
+} from './repositories/badges'
 
 let db: Database
 
@@ -54,5 +62,55 @@ describe('migration 10 celebrated-badges', () => {
         )
         .run()
     ).toThrow()
+  })
+})
+
+describe('rewards baseline (#66)', () => {
+  beforeEach(() => migrate(db, migrations))
+
+  it('is not taken on a new folder', () => {
+    expect(getCelebratedLevel(db)).toBeNull()
+  })
+
+  it('records what is earned as celebrated, settles old rows, and remembers the Level, once', () => {
+    recordBadgeUnlocks(db, [{ badgeId: 'comeback', unlockedAt: '2026-10-19T10:00:00.000Z' }])
+    expect(
+      takeRewardsBaseline(db, {
+        level: 3,
+        earned: [
+          { badgeId: 'comeback', unlockedAt: '2026-10-19T10:00:00.000Z' },
+          { badgeId: 'perfect-round', unlockedAt: '2026-10-20T10:00:00.000Z' }
+        ]
+      })
+    ).toBe(true)
+    expect(listBadgeUnlocks(db)).toEqual([
+      { badgeId: 'comeback', unlockedAt: '2026-10-19T10:00:00.000Z', celebrated: true },
+      { badgeId: 'perfect-round', unlockedAt: '2026-10-20T10:00:00.000Z', celebrated: true }
+    ])
+    expect(getCelebratedLevel(db)).toBe(3)
+    // Taken once: a second call changes nothing, even with more earned.
+    expect(
+      takeRewardsBaseline(db, {
+        level: 5,
+        earned: [{ badgeId: 'streak-7', unlockedAt: '2026-10-21T10:00:00.000Z' }]
+      })
+    ).toBe(false)
+    expect(listBadgeUnlocks(db)).toHaveLength(2)
+    expect(getCelebratedLevel(db)).toBe(3)
+  })
+
+  it('only raises the celebrated Level', () => {
+    takeRewardsBaseline(db, { level: 2, earned: [] })
+    raiseCelebratedLevel(db, 4)
+    expect(getCelebratedLevel(db)).toBe(4)
+    raiseCelebratedLevel(db, 3)
+    expect(getCelebratedLevel(db)).toBe(4)
+    raiseCelebratedLevel(db, 10)
+    expect(getCelebratedLevel(db)).toBe(10)
+  })
+
+  it('does not show up in the Settings read', () => {
+    takeRewardsBaseline(db, { level: 2, earned: [] })
+    expect(Object.keys(getSettings(db))).not.toContain('celebratedLevel')
   })
 })

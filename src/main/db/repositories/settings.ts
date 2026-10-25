@@ -19,7 +19,8 @@ const settingKeys = {
   generationLanguage: 'generation_language',
   checkForUpdatesAtLaunch: 'check_for_updates_at_launch',
   theme: 'theme',
-  dailyGoalRounds: 'daily_goal_rounds'
+  dailyGoalRounds: 'daily_goal_rounds',
+  celebrations: 'celebrations'
 } as const satisfies Record<keyof Settings, string>
 
 /**
@@ -30,7 +31,8 @@ const unseededDefaults: Partial<Settings> = {
   claudeConfigDir: null,
   checkForUpdatesAtLaunch: true,
   theme: DEFAULT_THEME,
-  dailyGoalRounds: DEFAULT_DAILY_GOAL_ROUNDS
+  dailyGoalRounds: DEFAULT_DAILY_GOAL_ROUNDS,
+  celebrations: true
 }
 
 export function getSettings(db: Database): Settings {

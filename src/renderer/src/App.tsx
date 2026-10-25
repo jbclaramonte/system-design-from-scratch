@@ -15,6 +15,7 @@ import { PathTopicView } from './path/PathTopicView'
 import { QuizScreen } from './quiz/QuizScreen'
 import { OpenSettingsContext } from './settings/openSettings'
 import { SettingsScreen } from './settings/SettingsScreen'
+import { CelebrationProvider } from './celebrations/CelebrationProvider'
 import { AppShell } from './shell/AppShell'
 import { UpdateBanner } from './update/UpdateBanner'
 import { UpdateCheckNotice } from './update/UpdateCheckNotice'
@@ -118,21 +119,23 @@ export function App() {
   return (
     <OpenSettingsContext.Provider value={openSettings}>
       <UpdateProvider>
-        <AppShell
-          activeItem={activeNavItem(screen)}
-          layout={screenLayout(screen)}
-          version={version}
-          scrollKey={screen.name === 'topic' ? `topic-${screen.topic.id}` : screen.name}
-          banner={
-            <>
-              <UpdateBanner />
-              <UpdateCheckNotice />
-            </>
-          }
-          onNavigate={navigate}
-        >
-          <AppScreen screen={screen} setScreen={setScreen} devInfo={{ version, ping, error }} />
-        </AppShell>
+        <CelebrationProvider screenKey={screen.name}>
+          <AppShell
+            activeItem={activeNavItem(screen)}
+            layout={screenLayout(screen)}
+            version={version}
+            scrollKey={screen.name === 'topic' ? `topic-${screen.topic.id}` : screen.name}
+            banner={
+              <>
+                <UpdateBanner />
+                <UpdateCheckNotice />
+              </>
+            }
+            onNavigate={navigate}
+          >
+            <AppScreen screen={screen} setScreen={setScreen} devInfo={{ version, ping, error }} />
+          </AppShell>
+        </CelebrationProvider>
       </UpdateProvider>
     </OpenSettingsContext.Provider>
   )

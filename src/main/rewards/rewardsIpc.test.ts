@@ -92,6 +92,7 @@ describe('createRewardsIpc.get', () => {
   })
 
   it('counts the history already stored (no new event needed) and remembers the Badges', () => {
+    ipc().get() // the baseline, taken at launch before anything is earned
     playRound('client-server', day(20), 40, false)
     playRound('client-server', day(21), 100, true)
     const summary = ipc().get()
@@ -106,6 +107,7 @@ describe('createRewardsIpc.get', () => {
   })
 
   it('keeps the first unlock and a celebration across calls', () => {
+    ipc().get() // the baseline
     playRound('client-server', day(20), 100, true)
     ipc().get()
     expect(markBadgeCelebrated(db, 'perfect-round')).toBe(true)
@@ -224,5 +226,123 @@ describe('createRewardsIpc.getRound', () => {
     expect(() => ipc().getRound({ roundId: 1.5 })).toThrow()
     expect(() => ipc().getRound({ roundId: 1, extra: true } as never)).toThrow()
     expect(() => ipc().getRound({} as never)).toThrow()
+  })
+})
+
+describe('createRewardsIpc celebrations', () => {
+  const pending = () => ipc().getCelebrations()
+
+  it('celebrates nothing on a fresh install', () => {
+    expect(pending()).toEqual({ badges: [], level: null })
+  })
+
+  it('never replays an existing history: what is earned before the first read is already celebrated', () => {
+    playRound('client-server', day(20), 40, false)
+    playRound('client-server', day(21), 100, true)
+    playRound('http', day(22), 100, true)
+    expect(pending()).toEqual({ badges: [], level: null })
+    expect(ipc().get().level.level).toBeGreaterThan(1)
+    expect(listBadgeUnlocks(db).length).toBeGreaterThan(0)
+    expect(listBadgeUnlocks(db).every((row) => row.celebrated)).toBe(true)
+    // And again, after a reload (a new IPC over the same data).
+    expect(pending()).toEqual({ badges: [], level: null })
+  })
+
+  it('also settles the Badges an earlier version left uncelebrated, at the baseline', () => {
+    playRound('client-server', day(20), 100, true)
+    db.prepare(
+      `INSERT INTO celebrated_badges (badge_id, unlocked_at, celebrated)
+       VALUES ('perfect-round', $at, 0)`
+    ).run({ at: day(20) })
+    expect(pending().badges).toEqual([])
+    expect(listBadgeUnlocks(db).every((row) => row.celebrated)).toBe(true)
+  })
+
+  it('celebrates a Badge unlocked after the baseline, once', () => {
+    playRound('client-server', day(20), 100, true)
+    ipc().get() // baseline: first Topic and Perfect Round are history
+    playRound('http', day(22), 60, false)
+    expect(pending().badges).toEqual([])
+    playRound('http', day(23), 100, true)
+    const first = pending()
+    // Same event, so the Badge list order: Foundations complete, then the Comeback on HTTP.
+    expect(first.badges.map((badge) => badge.id)).toEqual(['foundations-completed', 'comeback'])
+    expect(first.badges[0]).toMatchObject({ earned: true, unlockedAt: day(23) })
+    // Reading again does not consume it: only the mark does.
+    expect(pending().badges).toHaveLength(2)
+    ipc().markCelebrated({ badgeIds: ['foundations-completed'], level: null })
+    expect(pending().badges.map((badge) => badge.id)).toEqual(['comeback'])
+    ipc().markCelebrated({ badgeIds: ['comeback'], level: null })
+    expect(pending().badges).toEqual([])
+    // A reload replays nothing.
+    expect(createRewardsIpc(db, { now: () => NOW }).getCelebrations().badges).toEqual([])
+    expect(
+      ipc()
+        .get()
+        .badges.find((badge) => badge.id === 'foundations-completed')!.earned
+    ).toBe(true)
+  })
+
+  it('lists several new Badges in unlock order, the Badge list order on a tie', () => {
+    ipc().get()
+    playRound('client-server', day(20), 50, false)
+    playRound('client-server', day(21), 100, true)
+    expect(pending().badges.map((badge) => badge.id)).toEqual([
+      'first-topic-mastered',
+      'perfect-round',
+      'comeback'
+    ])
+    // A later unlock comes after, whatever its place in the list.
+    playRound('http', day(23), 100, true)
+    expect(pending().badges.map((badge) => badge.id)).toEqual([
+      'first-topic-mastered',
+      'perfect-round',
+      'comeback',
+      'foundations-completed'
+    ])
+  })
+
+  it('celebrates a Level reached after the baseline, once', () => {
+    ipc().get()
+    expect(pending().level).toBeNull()
+    // 8 + 80 + 80 = 168 XP: Level 2 (100 XP).
+    playRound('client-server', day(20), 40, false)
+    playRound('client-server', day(21), 100, true)
+    expect(pending().level).toBeNull()
+    playRound('http', day(22), 100, true)
+    const reached = pending().level
+    expect(reached).toMatchObject({ level: 2, previousLevel: 1 })
+    expect(reached!.level).toBe(ipc().get().level.level)
+    expect(reached!.name).toBe(ipc().get().level.name)
+    ipc().markCelebrated({ badgeIds: [], level: reached!.level })
+    expect(pending().level).toBeNull()
+    expect(createRewardsIpc(db, { now: () => NOW }).getCelebrations().level).toBeNull()
+  })
+
+  it('never marks a Level beyond the one reached, and never lowers it', () => {
+    ipc().get()
+    ipc().markCelebrated({ badgeIds: [], level: 9 })
+    playRound('client-server', day(21), 100, true)
+    playRound('http', day(22), 100, true)
+    // The level reached is below 9, and was not marked as 9: the climb still shows.
+    expect(pending().level).not.toBeNull()
+    const reached = pending().level!.level
+    ipc().markCelebrated({ badgeIds: [], level: reached })
+    ipc().markCelebrated({ badgeIds: [], level: 1 })
+    expect(pending().level).toBeNull()
+  })
+
+  it('validates what the renderer sends', () => {
+    expect(() => ipc().markCelebrated({ badgeIds: [''], level: null })).toThrow()
+    expect(() => ipc().markCelebrated({ badgeIds: [], level: 0 })).toThrow()
+    expect(() => ipc().markCelebrated({ badgeIds: [], level: 1.5 })).toThrow()
+    expect(() => ipc().markCelebrated({ level: null } as never)).toThrow()
+    expect(() => ipc().markCelebrated({ badgeIds: [], level: null, extra: 1 } as never)).toThrow()
+    expect(() => ipc().getCelebrations({ extra: 1 })).toThrow()
+  })
+
+  it('ignores an unknown Badge id when marking', () => {
+    ipc().get()
+    expect(() => ipc().markCelebrated({ badgeIds: ['nope'], level: null })).not.toThrow()
   })
 })

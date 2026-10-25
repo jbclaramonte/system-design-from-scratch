@@ -53,6 +53,7 @@ Single source of truth for domain terms. Use these exact terms in code, schema, 
 | [[XP]] | Points that grow only with mastery: a completed Round (by score, plus a bonus when passed), a Topic's first mastery, a Protocol Step passed, a Design Exercise completed. Never paid for a Declared Mastery, a Forced Unlock, reading a Lesson, asking a question or re-reading, and never twice for the same event. Derived from the history; not a currency. | points, coins, tokens, score (the Round's score is a percent) |
 | [[Level]] | A named step of total XP (Novice to Architect), shown with the progress to the next one. | rank, tier, grade |
 | [[Badge]] | A mark of a mastery milestone with a clear unlock rule (First Topic mastered, Foundations complete, Perfect Round, Comeback, 7-day Activity Streak, First Design Exercise completed); earned with its date or locked with its rule. | achievement, trophy, medal |
+| [[Celebration]] | The short CSS-only moment that marks a passed Round (the XP ticking up), a Level reached or a Badge earned (a card at the corner). Plays once per unlock, never for a failed Round nor for what was earned before the first read, never blocks anything, no sound; the Celebrations setting turns the animation off. | confetti, popup, toast, notification, reward animation |
 
 ## Design practice
 

@@ -13,6 +13,7 @@ Thresholds live in one table, `LEVELS` in `src/shared/rewards.ts`, documented in
 ## Related
 
 - [[XP]], [[Badge]], [[Learning Path]]
+- [[Celebration]] (a Badge earned, a Level reached and a passed Round are celebrated once)
 
 ## In code
 

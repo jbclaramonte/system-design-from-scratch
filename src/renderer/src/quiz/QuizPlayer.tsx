@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { QuestionFeedback, RoundResult, RoundStart } from '../../../shared/quiz'
+import { useRoundOnScreen } from '../celebrations/CelebrationProvider'
 import { useHoldUpdateBanner } from '../update/UpdateProvider'
 import { ClarifyQuestion } from './ClarifyQuestion'
 import { ContestForm } from './ContestForm'
@@ -74,6 +75,8 @@ export function QuizPlayer({
   const { round, quiz } = start
   // An install prompt never interrupts a Round.
   useHoldUpdateBanner()
+  // A Round being played holds the celebrations of Badges and Levels until its results.
+  useRoundOnScreen(null)
   const [feedback, setFeedback] = useState(
     () => new Map(start.answered.map((answered) => [answered.questionId, answered]))
   )
