@@ -119,6 +119,9 @@ gantt
     #65 XP, Levels and Badges                 :done, t4, after t3, 4d
     #66 Celebrations                          :done, t5, after t4, 1d
     #67 Learning Path as a roadmap of nodes   :done, t6, after t5, 3d
+
+    section Maintenance
+    #68 Update vulnerable dependencies        :done, dep1, 2026-10-25, 1d
 ```
 
 ## Dependency table
@@ -192,6 +195,7 @@ gantt
 | #65 | #64, #11, #14, #55 |
 | #66 | #65, #62 |
 | #67 | #62, #30, #17 |
+| #68 | None |
 
 ## Conventions
 
