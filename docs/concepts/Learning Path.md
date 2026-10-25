@@ -5,7 +5,7 @@ tags: [concept, learning-content]
 
 # Learning Path
 
-The linear sequence: [[Foundations Module]], then [[Topic]]s, then [[Design Exercise]]s. Each step unlocks when the previous one is mastered.
+The linear sequence: [[Foundations Module]], then [[Topic]]s, then [[Design Exercise]]s. Each step unlocks when the previous one is mastered. The screen draws it as a roadmap of nodes ([[Learning Path Implementation#Roadmap of nodes]]).
 
 ## Related
 

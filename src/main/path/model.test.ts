@@ -24,6 +24,7 @@ const topic = (
   mastery,
   declared: false,
   canUndoDeclaration: false,
+  roundNumber: 1,
   everMastered: mastery === 'mastered',
   ...changes
 })

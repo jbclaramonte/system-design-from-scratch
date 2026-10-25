@@ -645,6 +645,37 @@ async function phaseOne() {
   )
 
   await check(
+    'Learning Path roadmap: one named control on the current node, locked nodes are not controls, the filter works',
+    async () => {
+      const state = await c.evaluate(`JSON.stringify({
+        label: ${c.testId('path-continue')}.getAttribute('aria-label'),
+        current: document.querySelectorAll('[aria-current="step"]').length,
+        lockedControls: document.querySelectorAll('.path-node-locked button.path-node-main').length,
+        locked: document.querySelectorAll('.path-node-locked').length,
+        next: ${c.testId('path-strip-next')}.textContent.replace(/\\s+/g, ' '),
+        sections: [...document.querySelectorAll('.path-section h2')].map((h) => h.textContent)
+      })`)
+      const parsed = JSON.parse(state)
+      assert(/\. Not started\. .*Start$/.test(parsed.label), `current node name: ${parsed.label}`)
+      assert(parsed.current === 1, `${parsed.current} current nodes`)
+      assert(parsed.locked === EXPECTED_TOPICS - 1 + 8, `${parsed.locked} locked nodes`)
+      assert(parsed.lockedControls === 0, 'a locked node is a button')
+      assert(/^Next milestone/.test(parsed.next), `strip: ${parsed.next}`)
+      assert(
+        JSON.stringify(parsed.sections) ===
+          JSON.stringify(['Foundations Module', 'Primer topics', 'Design Exercises']),
+        `sections: ${parsed.sections}`
+      )
+      await c.click('path-filter-design_exercises')
+      const filtered = await c.evaluate(
+        `JSON.stringify([...document.querySelectorAll('.path-section h2')].map((h) => h.textContent))`
+      )
+      assert(filtered === JSON.stringify(['Design Exercises']), `filtered: ${filtered}`)
+      await c.click('path-filter-all')
+    }
+  )
+
+  await check(
     'Streak card on a fresh install: "Start your streak", goal of 1 Round, nothing done',
     async () => {
       await c.waitFor(`!!${c.testId('activity-card')}`, 'the Streak card')

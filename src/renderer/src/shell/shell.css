@@ -72,6 +72,17 @@
   color: var(--color-text-secondary);
 }
 
+/* A very narrow window: tighter items, so the header never scrolls sideways (#67). */
+@media (max-width: 480px) {
+  .shell-nav {
+    gap: 0;
+  }
+
+  .shell-nav-item {
+    padding: 0.3rem 0.3rem;
+  }
+}
+
 .shell-nav-item[aria-current='page'] {
   border-color: var(--color-nav-active-border);
   background: var(--color-nav-active-fill);

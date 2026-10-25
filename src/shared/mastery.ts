@@ -94,6 +94,8 @@ export interface TopicMasterySummary extends TopicSummary {
   declared: boolean
   /** The Declared Mastery can be undone (see `MasteryState.canUndoDeclaration`). */
   canUndoDeclaration: boolean
+  /** The Round being played or the next one (see `MasteryState.roundNumber`): "Round 2" on a path node. */
+  roundNumber: number
 }
 
 /** Latest score of a notion: the most recent completed round that tested it. */

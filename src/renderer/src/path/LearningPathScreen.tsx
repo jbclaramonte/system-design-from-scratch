@@ -1,11 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
-import {
-  learningPathSections,
-  type DesignExerciseStep,
-  type LearningPath,
-  type LearningPathStep,
-  type LearningPathStepStatus,
-  type TopicStep
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import type {
+  DesignExerciseStep,
+  LearningPath,
+  LearningPathStep,
+  TopicStep
 } from '../../../shared/learningPath'
 import type { TopicMasterySummary } from '../../../shared/mastery'
 import { ActivityCard } from '../activity/ActivityCard'
@@ -14,74 +12,27 @@ import { errorMessage } from '../quiz/errorMessage'
 import { LevelCard } from '../rewards/LevelCard'
 import './path.css'
 import {
-  actionLabel,
   canDeclareTopic,
   canForceUnlock,
   canLockAgain,
   canOpenExercise,
-  continueLabel,
-  filteredSections,
   forcedUnlockConfirmation,
   forcedUnlockNote,
   lockMessage,
-  noNextStepText,
   pathFilterLabels,
   pathFilters,
-  prerequisiteText,
-  priorityDetails,
-  progressText,
-  recommendedStep,
-  sectionCounter,
-  sectionTitles,
   showsForcedUnlock,
-  statusChipVariant,
-  statusLabel,
   statusNote,
-  stepTitle,
-  topicCounters,
   topicStepBySlug,
   type PathFilter
 } from './pathText'
+import { NodeFace, PathStrip, SectionGlyph, SectionStateChip } from './PathParts'
+import { buildPathView, type NodeView } from './pathView'
 
 type OpenTopic = (topic: TopicMasterySummary) => void
 type SetPath = (path: LearningPath) => void
 /** Opens a Design Exercise (`design_exercises.id`). */
 type OpenExercise = (designExerciseId: number) => void
-
-const chipClass = (status: LearningPathStepStatus): string => {
-  const variant = statusChipVariant[status]
-  return `chip chip-dot${variant === 'neutral' ? '' : ` chip-${variant}`}`
-}
-
-function StatusChip({ step, testId }: { step: LearningPathStep; testId?: string }) {
-  return (
-    <span className={chipClass(step.status)} data-testid={testId}>
-      {statusLabel(step)}
-    </span>
-  )
-}
-
-/** The circle before a title. Decorative: the status chip carries the status in words. */
-function StatusMark({ status }: { status: LearningPathStepStatus }) {
-  return (
-    <span className={`status-mark status-mark-${statusChipVariant[status]}`} aria-hidden="true">
-      <svg viewBox="0 0 20 20" width="20" height="20" fill="none">
-        <circle cx="10" cy="10" r="9" className="status-mark-ring" />
-        {(status === 'mastered' || status === 'completed') && (
-          <path d="M6 10.5l2.8 2.8L14 7.5" className="status-mark-glyph" />
-        )}
-        {status === 'in_progress' && <circle cx="10" cy="10" r="3" className="status-mark-dot" />}
-        {status === 'limit_reached' && (
-          <path d="M10 6v5M10 13.4v.1" className="status-mark-glyph" />
-        )}
-        {status === 'skipped' && <path d="M7 10h6" className="status-mark-glyph" />}
-        {status === 'locked' && (
-          <path d="M7.5 9V7.7a2.5 2.5 0 015 0V9M7 9h6v4.5H7z" className="status-mark-glyph" />
-        )}
-      </svg>
-    </span>
-  )
-}
 
 /** The marker of a step opened by a Forced Unlock. */
 function ForcedUnlockChip({ step }: { step: LearningPathStep }) {
@@ -251,16 +202,47 @@ function ForcedUnlockActions({
   )
 }
 
-function TopicStepItem({
+/** The one control of a node: a button over the whole card, or an inert block for a locked step. */
+function NodeMain({
+  node,
+  onOpen,
+  children
+}: {
+  node: NodeView
+  onOpen: (() => void) | null
+  children: ReactNode
+}) {
+  return onOpen ? (
+    <button
+      type="button"
+      className="card-clickable-main path-node-main"
+      aria-label={node.accessibleName}
+      data-testid={node.current ? 'path-continue' : undefined}
+      onClick={onOpen}
+    >
+      <NodeFace node={node}>{children}</NodeFace>
+    </button>
+  ) : (
+    <div className="card-clickable-main path-node-main" aria-disabled="true">
+      <NodeFace node={node}>{children}</NodeFace>
+    </div>
+  )
+}
+
+function nodeClass(node: NodeView): string {
+  return `path-node path-node-${node.status}${node.current ? ' path-node-current' : ''}`
+}
+
+function TopicNode({
   step,
+  node,
   path,
-  recommended,
   onOpenTopic,
   onPath
 }: {
   step: TopicStep
+  node: NodeView
   path: LearningPath
-  recommended: boolean
   onOpenTopic: OpenTopic
   onPath: SetPath
 }) {
@@ -268,217 +250,98 @@ function TopicStepItem({
   const note = statusNote(step)
   // A lock message names the topic to master: offer to open it unless it is locked too.
   const blocker = step.lockedBy && topicStepBySlug(path, step.lockedBy.slug)
-  const title = (
-    <>
-      <StatusMark status={step.status} />
-      <span className="path-step-title">{step.topic.title}</span>
-      <span className="path-step-chips">
-        {!step.topic.grounded && (
-          <span
-            className="chip chip-attention"
-            title="Foundations Module: generated from general knowledge, not checked against the primer"
-          >
-            Outside the primer
-          </span>
-        )}
-        <DeclaredChip step={step} />
-        <ForcedUnlockChip step={step} />
-        <StatusChip step={step} testId="path-status" />
-      </span>
-    </>
+  const chips = (
+    <span className="path-node-chips">
+      {!step.topic.grounded && (
+        <span
+          className="chip chip-attention"
+          title="Foundations Module: generated from general knowledge, not checked against the primer"
+        >
+          Outside the primer
+        </span>
+      )}
+      <DeclaredChip step={step} />
+      <ForcedUnlockChip step={step} />
+    </span>
   )
   return (
     <li
-      className={`card card-clickable path-step path-step-${step.status}`}
+      className={nodeClass(node)}
       data-step={step.key}
-      aria-current={recommended ? 'step' : undefined}
+      aria-current={node.current ? 'step' : undefined}
     >
-      {step.status === 'locked' ? (
-        <div className="card-clickable-main" aria-disabled="true">
-          {title}
-        </div>
-      ) : (
-        <button
-          type="button"
-          className="card-clickable-main"
-          onClick={() => onOpenTopic(step.topic)}
+      <div className="card card-clickable path-step">
+        <NodeMain
+          node={node}
+          onOpen={step.status === 'locked' ? null : () => onOpenTopic(step.topic)}
         >
-          {title}
-        </button>
-      )}
-      {lock && (
-        <p className="path-step-note" data-testid="path-lock-message">
-          <span>{lock}</span>
-          {blocker && blocker.status !== 'locked' && blocker.status !== 'mastered' && (
-            <button
-              type="button"
-              className="btn btn-sm card-clickable-action"
-              onClick={() => onOpenTopic(blocker.topic)}
-            >
-              Go to {blocker.topic.title}
-            </button>
+          {chips}
+        </NodeMain>
+        <div className="path-node-extras">
+          {lock && (
+            <p className="path-step-note" data-testid="path-lock-message">
+              <span>{lock}</span>
+              {blocker && blocker.status !== 'locked' && blocker.status !== 'mastered' && (
+                <button
+                  type="button"
+                  className="btn btn-sm card-clickable-action"
+                  onClick={() => onOpenTopic(blocker.topic)}
+                >
+                  Go to {blocker.topic.title}
+                </button>
+              )}
+            </p>
           )}
-        </p>
-      )}
-      {note && (
-        <p className="path-step-note" data-testid="path-status-note">
-          <span>{note}</span>
-        </p>
-      )}
-      <ForcedUnlockActions step={step} onPath={onPath} />
-      <DeclaredMasteryActions step={step} />
+          {note && (
+            <p className="path-step-note" data-testid="path-status-note">
+              <span>{note}</span>
+            </p>
+          )}
+          <ForcedUnlockActions step={step} onPath={onPath} />
+          <DeclaredMasteryActions step={step} />
+        </div>
+      </div>
     </li>
   )
 }
 
-function ExerciseStepItem({
+function ExerciseNode({
   step,
-  recommended,
+  node,
   onOpenExercise,
   onPath
 }: {
   step: DesignExerciseStep
-  recommended: boolean
+  node: NodeView
   onOpenExercise: OpenExercise
   onPath: SetPath
 }) {
   const lock = lockMessage(step)
   const id = canOpenExercise(step) ? step.designExerciseId : null
-  const prerequisites = prerequisiteText(step)
-  const title = (
-    <>
-      <span className="path-step-title">{step.title}</span>
-      <span className="path-step-chips">
-        <ForcedUnlockChip step={step} />
-        <StatusChip step={step} testId="path-status" />
-      </span>
-    </>
+  const chips = (
+    <span className="path-node-chips">
+      <ForcedUnlockChip step={step} />
+    </span>
   )
   return (
     <li
-      className={`card card-clickable path-step path-exercise path-step-${step.status}`}
+      className={`${nodeClass(node)} path-exercise`}
       data-step={step.key}
-      aria-current={recommended ? 'step' : undefined}
+      aria-current={node.current ? 'step' : undefined}
     >
-      {id !== null ? (
-        <button type="button" className="card-clickable-main" onClick={() => onOpenExercise(id)}>
-          {title}
-        </button>
-      ) : (
-        <div className="card-clickable-main" aria-disabled="true">
-          {title}
-        </div>
-      )}
-      {prerequisites && <p className="label-mono path-prerequisites">{prerequisites}</p>}
-      {(lock || !prerequisites) && (
-        <p className="path-step-note" data-testid={lock ? 'path-lock-message' : undefined}>
-          <span>{lock ?? 'Prerequisites mastered.'}</span>
-        </p>
-      )}
-      <ForcedUnlockActions step={step} onPath={onPath} />
-      <p className="path-rationale">{step.rationale}</p>
-    </li>
-  )
-}
-
-/** The hero card: mastered topics of all topics, the percentage, the bar and the counters. */
-function ProgressHero({ path }: { path: LearningPath }) {
-  const { masteredTopics, totalTopics, percent } = path.progress
-  const counters = topicCounters(path)
-  const items = [
-    { key: 'mastered', label: 'Mastered', value: counters.mastered },
-    { key: 'progress', label: 'In progress', value: counters.inProgress },
-    {
-      key: 'error',
-      label: 'Retry required',
-      value: counters.retryRequired,
-      hint: 'Topics at the Round Limit'
-    },
-    { key: 'locked', label: 'Locked', value: counters.locked }
-  ]
-  return (
-    <section className="card card-elevated path-hero" aria-labelledby="path-hero-label">
-      <div className="path-hero-head">
-        <div>
-          <h2 id="path-hero-label" className="label-caps">
-            Overall progress
-          </h2>
-          <p className="path-hero-count" data-testid="path-progress-text">
-            <strong>{masteredTopics}</strong>
-            <span className="path-hero-total"> / {totalTopics}</span>
-            <span className="path-hero-unit">topics mastered</span>
+      <div className="card card-clickable path-step">
+        <NodeMain node={node} onOpen={id !== null ? () => onOpenExercise(id) : null}>
+          {chips}
+        </NodeMain>
+        <div className="path-node-extras">
+          <p className="path-step-note" data-testid={lock ? 'path-lock-message' : undefined}>
+            <span>{lock ?? 'Prerequisites mastered.'}</span>
           </p>
+          <ForcedUnlockActions step={step} onPath={onPath} />
+          <p className="path-rationale">{step.rationale}</p>
         </div>
-        <p className="path-hero-percent">{percent}%</p>
       </div>
-      <div
-        className={`progress${percent === 100 ? ' progress-complete' : ''}`}
-        role="progressbar"
-        aria-label={progressText(path.progress)}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={percent}
-      >
-        <div className="progress-fill" style={{ width: `${percent}%` }} />
-      </div>
-      <dl className="path-counters">
-        {items.map((item) => (
-          <div key={item.key} className="stat stat-md path-counter" title={item.hint}>
-            <dt className={`label-caps path-counter-label path-counter-${item.key}`}>
-              {item.label}
-            </dt>
-            <dd className="stat-value">{item.value}</dd>
-          </div>
-        ))}
-      </dl>
-    </section>
-  )
-}
-
-/** The recommended next step with its call to action. */
-function CurrentPriority({
-  path,
-  onOpenTopic,
-  onOpenExercise
-}: {
-  path: LearningPath
-  onOpenTopic: OpenTopic
-  onOpenExercise: OpenExercise
-}) {
-  const next = recommendedStep(path)
-  const actionable = next && (next.kind === 'topic' || next.designExerciseId !== null)
-  return (
-    <section className="card card-elevated path-priority" aria-labelledby="path-priority-label">
-      <h2 id="path-priority-label" className="label-caps">
-        Current priority
-      </h2>
-      {next && actionable ? (
-        <div className="path-priority-body">
-          <div className="path-priority-text">
-            <p className="path-priority-title">{stepTitle(next)}</p>
-            <p className="path-priority-details muted">{priorityDetails(next).join(' · ')}</p>
-          </div>
-          <StatusChip step={next} />
-          <button
-            type="button"
-            className="btn btn-primary"
-            data-testid="path-continue"
-            aria-label={continueLabel(next)}
-            onClick={() =>
-              next.kind === 'topic'
-                ? onOpenTopic(next.topic)
-                : onOpenExercise(next.designExerciseId!)
-            }
-          >
-            {actionLabel(next)}
-          </button>
-        </div>
-      ) : (
-        <p className="path-priority-title" data-testid="path-no-next">
-          {next ? stepTitle(next) : noNextStepText(path)}
-        </p>
-      )}
-    </section>
+    </li>
   )
 }
 
@@ -507,18 +370,18 @@ export function LearningPathScreen({
   }, [])
 
   const heading = (
-    <header className="path-header">
+    <div className="path-title">
       <h1>Learning Path</h1>
       <p className="muted">
         Foundations, primer topics and Design Exercises: each step unlocks once the previous one is
         mastered.
       </p>
-    </header>
+    </div>
   )
   if (error) {
     return (
       <div className="path-screen">
-        {heading}
+        <header className="path-header">{heading}</header>
         <p role="alert">Could not load the Learning Path: {error}</p>
       </div>
     )
@@ -526,76 +389,85 @@ export function LearningPathScreen({
   if (!path) {
     return (
       <div className="path-screen">
-        {heading}
+        <header className="path-header">{heading}</header>
         <p>Loading the Learning Path...</p>
       </div>
     )
   }
 
-  const shown = filteredSections(filter)
+  const view = buildPathView(path, filter)
+  const stepOf = (key: string) => path.steps.find((step) => step.key === key)!
   return (
     <div className="path-screen" data-testid="learning-path">
-      {heading}
-      <div className="path-overview">
-        <div className="path-overview-main">
-          <ProgressHero path={path} />
-          <CurrentPriority path={path} onOpenTopic={onOpenTopic} onOpenExercise={onOpenExercise} />
+      <header className="path-header">
+        {heading}
+        <PathStrip strip={view.strip} />
+      </header>
+      <div className="path-layout">
+        <div className="path-main">
+          <div className="tabs" role="group" aria-label="Filter the Learning Path">
+            {pathFilters.map((value) => (
+              <button
+                key={value}
+                type="button"
+                className="tab"
+                aria-pressed={filter === value}
+                data-testid={`path-filter-${value}`}
+                onClick={() => setFilter(value)}
+              >
+                {pathFilterLabels[value]}
+              </button>
+            ))}
+          </div>
+          {view.sections.map((section) => (
+            <section
+              key={section.section}
+              className={`path-section${section.current ? ' path-section-current' : ''}`}
+              aria-labelledby={`path-${section.section}`}
+            >
+              <div className="card path-section-head">
+                <span className="icon-tile icon-tile-neutral" aria-hidden="true">
+                  <SectionGlyph />
+                </span>
+                <div className="path-section-text">
+                  <h2 id={`path-${section.section}`}>{section.title}</h2>
+                  <p className="label-mono muted" data-testid={`path-counter-${section.section}`}>
+                    {section.counter}
+                  </p>
+                </div>
+                <SectionStateChip state={section.state} />
+              </div>
+              <ol className="path-nodes">
+                {section.nodes.map((node) => {
+                  const step = stepOf(node.key)
+                  return step.kind === 'topic' ? (
+                    <TopicNode
+                      key={node.key}
+                      step={step}
+                      node={node}
+                      path={path}
+                      onOpenTopic={onOpenTopic}
+                      onPath={setPath}
+                    />
+                  ) : (
+                    <ExerciseNode
+                      key={node.key}
+                      step={step}
+                      node={node}
+                      onOpenExercise={onOpenExercise}
+                      onPath={setPath}
+                    />
+                  )
+                })}
+              </ol>
+            </section>
+          ))}
         </div>
-        <div className="path-aside">
+        <aside className="path-aside" aria-label="Level and streak">
           <LevelCard />
           <ActivityCard />
-        </div>
+        </aside>
       </div>
-      <div className="tabs" role="group" aria-label="Filter the Learning Path">
-        {pathFilters.map((value) => (
-          <button
-            key={value}
-            type="button"
-            className="tab"
-            aria-pressed={filter === value}
-            data-testid={`path-filter-${value}`}
-            onClick={() => setFilter(value)}
-          >
-            {pathFilterLabels[value]}
-          </button>
-        ))}
-      </div>
-      {learningPathSections.map((section) => {
-        const steps = path.steps.filter((step) => step.section === section)
-        if (steps.length === 0 || !shown.includes(section)) return null
-        return (
-          <section key={section} className="path-section" aria-labelledby={`path-${section}`}>
-            <div className="path-section-head">
-              <h2 id={`path-${section}`}>{sectionTitles[section]}</h2>
-              <p className="label-mono muted" data-testid={`path-counter-${section}`}>
-                {sectionCounter(path, section)}
-              </p>
-            </div>
-            <ol className={`path-steps${section === 'design_exercises' ? ' path-steps-grid' : ''}`}>
-              {steps.map((step) =>
-                step.kind === 'topic' ? (
-                  <TopicStepItem
-                    key={step.key}
-                    step={step}
-                    path={path}
-                    recommended={step.key === path.nextStepKey}
-                    onOpenTopic={onOpenTopic}
-                    onPath={setPath}
-                  />
-                ) : (
-                  <ExerciseStepItem
-                    key={step.key}
-                    step={step}
-                    recommended={step.key === path.nextStepKey}
-                    onOpenExercise={onOpenExercise}
-                    onPath={setPath}
-                  />
-                )
-              )}
-            </ol>
-          </section>
-        )
-      })}
     </div>
   )
 }

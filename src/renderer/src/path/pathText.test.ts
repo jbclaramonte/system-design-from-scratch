@@ -6,25 +6,20 @@ import type {
   TopicStep
 } from '../../../shared/learningPath'
 import {
-  actionLabel,
   canDeclareTopic,
   canForceUnlock,
   canLockAgain,
   canOpenExercise,
-  continueLabel,
   filteredSections,
   forcedUnlockConfirmation,
   forcedUnlockNote,
   lockMessage,
   noNextStepText,
   prerequisiteText,
-  priorityDetails,
   progressText,
   sectionCounter,
   showsForcedUnlock,
-  statusLabel,
-  statusNote,
-  topicCounters
+  statusNote
 } from './pathText'
 
 const topicStep = (
@@ -45,7 +40,8 @@ const topicStep = (
     notionCount: 0,
     mastery: 'not_started',
     declared: false,
-    canUndoDeclaration: false
+    canUndoDeclaration: false,
+    roundNumber: 1
   },
   status,
   lockedBy,
@@ -76,24 +72,6 @@ const ref = (title: string, status: LearningPathStepStatus = 'available') => ({
   slug: title.toLowerCase(),
   title,
   status
-})
-
-describe('continueLabel', () => {
-  it('says start, continue or come back depending on the status', () => {
-    expect(continueLabel(topicStep('available'))).toBe('Start: Cache')
-    expect(continueLabel(topicStep('in_progress'))).toBe('Continue: Cache')
-    expect(continueLabel(topicStep('skipped'))).toBe('Come back to Cache with another angle')
-    expect(continueLabel(topicStep('limit_reached'))).toBe('Choose how to go on with Cache')
-  })
-})
-
-describe('actionLabel', () => {
-  it('is the short form of the continue label', () => {
-    expect(actionLabel(topicStep('available'))).toBe('Start')
-    expect(actionLabel(topicStep('in_progress'))).toBe('Continue')
-    expect(actionLabel(topicStep('skipped'))).toBe('Come back')
-    expect(actionLabel(topicStep('limit_reached'))).toBe('Choose how to go on')
-  })
 })
 
 describe('lockMessage', () => {
@@ -197,15 +175,6 @@ describe('filters and counters', () => {
     expect(filteredSections('design_exercises')).toEqual(['design_exercises'])
   })
 
-  it('counts the topics of the hero card, Design Exercises left out', () => {
-    expect(topicCounters(path)).toEqual({
-      mastered: 2,
-      inProgress: 1,
-      retryRequired: 1,
-      locked: 2
-    })
-  })
-
   it('counts mastered topics per section and completed Design Exercises', () => {
     expect(sectionCounter(path, 'foundations')).toBe('2/2 mastered')
     expect(sectionCounter(path, 'primer')).toBe('0/5 mastered')
@@ -214,13 +183,6 @@ describe('filters and counters', () => {
 })
 
 describe('status texts', () => {
-  it('calls a startable Design Exercise ready, a topic not started', () => {
-    expect(statusLabel(exerciseStep([], { status: 'available' }))).toBe('Ready to start')
-    expect(statusLabel(exerciseStep([], { status: 'locked' }))).toBe('Locked')
-    expect(statusLabel(topicStep('available'))).toBe('Not started')
-    expect(statusLabel(topicStep('limit_reached'))).toBe('Round Limit reached')
-  })
-
   it('explains a topic at the Round Limit or skipped, and nothing else', () => {
     expect(statusNote(topicStep('limit_reached'))).toContain('Round Limit reached')
     expect(statusNote(topicStep('skipped'))).toContain('another angle')
@@ -234,14 +196,6 @@ describe('status texts', () => {
       '2 of 3 prerequisites mastered'
     )
     expect(prerequisiteText(exerciseStep([]))).toBeNull()
-  })
-
-  it('details the priority step with real data only', () => {
-    expect(priorityDetails(topicStep('available'))).toEqual(['Primer topic'])
-    const withNotions = topicStep('in_progress')
-    withNotions.topic.notionCount = 5
-    expect(priorityDetails(withNotions)).toEqual(['Primer topic', '5 notions'])
-    expect(priorityDetails(exerciseStep([], { rationale: 'A cache.' }))).toEqual(['A cache.'])
   })
 })
 

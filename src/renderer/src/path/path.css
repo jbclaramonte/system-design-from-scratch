@@ -1,6 +1,6 @@
-/* Learning Path screen (#30). Tokens and shared classes (.card, .chip, .progress, .btn, .stat,
-   .tabs, .card-clickable, .status-mark, .label-caps, .label-mono) come from styles/; this file
-   only lays the screen out. */
+/* Learning Path screen (#30, redrawn as a roadmap of nodes in #67). Tokens and shared classes
+   (.card, .chip, .progress, .btn, .tabs, .card-clickable, .icon-tile, .status-mark, .label-caps,
+   .label-mono) come from styles/; this file only lays the screen out. */
 
 .path-screen {
   display: flex;
@@ -9,21 +9,93 @@
   padding-bottom: var(--space-xl);
 }
 
-.path-header h1 {
+.path-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-md) var(--space-lg);
+}
+
+.path-title {
+  flex: 1 1 22rem;
+  min-width: 0;
+}
+
+.path-title h1 {
   margin: 0 0 var(--space-xs);
   font-size: var(--type-headline-lg-size);
   line-height: var(--type-headline-lg-line);
 }
 
-.path-header p {
+.path-title p {
   margin: 0;
 }
 
-.path-overview {
+/* Header strip: global progress and the next milestone. */
+
+.path-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  min-width: 0;
+}
+
+.path-strip-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  min-width: 11rem;
+  max-width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-base);
+}
+
+.path-strip-label {
+  color: var(--color-text-secondary);
+}
+
+.path-strip-value {
+  font-family: var(--font-mono);
+  font-size: var(--type-body-md-size);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.path-strip-value strong {
+  font-size: var(--type-headline-sm-size);
+}
+
+.path-strip-total,
+.path-strip-unit {
+  color: var(--color-text-secondary);
+  font-weight: 400;
+}
+
+.path-strip-next {
+  max-width: 22rem;
+}
+
+.path-strip-bar {
+  display: block;
+}
+
+/* Layout: the path, and the side panel (Level, Streak and Daily Goal). */
+
+.path-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 19rem;
   align-items: start;
-  gap: var(--space-md);
+  gap: var(--space-lg);
+}
+
+.path-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  min-width: 0;
 }
 
 .path-aside {
@@ -33,212 +105,211 @@
   min-width: 0;
 }
 
-.path-overview-main {
+/* Sections: a header card (icon, title, count, state) over a well of nodes. */
+
+.path-section {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
-  min-width: 0;
-}
-
-/* Hero progress card */
-
-.path-hero {
-  padding: var(--space-lg);
-}
-
-.path-hero h2,
-.path-priority h2 {
-  margin: 0;
-}
-
-.path-hero-head {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: var(--space-md);
-  margin-bottom: var(--space-md);
-}
-
-.path-hero-count {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-sm);
-  margin: var(--space-xs) 0 0;
-  font-family: var(--font-mono);
-}
-
-.path-hero-count strong {
-  font-size: var(--type-headline-xl-size);
-  line-height: var(--type-headline-xl-line);
-  letter-spacing: var(--type-headline-xl-tracking);
-  font-weight: var(--type-headline-xl-weight);
-}
-
-.path-hero-total {
-  color: var(--color-text-secondary);
-  font-size: var(--type-headline-md-size);
-}
-
-.path-hero-unit {
-  margin-left: var(--space-xs);
-  color: var(--color-text-secondary);
-  font-family: var(--font-sans);
-  font-size: var(--type-body-md-size);
-}
-
-.path-hero-percent {
-  margin: 0;
-  color: var(--color-mastered-text);
-  font-family: var(--font-mono);
-  font-size: var(--type-headline-lg-size);
-  line-height: var(--type-headline-lg-line);
-  font-weight: var(--type-headline-lg-weight);
-}
-
-.path-counters {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  margin: var(--space-lg) 0 0;
-  padding-top: var(--space-md);
-  border-top: 1px solid var(--color-border-hairline);
-}
-
-.path-counter {
-  flex-direction: column-reverse;
-  padding: 0 var(--space-md);
-  border-left: 1px solid var(--color-border-hairline);
-}
-
-.path-counter:first-child {
-  padding-left: 0;
-  border-left: 0;
-}
-
-.path-counter-label {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-}
-
-.path-counter-label::before {
-  content: '';
-  flex: none;
-  width: 6px;
-  height: 6px;
-  border-radius: var(--radius-pill);
-  background: var(--color-locked);
-}
-
-.path-counter-mastered::before {
-  background: var(--color-mastered);
-  box-shadow: var(--glow-mastered);
-}
-
-.path-counter-progress::before {
-  background: var(--color-progress-text);
-  box-shadow: var(--glow-progress);
-}
-
-.path-counter-error::before {
-  background: var(--color-error);
-}
-
-/* Current priority card */
-
-.path-priority {
-  padding: var(--space-md) var(--space-lg);
-  border-left: 2px solid var(--color-progress);
-}
-
-.path-priority-body {
-  display: flex;
-  align-items: center;
-  gap: var(--space-md);
-  margin-top: var(--space-sm);
-}
-
-.path-priority-text {
-  flex: 1;
-  min-width: 0;
-}
-
-.path-priority-title {
-  margin: 0;
-  font-size: var(--type-headline-sm-size);
-  line-height: var(--type-headline-sm-line);
-  letter-spacing: var(--type-headline-sm-tracking);
-  font-weight: 600;
-}
-
-.path-priority-details {
-  margin: var(--space-2xs) 0 0;
-  font-size: var(--type-body-md-size);
-}
-
-.path-priority > .path-priority-title {
-  margin-top: var(--space-sm);
-}
-
-/* Sections and steps */
-
-.path-section {
-  margin-top: var(--space-md);
 }
 
 .path-section-head {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-md);
-  margin-bottom: var(--space-md);
-}
-
-.path-section-head h2 {
-  margin: 0;
-  font-size: var(--type-headline-md-size);
-  line-height: var(--type-headline-md-line);
-}
-
-.path-section-head p {
-  margin: 0;
-}
-
-.path-steps {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-sm);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.path-steps-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: center;
   gap: var(--space-md);
 }
 
-.path-step[aria-current='step'] {
+.path-section-current .path-section-head {
   border-color: var(--color-progress-border);
   box-shadow: var(--glow-progress);
 }
 
-.path-step-locked,
-.path-step-coming_soon {
+.path-section-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.path-section-text h2 {
+  margin: 0;
+  font-size: var(--type-headline-md-size);
+  line-height: var(--type-headline-md-line);
+  overflow-wrap: anywhere;
+}
+
+.path-section-text p {
+  margin: 0;
+}
+
+/* The path: nodes in a well, linked by a dashed line (decorative, behind the cards). The nodes
+   zigzag a little on a wide screen; on a narrow one they are a single column. */
+
+.path-nodes {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  margin: 0;
+  padding: var(--space-lg);
+  list-style: none;
+  border-radius: var(--radius-xl);
+  background: color-mix(in srgb, var(--color-surface-subtle) 45%, transparent);
+}
+
+.path-nodes::before {
+  content: '';
+  position: absolute;
+  top: var(--space-lg);
+  bottom: var(--space-lg);
+  left: 50%;
+  border-left: 2px dashed var(--color-border-active);
+  pointer-events: none;
+}
+
+.path-node {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+}
+
+.path-node:nth-child(odd) {
+  margin-right: 3rem;
+}
+
+.path-node:nth-child(even) {
+  margin-left: 3rem;
+}
+
+.path-step {
+  padding: var(--space-md);
+}
+
+.path-node-current .path-step {
+  padding: var(--space-lg) var(--space-md);
+  border-color: var(--color-progress-border);
+  box-shadow: var(--glow-progress);
+}
+
+.path-node-locked .path-step,
+.path-node-coming_soon .path-step {
   background: var(--color-canvas);
 }
 
-.path-step-title {
+.path-node-main {
+  align-items: flex-start;
+}
+
+.path-node-tile {
+  position: relative;
+  overflow: visible;
+}
+
+.path-node-mark {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-base);
+}
+
+.path-node-body {
+  display: flex;
   flex: 1;
+  flex-direction: column;
+  gap: var(--space-2xs);
   min-width: 0;
+}
+
+/* The status line is above the title and the chips below it: nothing overlaps the title. */
+
+.path-node-eyebrow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-xs);
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+}
+
+.path-node-status {
+  font-weight: 600;
+}
+
+.path-node-status-mastered {
+  color: var(--color-mastered-text);
+}
+
+.path-node-status-progress {
+  color: var(--color-progress-text);
+}
+
+.path-node-status-attention {
+  color: var(--color-attention-text);
+}
+
+.path-node-title {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.path-node-locked .path-node-title,
+.path-node-coming_soon .path-node-title {
+  color: var(--color-text-secondary);
   font-weight: 500;
 }
 
-.path-step-chips {
+.path-node-detail {
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-sm-size);
+  line-height: var(--type-body-sm-line);
+}
+
+.path-node-chips {
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: var(--space-sm);
+  gap: var(--space-xs);
+}
+
+.path-node-chips:empty {
+  display: none;
+}
+
+.path-node-chips:not(:empty) {
+  margin-top: var(--space-xs);
+}
+
+/* The action: a quiet label on every node, the primary button on the current one. */
+
+.path-node-action {
+  flex: none;
+  align-self: center;
+  color: var(--color-text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--type-label-mono-size);
+  text-transform: uppercase;
+  letter-spacing: var(--type-label-mono-tracking);
+}
+
+.path-node-action:not(.btn)::after {
+  content: ' \203a';
+}
+
+.path-node-action.btn {
+  pointer-events: none;
+}
+
+.path-node-extras {
+  margin-left: calc(2.5rem + var(--space-md));
+}
+
+.path-node-extras:empty {
+  display: none;
+}
+
+.path-node-extras > * + * {
+  margin-top: var(--space-sm);
+}
+
+.path-node-extras > :first-child {
+  margin-top: var(--space-sm);
 }
 
 /* Reason lines */
@@ -248,42 +319,19 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-sm) var(--space-md);
-  margin: var(--space-sm) 0 0 calc(20px + var(--space-md));
+  margin: 0;
   color: var(--color-text-secondary);
   font-size: var(--type-body-md-size);
 }
 
-.path-exercise .card-clickable-main {
-  align-items: flex-start;
-}
-
-.path-exercise .path-step-note,
-.path-exercise .path-prerequisites,
-.path-exercise .path-rationale {
-  margin-left: 0;
-}
-
-.path-prerequisites {
-  margin: var(--space-sm) 0 0;
-  color: var(--color-text-secondary);
-}
-
 .path-rationale {
-  margin: var(--space-sm) 0 0;
+  margin: 0;
   color: var(--color-text-muted);
   font-size: var(--type-body-sm-size);
   line-height: var(--type-body-sm-line);
 }
 
 /* Forced Unlock: the button under a lock message, its confirmation, the note of an opened step. */
-
-.path-unlock {
-  margin: var(--space-sm) 0 0 calc(20px + var(--space-md));
-}
-
-.path-exercise .path-unlock {
-  margin-left: 0;
-}
 
 .path-unlock .path-step-note {
   margin: 0;
@@ -315,27 +363,78 @@
 }
 
 @media (max-width: 900px) {
-  .path-overview {
+  .path-layout {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* The side panel has nothing to focus: it can sit above the path on a narrow window. */
+  .path-aside {
+    order: -1;
   }
 }
 
 @media (max-width: 760px) {
-  .path-counters {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    row-gap: var(--space-md);
+  .path-strip {
+    width: 100%;
   }
 
-  .path-counter:nth-child(odd) {
-    padding-left: 0;
-    border-left: 0;
+  .path-strip-item {
+    flex: 1 1 100%;
   }
 
-  .path-priority-body {
+  .path-nodes {
+    padding: var(--space-md);
+  }
+
+  .path-nodes::before {
+    left: calc(var(--space-md) + 1.25rem);
+  }
+
+  .path-node:nth-child(odd),
+  .path-node:nth-child(even) {
+    margin-right: 0;
+    margin-left: 0;
+  }
+
+  .path-node-main {
     flex-wrap: wrap;
   }
 
-  .path-steps-grid {
-    grid-template-columns: minmax(0, 1fr);
+  /* The action drops under the text instead of squeezing the title into a narrow column. */
+  .path-node-body {
+    flex: 1 1 12rem;
+  }
+
+  .path-node-action {
+    align-self: flex-start;
+    margin-left: calc(2.5rem + var(--space-md));
+  }
+
+  .path-node-extras {
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .path-section-head {
+    flex-wrap: wrap;
+  }
+
+  .path-section-text {
+    flex: 1 1 10rem;
+  }
+
+  .path-nodes {
+    padding: var(--space-sm);
+  }
+
+  .path-nodes::before {
+    left: calc(var(--space-sm) + 1.25rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .path-step {
+    transition: none;
   }
 }

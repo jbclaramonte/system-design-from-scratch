@@ -38,7 +38,8 @@ function step(
       notionCount: 0,
       mastery: status === 'locked' || status === 'available' ? 'not_started' : 'in_progress',
       declared: false,
-      canUndoDeclaration: false
+      canUndoDeclaration: false,
+      roundNumber: 1
     },
     status,
     lockedBy: null,

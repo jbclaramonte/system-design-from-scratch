@@ -45,35 +45,6 @@ export const stepStatusLabels: Record<LearningPathStepStatus, string> = {
 export const stepTitle = (step: LearningPathStep): string =>
   step.kind === 'topic' ? step.topic.title : step.title
 
-/** Label of the "Continue" call to action on the recommended step. */
-export function continueLabel(step: LearningPathStep): string {
-  const title = stepTitle(step)
-  switch (step.status) {
-    case 'in_progress':
-      return `Continue: ${title}`
-    case 'skipped':
-      return `Come back to ${title} with another angle`
-    case 'limit_reached':
-      return `Choose how to go on with ${title}`
-    default:
-      return `Start: ${title}`
-  }
-}
-
-/** Short label of the button of the Current priority card (the full sentence is `continueLabel`). */
-export function actionLabel(step: LearningPathStep): string {
-  switch (step.status) {
-    case 'in_progress':
-      return 'Continue'
-    case 'skipped':
-      return 'Come back'
-    case 'limit_reached':
-      return 'Choose how to go on'
-    default:
-      return 'Start'
-  }
-}
-
 /** Why a topic does not unlock what follows, when it is not simply unfinished. */
 function blockerNote(ref: LearningPathTopicRef): string {
   switch (ref.status) {
@@ -189,27 +160,6 @@ export function noNextStepText(path: LearningPath): string {
   return 'Nothing to start right now.'
 }
 
-/** Topic counts of the hero card, from the topic steps of the path. */
-export interface TopicCounters {
-  mastered: number
-  inProgress: number
-  /** Topics at the Round Limit, waiting for another angle or a skip. */
-  retryRequired: number
-  locked: number
-}
-
-export function topicCounters(path: LearningPath): TopicCounters {
-  const counters: TopicCounters = { mastered: 0, inProgress: 0, retryRequired: 0, locked: 0 }
-  for (const step of path.steps) {
-    if (step.kind !== 'topic') continue
-    if (step.status === 'mastered') counters.mastered += 1
-    else if (step.status === 'in_progress') counters.inProgress += 1
-    else if (step.status === 'limit_reached') counters.retryRequired += 1
-    else if (step.status === 'locked') counters.locked += 1
-  }
-  return counters
-}
-
 /** "6/6 mastered" for a topic section, "1/8 completed" for the Design Exercises. */
 export function sectionCounter(path: LearningPath, section: LearningPathSection): string {
   const steps = path.steps.filter((step) => step.section === section)
@@ -217,26 +167,6 @@ export function sectionCounter(path: LearningPath, section: LearningPathSection)
     (step) => step.status === (section === 'design_exercises' ? 'completed' : 'mastered')
   ).length
   return `${done}/${steps.length} ${section === 'design_exercises' ? 'completed' : 'mastered'}`
-}
-
-/** The label of a step's status chip. A startable Design Exercise is "Ready to start". */
-export const statusLabel = (step: LearningPathStep): string =>
-  step.kind === 'design_exercise' && step.status === 'available'
-    ? 'Ready to start'
-    : stepStatusLabels[step.status]
-
-export type ChipVariant = 'mastered' | 'progress' | 'attention' | 'locked' | 'error' | 'neutral'
-
-/** The chip variant of a status (see the Design System: emerald mastered, indigo in progress...). */
-export const statusChipVariant: Record<LearningPathStepStatus, ChipVariant> = {
-  locked: 'locked',
-  available: 'neutral',
-  in_progress: 'progress',
-  mastered: 'mastered',
-  skipped: 'attention',
-  limit_reached: 'error',
-  completed: 'mastered',
-  coming_soon: 'neutral'
 }
 
 /** What an unlocked topic that does not simply continue is waiting for, or null. */
@@ -258,14 +188,4 @@ export function prerequisiteText(step: DesignExerciseStep): string | null {
   if (total === 0) return null
   const mastered = total - step.missingPrerequisites.length
   return `${mastered} of ${total} prerequisites mastered`
-}
-
-/** The facts under the title of the Current priority card; only what the step really has. */
-export function priorityDetails(step: LearningPathStep): string[] {
-  if (step.kind === 'design_exercise') return [step.rationale]
-  const details = [step.section === 'foundations' ? sectionTitles.foundations : 'Primer topic']
-  if (step.topic.notionCount > 0) {
-    details.push(`${step.topic.notionCount} ${step.topic.notionCount === 1 ? 'notion' : 'notions'}`)
-  }
-  return details
 }

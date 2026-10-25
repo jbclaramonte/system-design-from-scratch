@@ -82,7 +82,8 @@ export function listTopicMasteries(db: Database): TopicMasterySummary[] {
       ...topic,
       mastery: derived.status,
       declared: derived.declared,
-      canUndoDeclaration: derived.canUndoDeclaration
+      canUndoDeclaration: derived.canUndoDeclaration,
+      roundNumber: derived.roundNumber
     }
   })
 }
