@@ -1,3 +1,4 @@
+import { schemaCompatibility, SchemaTooNewError, supportedSchemaVersion } from './compatibility'
 import type { Database } from './driver'
 
 export interface Migration {
@@ -25,11 +26,9 @@ export function schemaVersion(db: Database): number {
 export function migrate(db: Database, migrations: readonly Migration[]): number {
   assertOrdered(migrations)
   const current = schemaVersion(db)
-  const latest = migrations.at(-1)?.version ?? 0
-  if (current > latest) {
-    throw new Error(
-      `Database schema version ${current} is newer than this app supports (${latest}).`
-    )
+  const latest = supportedSchemaVersion(migrations)
+  if (schemaCompatibility(current, latest) === 'too_new') {
+    throw new SchemaTooNewError(current, latest)
   }
 
   const record = db.prepare(

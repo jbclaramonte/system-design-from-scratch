@@ -1,3 +1,4 @@
+import { pathToFileURL } from 'node:url'
 import { DatabaseSync } from 'node:sqlite'
 
 /**
@@ -29,10 +30,23 @@ export interface Database {
   close(): void
 }
 
+export interface OpenOptions {
+  /** The file must exist and nothing is written to it (no journal mode change). */
+  readOnly?: boolean
+  /**
+   * Read-only, and SQLite does not even create the `-wal` and `-shm` files of a WAL database.
+   * Only for a file no other connection is writing to (the content of a `-wal` file is ignored).
+   */
+  immutable?: boolean
+}
+
 /** Opens (or creates) a database with WAL and foreign keys on. Use `:memory:` for tests. */
-export function openDatabase(path: string): Database {
-  const db = new DatabaseSync(path, { enableForeignKeyConstraints: true })
-  db.exec('PRAGMA journal_mode = WAL')
+export function openDatabase(path: string, options: OpenOptions = {}): Database {
+  const immutable = options.immutable ?? false
+  const readOnly = immutable || (options.readOnly ?? false)
+  const location = immutable ? `${pathToFileURL(path).href}?immutable=1` : path
+  const db = new DatabaseSync(location, { enableForeignKeyConstraints: true, readOnly })
+  if (!readOnly) db.exec('PRAGMA journal_mode = WAL')
   db.exec('PRAGMA foreign_keys = ON')
   db.exec('PRAGMA busy_timeout = 5000')
 

@@ -122,6 +122,7 @@ gantt
 
     section Maintenance
     #68 Update vulnerable dependencies        :done, dep1, 2026-10-25, 1d
+    #69 Tell the learner when data is newer   :done, dep2, after dep1, 1d
 ```
 
 ## Dependency table
@@ -196,6 +197,7 @@ gantt
 | #66 | #65, #62 |
 | #67 | #62, #30, #17 |
 | #68 | None |
+| #69 | None |
 
 ## Conventions
 

@@ -17,6 +17,10 @@
 // neither, such as a container running as root. SMOKE_APP_ARGS adds Chromium switches (space
 // separated), for example --disable-dev-shm-usage in a container with a small /dev/shm.
 //
+// Before them, one launch on a data folder written by a newer app (schema version 999, SDFS_NO_DIALOG
+// set so no native dialog opens): the app must print that the data is newer, exit with 1, open no
+// window and leave the database files byte-identical.
+//
 // Two launches share one scratch user-data folder:
 //   1. fresh folder: window, first-run screen (course language: keyboard choice, saved with its
 //      marker, nothing requested before it), Learning Path (21 topics), database, Settings (Test
@@ -283,6 +287,7 @@ function installFakeCli() {
 
 let child
 let childExited = true
+let childExitCode = null
 let appOutput = ''
 
 function killTree(signal) {
@@ -328,12 +333,13 @@ async function freePort() {
 /** Port of the main process inspector of the running app, when launched with `inspect`. */
 let inspectPort
 
-async function launchApp(extraEnv = {}, { inspect = false } = {}) {
+async function launchApp(extraEnv = {}, { inspect = false, userDataDir = userData } = {}) {
   const port = await freePort()
   childExited = false
+  childExitCode = null
   appOutput = ''
   // The scratch --user-data-dir is always passed, so the real userData folder is never opened.
-  const args = [`--user-data-dir=${userData}`, `--remote-debugging-port=${port}`]
+  const args = [`--user-data-dir=${userDataDir}`, `--remote-debugging-port=${port}`]
   if (inspect) {
     inspectPort = await freePort()
     args.push(`--inspect=127.0.0.1:${inspectPort}`)
@@ -364,7 +370,10 @@ async function launchApp(extraEnv = {}, { inspect = false } = {}) {
   })
   child.stdout.on('data', (chunk) => (appOutput += chunk))
   child.stderr.on('data', (chunk) => (appOutput += chunk))
-  child.once('exit', () => (childExited = true))
+  child.once('exit', (code) => {
+    childExited = true
+    childExitCode = code
+  })
   return port
 }
 
@@ -566,6 +575,64 @@ function readOnlyDb() {
 }
 
 const EXPECTED_TOPICS = 21
+
+/**
+ * The database files of a folder (the database, its -wal and -shm) with their SHA-256: any write,
+ * creation or deletion changes it. Electron's own files in the folder are not part of it.
+ */
+function folderFingerprint(dir) {
+  return JSON.stringify(
+    readdirSync(dir)
+      .filter((name) => name.startsWith('system-design-from-scratch.db'))
+      .sort()
+      .map((name) => [
+        name,
+        createHash('sha256')
+          .update(readFileSync(join(dir, name)))
+          .digest('hex')
+      ])
+  )
+}
+
+/**
+ * Data written by a newer app: the packaged app must say so and quit, not open a window, and
+ * leave the folder exactly as it was. The native dialog is turned off (SDFS_NO_DIALOG): the text
+ * goes to stderr and the exit code is 1.
+ */
+async function phaseNewerData() {
+  const newerData = join(scratch, 'newer-data')
+  mkdirSync(newerData, { recursive: true })
+  const db = new DatabaseSync(join(newerData, 'system-design-from-scratch.db'))
+  db.exec(`CREATE TABLE schema_migrations (
+    version INTEGER PRIMARY KEY, name TEXT NOT NULL, applied_at TEXT NOT NULL) STRICT;
+    CREATE TABLE learner_data (x TEXT NOT NULL) STRICT;
+    INSERT INTO learner_data VALUES ('kept');`)
+  for (let version = 1; version <= 999; version++) {
+    db.prepare(
+      "INSERT INTO schema_migrations VALUES (?, 'future', '2099-01-01T00:00:00.000Z')"
+    ).run(version)
+  }
+  db.close()
+  const before = folderFingerprint(newerData)
+  await check(
+    'data newer than the app: it says so on stderr, opens no window, exits with 1 and does not touch the database',
+    async () => {
+      await launchApp({ SDFS_NO_DIALOG: '1' }, { userDataDir: newerData })
+      for (let i = 0; i < 300 && !childExited; i++) await sleep(100)
+      assert(childExited, `the app did not exit:\n${redact(appOutput)}`)
+      assert(childExitCode === 1, `exit code ${childExitCode}:\n${redact(appOutput)}`)
+      assert(
+        /created by a newer version of the app\. Nothing was changed\. Update the app/.test(
+          appOutput
+        ),
+        `message: ${redact(appOutput)}`
+      )
+      assert(!/Database ready/.test(appOutput), 'the database was opened')
+      assert(folderFingerprint(newerData) === before, 'a database file changed')
+    }
+  )
+  await stopApp()
+}
 
 async function phaseOne() {
   const port = await launchApp({}, { inspect: true })
@@ -1567,6 +1634,7 @@ console.log(
 installFakeCli()
 try {
   await startFakeRelease()
+  await phaseNewerData()
   await phaseOne()
   if (results.every((result) => result.ok)) {
     await phaseTwo()

@@ -194,13 +194,14 @@ How it runs:
 - The app binary is spawned with `--remote-debugging-port=<free port>`, a scratch `--user-data-dir` (always passed, so the real user data is never opened) and a **minimal environment**: `PATH=/usr/bin:/bin`, no `SHELL`, `HOME` set to a scratch folder, and the two `SDFS_UPDATE_*` variables that point the update check at a local fake release ([[#Updates]]) (on Linux, `DISPLAY` and `XAUTHORITY` are passed through: Chromium needs a display). The real user data and `~/.claude*` are never touched.
 - A fake Claude Code CLI sits in `<scratch HOME>/.local/bin/claude`. It speaks the stream-json protocol the app expects (`--version`, `auth status`, a Notion Outline, a lesson with a Mermaid flowchart) and logs every call. As `claude` is not on PATH, finding it proves the discovery through the common install locations (`commonCliLocations` in `src/main/generation/resolveCli.ts`) and the stream-json plumbing of a packaged app.
 - The page is driven over the Chrome DevTools protocol (the WebSocket built into Node 22+).
-- Two launches share one scratch user-data folder. The first starts on a fresh folder (the first-run screen is answered with the keyboard). Then the app is stopped, every topic is marked mastered in the scratch database (with `node:sqlite`; the app cannot be imported here, so the script inserts a passed round per topic, the way the earlier seed scripts did) and the app is launched again, because a packaged app enforces the Learning Path lock and an exercise opens only when its prerequisites are mastered.
+- A launch on data from a newer app comes first, on its own scratch folder (see the row "Data newer than the app"). Then two launches share one scratch user-data folder. The first starts on a fresh folder (the first-run screen is answered with the keyboard). Then the app is stopped, every topic is marked mastered in the scratch database (with `node:sqlite`; the app cannot be imported here, so the script inserts a passed round per topic, the way the earlier seed scripts did) and the app is launched again, because a packaged app enforces the Learning Path lock and an exercise opens only when its prerequisites are mastered.
 - The whole process group of the app is killed at the end, also on failure or Ctrl+C. The script exits 1 when a check fails and prints one `PASS`/`FAIL` line per check.
 
 Covered:
 
 | Check | What it proves |
 |---|---|
+| Data newer than the app | A scratch folder holds a database at schema version 999 (only the `schema_migrations` table and one row of learner data). The packaged app is started with `SDFS_NO_DIALOG=1` (so no native dialog opens): it prints "Your data was created by a newer version of the app. Nothing was changed. Update the app..." on stderr, exits with code 1 before it opens the database or a window, and the SHA-256 of the database files is unchanged (#69). The native dialog itself, with its **Open the Releases page** button, is checked by hand. |
 | Window loads, `file:` origin | The packaged renderer starts, the preload bridge works. |
 | First-run screen (fresh folder) | The course language is asked before anything else: no app shell, Learning Path or update banner behind it, no request to the release API, the preselected choice is focused, no marker in the database. An arrow key changes the choice, Enter saves it: `generation_language` and `generation_language_chosen` are written and the Learning Path opens (#61). |
 | Learning Path shows 21 topics | The Source Corpus is read from the package (`resources/corpus/primer.json` in the asar). |
@@ -220,6 +221,7 @@ Covered:
 
 Not covered, to check by hand ([[#First launch checklist]]):
 
+- **The startup error dialog**: the smoke test turns it off (`SDFS_NO_DIALOG=1`); how it looks and its **Open the Releases page** button are checked by hand, with `--user-data-dir` pointing at a scratch folder holding a database of a higher version.
 - **The real Claude Code CLI**: login, models, real latency and output, the Claude config directory. The fake CLI proves the plumbing, not the content.
 - **The real network**: the renderer fetches nothing (the CSP forbids it) and the update check only talks to a local fake release; GitHub is never called. On macOS no update is installed (that is done by hand, [[#Checked by hand (#58)]]); on Linux the AppImage update runs against a scratch file, not a real AppImage.
 - **Gatekeeper and quarantine on a downloaded copy**: the locally built `.app` has no quarantine attribute, and the browser download path (**Open Anyway**) is not exercised by CI or by the script ([[#Open an unsigned build]]).

@@ -1,6 +1,6 @@
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { app, BrowserWindow, ipcMain, Menu, nativeTheme, session, shell } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, session, shell } from 'electron'
 import { createAboutIpc, licensesPath } from './about'
 import { createLessonIpc, FOUNDATIONS_TOPICS, seedTopics } from './content'
 import { corpusPath, loadCorpus } from './corpus'
@@ -13,6 +13,7 @@ import { createLessonQuestionIpc } from './lessonQuestion'
 import { createDesignIpc } from './ipc/design'
 import { createHandlers } from './ipc/handlers'
 import { buildApplicationMenuTemplate } from './menu'
+import { reportStartupFailure } from './startup/failure'
 import { createMasteryIpc, createMasteryService } from './mastery'
 import { createExerciseLockGuard, createLearningPathIpc, createTopicLockGuard } from './path'
 import { createProtocolIpc, createProtocolService, seedDesignExercises } from './protocol'
@@ -127,7 +128,7 @@ app.on('web-contents-created', (_event, contents) => {
 let db: Database | undefined
 let generation: GenerationService | undefined
 
-void app.whenReady().then(() => {
+function start(): void {
   const opened = openAppDatabase(app.getPath('userData'))
   db = opened.db
   console.log(`Database ready at schema version ${opened.schemaVersion}`)
@@ -319,7 +320,24 @@ void app.whenReady().then(() => {
       createMainWindow()
     }
   })
-})
+}
+
+/** A fatal startup error (such as data from a newer app) is shown, not left as a silent failure. */
+function failStartup(error: unknown): Promise<void> {
+  generation?.dispose()
+  generation = undefined
+  db?.close()
+  db = undefined
+  return reportStartupFailure(error, app.getPath('userData'), {
+    showMessageBox: (options) => dialog.showMessageBox(options),
+    openExternal: (url) => shell.openExternal(url),
+    exit: (code) => app.exit(code),
+    log: (message) => console.error(message),
+    env: process.env
+  })
+}
+
+void app.whenReady().then(start).catch(failStartup)
 
 app.on('will-quit', () => {
   // Kills running CLI processes and drops queued Generations.

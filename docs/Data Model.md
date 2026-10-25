@@ -15,7 +15,13 @@ Local SQLite database of the app, owned by the Electron main process. Table name
 
 ## Migrations
 
-`src/main/db/migrations/` holds numbered migrations, listed in order in `migrations/index.ts`. `migrate()` (`src/main/db/migrate.ts`) applies the pending ones at startup, each in its own transaction, and records it in `schema_migrations (version, name, applied_at)`. Running it again is a no-op; a database newer than the app is refused. Never edit or reorder an applied migration: append a new one.
+`src/main/db/migrations/` holds numbered migrations, listed in order in `migrations/index.ts`. `migrate()` (`src/main/db/migrate.ts`) applies the pending ones at startup, each in its own transaction, and records it in `schema_migrations (version, name, applied_at)`. Running it again is a no-op. Never edit or reorder an applied migration: append a new one.
+
+### Versioning rule: an older app refuses a newer database
+
+The schema version of a database is the highest version in `schema_migrations`; the version of the app is the last entry of `migrations/index.ts`. `schemaCompatibility(found, supported)` (`src/main/db/compatibility.ts`) decides: equal is `current` (nothing to do), lower is `migrate` (a fresh database is version 0), higher is `too_new`. An app never writes to a database newer than itself, because it does not know the tables and rules of that version.
+
+`openAppDatabase` reads the version first, with `peekSchemaVersion`: a read-only open of the file (immutable when it has no `-wal` file, so not even a `-wal` or `-shm` file is created; no pragma, no `CREATE TABLE`, nothing created if the file does not exist). A `too_new` result throws `SchemaTooNewError` before the database is opened for writing, and `migrate` keeps the same check. `src/main/index.ts` catches every fatal startup error (`failStartup`, `src/main/startup/failure.ts`) and shows a native dialog, then exits with code 1: for a newer database, "Your data was created by a newer version of the app", nothing was changed, update the app, with a button opening the Releases page; for any other error (the file cannot be opened, a migration fails), the error message and the data folder. With `SDFS_NO_DIALOG=1` only the text goes to stderr (smoke test). The learner's way out of a refusal is to update the app: the data is never downgraded.
 
 | Version | Name | Change |
 |---|---|---|
