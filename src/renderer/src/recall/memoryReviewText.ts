@@ -41,4 +41,10 @@ export const practiceEmptyText = (scope: 'notion' | 'notions'): string =>
     ? 'Nothing to practice yet for this notion. Questions come from Topics you have already passed.'
     : 'Nothing to practice yet for these notions. Questions come from Topics you have already passed.'
 
+/** A Practice that could not start (the call failed), as opposed to having nothing to ask. */
+export const practiceFailedText = 'Could not start the practice. Try again in a moment.'
+
+/** The Memory Review could not be loaded: calm, with a retry; the raw error stays in the console. */
+export const loadFailedText = 'Could not load the Memory review. Nothing is lost: try again.'
+
 export const openTopicFailedText = 'Could not open the lesson section. Try again in a moment.'

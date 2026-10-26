@@ -129,3 +129,13 @@
 .memory-footnote {
   margin-top: var(--space-lg);
 }
+
+.memory-load-error {
+  display: grid;
+  gap: var(--space-sm);
+  justify-items: start;
+}
+
+.memory-load-error > p {
+  margin: 0;
+}

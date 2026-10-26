@@ -6,7 +6,6 @@ import type {
   RecallStart
 } from '../../../shared/recall'
 import type { TopicMasterySummary } from '../../../shared/mastery'
-import { errorMessage } from '../quiz/errorMessage'
 import './memoryReview.css'
 import { attentionNotionIds, requestPractice } from './memoryReviewLogic'
 import {
@@ -14,10 +13,12 @@ import {
   emptyTitle,
   footnoteText,
   lastSeenText,
+  loadFailedText,
   missedOfText,
   noAttentionText,
   openTopicFailedText,
   practiceEmptyText,
+  practiceFailedText,
   resultMarkLabel,
   startUnavailableText
 } from './memoryReviewText'
@@ -148,8 +149,10 @@ function NotionRow({
           className="btn-sm"
           data-testid="memory-practice"
           aria-label={`Practice ${notion.title}`}
-          disabled={busy}
-          onClick={() => onPractice(entry)}
+          aria-disabled={busy}
+          onClick={() => {
+            if (!busy) onPractice(entry)
+          }}
         >
           Practice
         </button>
@@ -160,6 +163,22 @@ function NotionRow({
         </p>
       )}
     </li>
+  )
+}
+
+/** The load failed: honey, never red; the learner can retry or go back from the header. */
+export function MemoryReviewLoadError({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div
+      className="notice notice-attention memory-load-error"
+      role="alert"
+      data-testid="memory-error"
+    >
+      <p>{loadFailedText}</p>
+      <button type="button" data-testid="memory-retry" onClick={onRetry}>
+        Try again
+      </button>
+    </div>
   )
 }
 
@@ -174,6 +193,8 @@ export function MemoryReviewContent({
   now = new Date(),
   starting = null,
   notice = null,
+  solidOpen = false,
+  onToggleSolid = () => {},
   onStart,
   onPractice,
   onOpenSection
@@ -183,11 +204,13 @@ export function MemoryReviewContent({
   /** The Practice being started: every Practice button waits for it. */
   starting?: Scope | null
   notice?: Notice | null
+  /** Owned by the screen, so it survives a Practice (the content unmounts while it plays). */
+  solidOpen?: boolean
+  onToggleSolid?: () => void
   onStart: () => void
   onPractice: (entry: MemoryReviewNotion) => void
   onOpenSection: (entry: MemoryReviewNotion) => void
 }) {
-  const [solidOpen, setSolidOpen] = useState(false)
   const solidId = useId()
   const noteId = useId()
 
@@ -301,7 +324,7 @@ export function MemoryReviewContent({
               data-testid="memory-solid-toggle"
               aria-expanded={solidOpen}
               aria-controls={solidId}
-              onClick={() => setSolidOpen(!solidOpen)}
+              onClick={onToggleSolid}
             >
               <ChevronIcon open={solidOpen} />
               <CheckIcon />
@@ -341,13 +364,25 @@ export function MemoryReviewScreen({
 }) {
   const [phase, setPhase] = useState<Phase>({ name: 'list' })
   const [view, setView] = useState<MemoryReviewView | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [failed, setFailed] = useState(false)
+  const [reloadKey, setReloadKey] = useState(0)
+  const [solidOpen, setSolidOpen] = useState(false)
   const [starting, setStarting] = useState<Scope | null>(null)
   const [notice, setNotice] = useState<Notice | null>(null)
   const heading = useRef<HTMLHeadingElement>(null)
   const inList = phase.name === 'list'
+  // The Practice being played; a late completion of one the learner already left is ignored.
+  const playing = useRef<number | null>(null)
+  const mounted = useRef(true)
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+    }
+  }, [])
 
-  // Loaded when the screen opens and again each time the learner comes back from a Practice.
+  // Loaded when the screen opens, on "Try again", and again each time the learner comes back from
+  // a Practice.
   useEffect(() => {
     if (!inList) return
     heading.current?.focus()
@@ -357,24 +392,33 @@ export function MemoryReviewScreen({
       .then((loaded) => {
         if (!active) return
         setView(loaded)
-        setError(null)
+        setFailed(false)
       })
       .catch((reason: unknown) => {
-        if (active) setError(errorMessage(reason))
+        console.warn('Could not load the Memory review:', reason)
+        if (active) setFailed(true)
       })
     return () => {
       active = false
     }
-  }, [inList])
+  }, [inList, reloadKey])
 
   const practice = (notionIds: number[], scope: Scope) => {
     if (starting !== null) return
     setStarting(scope)
     setNotice(null)
     requestPractice((request) => window.api.startRecallPractice(request), notionIds)
-      .then((start) => {
-        if (start) setPhase({ name: 'play', start })
-        else setNotice({ scope, text: practiceEmptyText(scope === 'all' ? 'notions' : 'notion') })
+      .then((request) => {
+        if (request.kind === 'started') {
+          playing.current = request.start.session.id
+          setPhase({ name: 'play', start: request.start })
+        } else {
+          const text =
+            request.kind === 'failed'
+              ? practiceFailedText
+              : practiceEmptyText(scope === 'all' ? 'notions' : 'notion')
+          setNotice({ scope, text })
+        }
       })
       .finally(() => setStarting(null))
   }
@@ -387,13 +431,22 @@ export function MemoryReviewScreen({
       .listMasteryTopics()
       .then((topics) => {
         const topic = topics.find((candidate) => candidate.slug === entry.topicSlug)
+        if (!mounted.current) return
         if (topic) onOpenTopic(topic)
         else fail()
       })
       .catch(fail)
   }
 
-  const backToReview = () => setPhase({ name: 'list' })
+  const retry = () => {
+    setFailed(false)
+    setReloadKey((key) => key + 1)
+  }
+
+  const backToReview = () => {
+    playing.current = null
+    setPhase({ name: 'list' })
+  }
 
   if (phase.name !== 'list') {
     return (
@@ -410,7 +463,9 @@ export function MemoryReviewScreen({
           <RecallPlayer
             key={phase.start.session.id}
             start={phase.start}
-            onCompleted={(result) => setPhase({ name: 'results', result })}
+            onCompleted={(result) => {
+              if (playing.current === phase.start.session.id) setPhase({ name: 'results', result })
+            }}
             onGiveUp={backToReview}
             giveUp={{ label: BACK_TO_REVIEW, hint: 'go back to Memory review' }}
           />
@@ -435,18 +490,16 @@ export function MemoryReviewScreen({
           Dashboard
         </button>
       </header>
-      {error && (
-        <p role="alert" className="notice notice-error">
-          Could not load the Memory review: {error}
-        </p>
-      )}
+      {failed && <MemoryReviewLoadError onRetry={retry} />}
       {!view ? (
-        !error && <p>Loading the Memory review...</p>
+        !failed && <p>Loading the Memory review...</p>
       ) : (
         <MemoryReviewContent
           view={view}
           starting={starting}
           notice={notice}
+          solidOpen={solidOpen}
+          onToggleSolid={() => setSolidOpen(!solidOpen)}
           onStart={() => practice(attentionNotionIds(view), 'all')}
           onPractice={(entry) => practice([entry.notion.id], entry.notion.id)}
           onOpenSection={openSection}

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { MemoryReviewNotion, MemoryReviewView, RecallStart } from '../../../shared/recall'
 import { attentionNotionIds, requestPractice } from './memoryReviewLogic'
 
@@ -31,25 +31,32 @@ describe('attentionNotionIds', () => {
 })
 
 describe('requestPractice', () => {
+  afterEach(() => vi.restoreAllMocks())
+
   it('passes the Notion ids and returns the started session', async () => {
     const call = vi.fn().mockResolvedValue(started)
-    await expect(requestPractice(call, [4])).resolves.toBe(started)
+    await expect(requestPractice(call, [4])).resolves.toEqual({ kind: 'started', start: started })
     expect(call).toHaveBeenCalledWith({ notionIds: [4] })
   })
 
-  it('returns null when there is nothing to practice', async () => {
-    await expect(requestPractice(vi.fn().mockResolvedValue(null), [4])).resolves.toBeNull()
+  it('says "empty" when there is nothing to practice yet', async () => {
+    await expect(requestPractice(vi.fn().mockResolvedValue(null), [4])).resolves.toEqual({
+      kind: 'empty'
+    })
   })
 
-  it('returns null, never an error, when the call fails', async () => {
-    await expect(
-      requestPractice(vi.fn().mockRejectedValue(new Error('boom')), [4])
-    ).resolves.toBeNull()
+  it('says "failed", not "empty", when the call fails, and logs the error', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const error = new Error('boom')
+    await expect(requestPractice(vi.fn().mockRejectedValue(error), [4])).resolves.toEqual({
+      kind: 'failed'
+    })
+    expect(warn).toHaveBeenCalledWith(expect.any(String), error)
   })
 
   it('does not call at all without Notions: the empty list means "everything" for the service', async () => {
     const call = vi.fn()
-    await expect(requestPractice(call, [])).resolves.toBeNull()
+    await expect(requestPractice(call, [])).resolves.toEqual({ kind: 'empty' })
     expect(call).not.toHaveBeenCalled()
   })
 })

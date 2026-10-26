@@ -4,7 +4,7 @@ import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import type { MemoryReviewNotion, MemoryReviewView } from '../../../shared/recall'
-import { MemoryReviewContent } from './MemoryReviewScreen'
+import { MemoryReviewContent, MemoryReviewLoadError } from './MemoryReviewScreen'
 
 const entry = (id: number, lastResults: boolean[]): MemoryReviewNotion => ({
   notion: { id, slug: `notion-${id}`, title: `Notion ${id}` },
@@ -13,7 +13,8 @@ const entry = (id: number, lastResults: boolean[]): MemoryReviewNotion => ({
   lastResults,
   missed: lastResults.filter((result) => !result).length,
   of: lastResults.length,
-  lastSeenAt: '2026-10-23T08:00:00.000Z',
+  // Local dates, like memoryReviewText.test.ts: days are counted in the learner's time zone.
+  lastSeenAt: new Date(2026, 9, 23, 8).toISOString(),
   sourceSections: []
 })
 
@@ -33,7 +34,7 @@ const render = (value: MemoryReviewView, props: Record<string, unknown> = {}) =>
   renderToStaticMarkup(
     createElement(MemoryReviewContent, {
       view: value,
-      now: new Date('2026-10-26T12:00:00.000Z'),
+      now: new Date(2026, 9, 26, 12),
       onStart: () => {},
       onPractice: () => {},
       onOpenSection: () => {},
@@ -61,9 +62,9 @@ describe('MemoryReviewContent', () => {
     expect(html).toContain('Last seen 3 days ago')
     expect(html).toContain('aria-label="Open the lesson section for Notion 1"')
     expect(html).toContain('aria-label="Practice Notion 1"')
-    // Six marks for the first notion, each named in words.
-    expect(html.match(/aria-label="Correct"/g)?.length).toBeGreaterThanOrEqual(2)
-    expect(html.match(/aria-label="Missed"/g)?.length).toBeGreaterThanOrEqual(4)
+    // Needs attention: 2 correct and 4 missed; Getting steadier: 2 correct and 1 missed.
+    expect(html.match(/aria-label="Correct"/g)).toHaveLength(4)
+    expect(html.match(/aria-label="Missed"/g)).toHaveLength(5)
   })
 
   it('collapses Solid by default behind a disclosure button', () => {
@@ -72,6 +73,16 @@ describe('MemoryReviewContent', () => {
     expect(html).toContain('Solid')
     expect(html).not.toContain('Notion 3')
     expect(html).not.toContain('Notion 4')
+    expect(html).toMatch(
+      /<ul id="[^"]*" class="memory-list" data-testid="memory-group-solid" hidden="">/
+    )
+  })
+
+  it('opens Solid when the learner asked for it', () => {
+    const html = render(view, { solidOpen: true })
+    expect(html).toContain('aria-expanded="true"')
+    expect(html).toContain('Notion 3')
+    expect(html).toContain('Notion 4')
   })
 
   it('never uses red, a lost streak or any XP wording, and says what the numbers are based on', () => {
@@ -112,5 +123,20 @@ describe('MemoryReviewContent', () => {
     expect(html).toContain('Nothing to review yet')
     expect(html).toContain('different quizzes')
     expect(html).not.toContain('Start a recall quiz on these')
+  })
+})
+
+describe('MemoryReviewLoadError', () => {
+  const html = renderToStaticMarkup(createElement(MemoryReviewLoadError, { onRetry: () => {} }))
+
+  it('is calm: honey, never red, and no raw error text', () => {
+    expect(html).toContain('notice-attention')
+    expect(html).not.toContain('notice-error')
+    expect(html).toContain('Could not load the Memory review')
+    expect(html).not.toMatch(/Error invoking|remote method/)
+  })
+
+  it('offers a way to try again', () => {
+    expect(html).toContain('Try again')
   })
 })
