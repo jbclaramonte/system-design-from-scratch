@@ -51,8 +51,11 @@ export interface RecallResult {
   notionOutcomes: RecallNotionOutcome[]
 }
 
-/** The groups of Memory Review. A Notion with fewer than 2 answers is in none. */
-export type MemoryReviewStatus = 'needs_attention' | 'steadier' | 'solid'
+/**
+ * How well a Notion is remembered, and the groups of Memory Review. A Notion with fewer than 2
+ * answers is tracked in none of them.
+ */
+export type NotionRecallStatus = 'needs_attention' | 'steadier' | 'solid'
 
 export interface MemoryReviewNotion {
   notion: NotionRef
@@ -76,5 +79,5 @@ export interface MemoryReviewView {
   needsAttention: number
   steadier: number
   solid: number
-  groups: Record<MemoryReviewStatus, MemoryReviewNotion[]>
+  groups: Record<NotionRecallStatus, MemoryReviewNotion[]>
 }

@@ -16,7 +16,7 @@ const submitRequest = z
   .object({
     sessionId: id,
     questionId: id,
-    answer: z.object({ selected: z.array(z.number()) })
+    answer: z.object({ selected: z.array(z.number()) }).strict()
   })
   .strict()
 const questionRequest = z.object({ sessionId: id, questionId: id }).strict()
@@ -39,7 +39,8 @@ export interface RecallIpc {
 
 /**
  * Recall Quiz and Memory Review calls over IPC. A Recall Quiz never blocks the Learning Path: a
- * failure while preparing the gate is logged and returns null, so the Lesson opens. Recall calls
+ * failure while preparing the gate (a malformed request included) is logged and returns null, so
+ * the Lesson opens. Recall calls
  * are not guarded by the Learning Path lock and notify nothing: they change no mastery.
  */
 export function createRecallIpc(
@@ -55,10 +56,8 @@ export function createRecallIpc(
 
   return {
     prepareGate(request) {
-      // A malformed request is a bug of the renderer, not a technical failure: it still throws.
-      const { topicId } = gateRequest.parse(request)
       try {
-        return service.prepareGate(topicId)
+        return service.prepareGate(gateRequest.parse(request).topicId)
       } catch (error) {
         log('Could not prepare the Recall Quiz gate; the Lesson opens without it', error)
         return null

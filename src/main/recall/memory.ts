@@ -7,13 +7,15 @@
  * `solid`; every other tracked Notion is `steadier`.
  */
 
+import type { NotionRecallStatus } from '../../shared/recall'
+
+export type { NotionRecallStatus }
+
 /** Number of latest answers per Notion that count. */
 export const RECALL_WINDOW = 6
 
 const MISSED_FOR_ATTENTION = 3
 const STREAK_FOR_SOLID = 4
-
-export type NotionRecallStatus = 'needs_attention' | 'steadier' | 'solid'
 
 /** `results` are oldest first, `true` meaning correct. */
 export function classifyNotion(results: readonly boolean[]): NotionRecallStatus | 'untracked' {

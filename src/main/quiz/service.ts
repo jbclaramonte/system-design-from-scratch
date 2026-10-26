@@ -41,6 +41,7 @@ import {
 import type { FreeAnswerGrader } from './freeAnswerGrader'
 import type { QuestionClarifier } from './questionClarifier'
 import {
+  choiceAttemptFeedback,
   freeAnswerFeedback,
   gradeAnswer,
   InvalidAnswerError,
@@ -48,7 +49,8 @@ import {
   meetsThreshold,
   normalizeFreeAnswer,
   notionScores,
-  parseChoiceBody,
+  questionBrief,
+  questionPresentation,
   parseFreeAnswerBody,
   parseGradingRecord,
   quizScorePercent,
@@ -154,16 +156,12 @@ export function createQuizService(
   }
 
   function toQuestionView(question: Question, notions: Map<number, NotionRef>): QuestionView {
-    const choiceBody = question.type === 'free_answer' ? null : parseChoiceBody(question.body)
     return {
       id: question.id,
       position: question.position,
       type: question.type,
       prompt: question.prompt,
-      scenario: choiceBody?.scenario ?? null,
-      diagram: choiceBody?.diagram ?? null,
-      // Texts only: the `correct` flags stay in the main process until the answer is graded.
-      choices: choiceBody?.choices.map((choice) => choice.text) ?? [],
+      ...questionPresentation(question),
       notions: question.notionIds.flatMap((id) => notions.get(id) ?? []),
       gradable: gradable(question)
     }
@@ -181,8 +179,7 @@ export function createQuizService(
         contestable: roundOpen
       })
     }
-    const { feedback } = gradeAnswer(question, attempt.answer, graders)
-    return { ...feedback, result: attempt.result, score: attempt.score, feedback: attempt.feedback }
+    return choiceAttemptFeedback(question, attempt, graders)
   }
 
   /** Attempts of the round on the questions in play, by question id. */
@@ -227,21 +224,12 @@ export function createQuizService(
     }
   }
 
-  /**
-   * What the clarification prompt may see: exactly what `toQuestionView` sends the renderer. The
-   * `correct` flags, the explanation and the free-answer rubric are never read here.
-   */
   function clarificationBrief(round: Round, question: Question): QuestionBrief {
-    const choiceBody = question.type === 'free_answer' ? null : parseChoiceBody(question.body)
-    return {
-      questionId: question.id,
-      type: question.type,
-      prompt: question.prompt,
-      scenario: choiceBody?.scenario ?? null,
-      choices: choiceBody?.choices.map((choice) => choice.text) ?? [],
-      topicTitle: getTopic(db, requireQuiz(round.quizId).topicId)?.title ?? '',
-      language: requireQuiz(round.quizId).language
-    }
+    const quiz = requireQuiz(round.quizId)
+    return questionBrief(question, {
+      topicTitle: getTopic(db, quiz.topicId)?.title ?? '',
+      language: quiz.language
+    })
   }
 
   function gradingRequestFor(round: Round, question: Question) {

@@ -8,15 +8,14 @@ import { getNotion, getTopic } from '../db/repositories/learningContent'
 import {
   completeRecallSession,
   createRecallSession,
-  findOpenGateSession,
   getRecallSession,
   hasCompletedGateSession,
+  listOpenGateSessions,
   listRecallAttempts,
   listRecallSessionQuestionIds
 } from '../db/repositories/recall'
 import { getGenerationLanguage } from '../db/repositories/settings'
 import type { Attempt, Question, RecallSession } from '../db/types'
-import type { QuestionBrief } from '../generation/prompts/questionClarification'
 import {
   locallyGradedTypes,
   type NotionRef,
@@ -34,7 +33,13 @@ import type {
   RecallSessionView,
   RecallStart
 } from '../../shared/recall'
-import { gradeAnswer, localGraders, parseChoiceBody } from '../quiz/grading'
+import {
+  choiceAttemptFeedback,
+  gradeAnswer,
+  localGraders,
+  questionBrief,
+  questionPresentation
+} from '../quiz/grading'
 import type { QuestionClarifier } from '../quiz/questionClarifier'
 import { eligibleTopicIds } from './eligibility'
 import { classifyNotion, RECALL_WINDOW, type NotionRecallStatus } from './memory'
@@ -135,9 +140,7 @@ export function createRecallService(
 
   /** The stored grading of an attempt, with the answer key re-attached. */
   function attemptFeedback(attempt: Attempt): QuestionFeedback {
-    const question = getQuestion(db, attempt.questionId)!
-    const { feedback } = gradeAnswer(question, attempt.answer, localGraders)
-    return { ...feedback, result: attempt.result, score: attempt.score, feedback: attempt.feedback }
+    return choiceAttemptFeedback(getQuestion(db, attempt.questionId)!, attempt, localGraders)
   }
 
   /** The window of the shakiest Notion of the question, if one needs attention. */
@@ -164,16 +167,12 @@ export function createRecallService(
         if (!isLocallyGraded(question)) {
           throw new Error(`Question ${questionId} cannot be graded locally.`)
         }
-        const body = parseChoiceBody(question.body)
         return {
           id: question.id,
           position,
           type: question.type,
           prompt: question.prompt,
-          scenario: body.scenario ?? null,
-          diagram: body.diagram ?? null,
-          // Texts only: the `correct` flags stay in the main process until the answer is graded.
-          choices: body.choices.map((choice) => choice.text),
+          ...questionPresentation(question),
           notions: question.notionIds.flatMap((id) => notionRef(id) ?? []),
           gradable: true,
           recallHint: recallHint(question.notionIds, results)
@@ -217,8 +216,9 @@ export function createRecallService(
     prepareGate(topicId) {
       return db.transaction(() => {
         if (hasCompletedGateSession(db, topicId)) return null
-        const open = findOpenGateSession(db, topicId)
-        if (open && inCurrentLanguage(open)) return start(open)
+        // Newest first: a language round-trip (fr, en, fr) resumes the session left in fr.
+        const open = listOpenGateSessions(db, topicId).find(inCurrentLanguage)
+        if (open) return start(open)
         const eligible = eligibleTopicIds(loadPassedTopics(db), topicId)
         const questionIds = pickQuestions(eligible)
         if (questionIds.length === 0) return null
@@ -298,17 +298,10 @@ export function createRecallService(
       requireUnanswered(session, questionId)
       const quiz = getQuiz(db, question.quizId)
       if (!quiz) throw new Error(`Quiz ${question.quizId} does not exist.`)
-      const body = parseChoiceBody(question.body)
-      // What the learner sees only: the prompt, the scenario and the choice texts.
-      const brief: QuestionBrief = {
-        questionId: question.id,
-        type: question.type,
-        prompt: question.prompt,
-        scenario: body.scenario ?? null,
-        choices: body.choices.map((choice) => choice.text),
+      const brief = questionBrief(question, {
         topicTitle: getTopic(db, quiz.topicId)?.title ?? '',
         language: quiz.language
-      }
+      })
       return questionClarifier.clarify(brief, options)
     },
 

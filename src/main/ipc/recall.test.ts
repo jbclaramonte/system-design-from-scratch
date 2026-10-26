@@ -63,8 +63,6 @@ describe('createRecallIpc', () => {
     const recall = ipc(service)
     const client = fakeClient()
 
-    expect(() => recall.prepareGate({ topicId: 0 })).toThrow()
-    expect(() => recall.prepareGate({ topicId: 1, extra: true } as never)).toThrow()
     expect(() => recall.startPractice({ notionIds: [-1] })).toThrow()
     expect(() => recall.startPractice({ notionIds: [1], extra: 1 } as never)).toThrow()
     expect(() =>
@@ -72,6 +70,13 @@ describe('createRecallIpc', () => {
     ).toThrow()
     expect(() =>
       recall.submitAnswer({ sessionId: 1, questionId: 1, answer: { selected: ['0'] } } as never)
+    ).toThrow()
+    expect(() =>
+      recall.submitAnswer({
+        sessionId: 1,
+        questionId: 1,
+        answer: { selected: [0], text: 'extra' }
+      } as never)
     ).toThrow()
     expect(() => recall.complete({ sessionId: -2 })).toThrow()
     expect(() => recall.cancelClarification({ sessionId: 1, questionId: 0 })).toThrow()
@@ -99,8 +104,15 @@ describe('createRecallIpc', () => {
     expect(log).toHaveBeenCalledWith(expect.stringContaining('gate'), expect.any(Error))
   })
 
-  it('still refuses a malformed gate request instead of hiding it', () => {
-    expect(() => ipc(stubService()).prepareGate({ topicId: 'x' } as never)).toThrow()
+  it('returns null for a malformed gate request too: the Lesson opens', () => {
+    const service = stubService()
+    const recall = ipc(service)
+
+    expect(recall.prepareGate({ topicId: 0 })).toBeNull()
+    expect(recall.prepareGate({ topicId: 1, extra: true } as never)).toBeNull()
+    expect(recall.prepareGate({ topicId: 'x' } as never)).toBeNull()
+    expect(recall.prepareGate(undefined as never)).toBeNull()
+    expect(service.prepareGate).not.toHaveBeenCalled()
   })
 
   it('lets the other calls throw their refusals', () => {

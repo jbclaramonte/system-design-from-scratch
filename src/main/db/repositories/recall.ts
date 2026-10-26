@@ -50,6 +50,17 @@ export function findOpenGateSession(db: Database, topicId: number): RecallSessio
     .get<RecallSession>({ topicId })
 }
 
+/** Gate sessions of the Topic that are not completed yet, newest first. */
+export function listOpenGateSessions(db: Database, topicId: number): RecallSession[] {
+  return db
+    .prepare(
+      `SELECT ${SESSION_COLUMNS} FROM recall_sessions
+       WHERE kind = 'gate' AND topic_id = $topicId AND completed_at IS NULL
+       ORDER BY id DESC`
+    )
+    .all<RecallSession>({ topicId })
+}
+
 /** True once a gate session of the Topic was completed: it is never asked again. */
 export function hasCompletedGateSession(db: Database, topicId: number): boolean {
   return (

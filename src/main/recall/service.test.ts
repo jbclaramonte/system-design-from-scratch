@@ -6,8 +6,10 @@ import {
   completeRound,
   createQuiz,
   createRound,
+  flagQuestion,
   listQuestions,
-  recordAttempt
+  recordAttempt,
+  replaceQuestion
 } from '../db/repositories/assessment'
 import { createNotions, createTopic } from '../db/repositories/learningContent'
 import { declareMastery } from '../db/repositories/mastery'
@@ -134,12 +136,29 @@ function seedDeclaredTopic(slug: string, day: number, freshCount = 4) {
   return seeded
 }
 
-/** Passed topics: `old` and `recent`; the learner opens `opening`. */
+/**
+ * Passed topics: `old` and `recent`; the learner opens `opening`, which has questions of its own
+ * (never asked) that the gate must not pick.
+ */
 function seedThree() {
   const old = seedTopic('old', 10)
   const recent = seedTopic('recent', 14)
   const opening = createTopic(db, { slug: 'opening', title: 'Opening', position: 3 })
-  return { old, recent, opening: opening.id }
+  const quiz = createQuiz(db, {
+    topicId: opening.id,
+    language: 'fr',
+    purpose: 'recall',
+    grounded: false,
+    questions: Array.from({ length: 4 }, (_, position) => ({
+      position,
+      type: 'single_choice' as const,
+      prompt: `opening question ${position}`,
+      body: choiceBody('single_choice'),
+      notionIds: []
+    }))
+  })
+  const openingQuestions = listQuestions(db, quiz.id).map((question) => question.id)
+  return { old, recent, opening: opening.id, openingQuestions }
 }
 
 const service = (options: Parameters<typeof createRecallService>[1] = {}) =>
@@ -168,7 +187,7 @@ describe('prepareGate', () => {
   })
 
   it('asks up to 6 questions, none from the opening Topic or the most recent one', () => {
-    const { old, recent, opening } = seedThree()
+    const { old, recent, opening, openingQuestions } = seedThree()
     const start = service().prepareGate(opening)!
 
     expect(start.session).toMatchObject({ kind: 'gate', topicId: opening, completedAt: null })
@@ -176,6 +195,8 @@ describe('prepareGate', () => {
     const oldIds = new Set([...old.asked, ...old.fresh])
     expect(start.questions.every((question) => oldIds.has(question.id))).toBe(true)
     expect(start.questions.some((question) => recent.asked.includes(question.id))).toBe(false)
+    expect(start.questions.some((question) => recent.fresh.includes(question.id))).toBe(false)
+    expect(start.questions.some((question) => openingQuestions.includes(question.id))).toBe(false)
     expect(start.answered).toEqual([])
     expect(start.questions.map((question) => question.position)).toEqual([0, 1, 2, 3, 4, 5])
   })
@@ -249,6 +270,37 @@ describe('prepareGate', () => {
 
     // Nothing in English: no gate, rather than a session in French.
     expect(recall.prepareGate(opening)).toBeNull()
+  })
+
+  it('resumes the original session after a language round-trip, with its answer', () => {
+    const { opening } = seedThree()
+    const recall = service()
+    const first = recall.prepareGate(opening)!
+    const questionId = first.questions[0]!.id
+    answerRight(recall, first.session.id, questionId)
+
+    updateSettings(db, { generationLanguage: 'en' })
+    expect(recall.prepareGate(opening)).toBeNull()
+    updateSettings(db, { generationLanguage: 'fr' })
+    const again = recall.prepareGate(opening)!
+
+    expect(again.session.id).toBe(first.session.id)
+    expect(again.answered.map((feedback) => feedback.questionId)).toEqual([questionId])
+  })
+
+  it('resumes the session of the current language when another one is newer', () => {
+    const { opening } = seedThree()
+    const recall = service()
+    const french = recall.prepareGate(opening)!
+    seedTopic('old-en', 8, { language: 'en' })
+    seedTopic('recent-en', 15, { language: 'en' })
+    updateSettings(db, { generationLanguage: 'en' })
+    const english = recall.prepareGate(opening)!
+    expect(english.session.id).not.toBe(french.session.id)
+
+    expect(recall.prepareGate(opening)!.session.id).toBe(english.session.id)
+    updateSettings(db, { generationLanguage: 'fr' })
+    expect(recall.prepareGate(opening)!.session.id).toBe(french.session.id)
   })
 
   it('tags a question on a Shaky Notion with how often it was missed', () => {
@@ -459,6 +511,20 @@ describe('complete', () => {
   it('refuses an unknown session', () => {
     expect(() => service().complete(9999)).toThrow(/does not exist/)
   })
+
+  it('is idempotent: completing again returns the same result and keeps the first time', () => {
+    const { opening } = seedThree()
+    const recall = service()
+    const start = recall.prepareGate(opening)!
+    for (const question of start.questions) answerRight(recall, start.session.id, question.id)
+    const first = recall.complete(start.session.id)
+
+    const second = recall.complete(start.session.id)
+
+    expect(second).toEqual(first)
+    expect(second.session.completedAt).toBe(first.session.completedAt)
+    expect(listRecallAttempts(db, start.session.id)).toHaveLength(start.questions.length)
+  })
 })
 
 describe('startPractice', () => {
@@ -493,6 +559,14 @@ describe('startPractice', () => {
       start.questions.every((question) => question.notions.some((n) => n.id === notionId))
     ).toBe(true)
     expect(old.notionIds).not.toContain(notionId)
+  })
+
+  it('returns null for a Notion of a Topic that is not passed', () => {
+    seedThree()
+    const unpassed = seedTopic('unpassed', 20)
+    db.prepare('UPDATE rounds SET passed = 0 WHERE topic_id = $id').run({ id: unpassed.topicId })
+
+    expect(service().startPractice(unpassed.notionIds)).toBeNull()
   })
 
   it('returns null for an empty list of Notions', () => {
@@ -646,6 +720,31 @@ describe('getMemoryReview', () => {
       lastSeenAt: at(16),
       sourceSections: []
     })
+  })
+
+  it('shows a last seen time no more recent than the visible results (replaced questions)', () => {
+    const topic = seedTopic('seen', 10, { askedCount: 0, freshCount: 3, notionSlugs: ['t'] })
+    const [a, b, c] = topic.fresh as [number, number, number]
+    playRecall(
+      [
+        [a, 'correct'],
+        [b, 'incorrect'],
+        [c, 'correct']
+      ],
+      11
+    )
+    // The last answer (day 13) was on a question that was flagged and replaced since.
+    flagQuestion(db, c, 'wrong key')
+    replaceQuestion(db, c, {
+      type: 'single_choice',
+      prompt: 'Better',
+      body: choiceBody('single_choice'),
+      notionIds: topic.notionIds
+    })
+
+    const [row] = service().getMemoryReview().groups.steadier
+
+    expect(row).toMatchObject({ lastResults: [true, false], lastSeenAt: at(12) })
   })
 
   it('puts a Notion with 1 or 2 misses under steadier, counting only the last 6 answers', () => {

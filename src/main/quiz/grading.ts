@@ -3,7 +3,9 @@
 // the stored grading), quiz and per-notion scores. Pure: no database, no Electron. Rules in
 // docs/Quiz Engine.md.
 import { z } from 'zod'
+import type { GenerationLanguage } from '../../shared/generationLanguage'
 import type { Json } from '../../shared/json'
+import type { QuestionBrief } from '../generation/prompts/questionClarification'
 import {
   FREE_ANSWER_MAX_LENGTH,
   type AttemptResult,
@@ -80,6 +82,45 @@ export function normalizeChoiceAnswer(answer: unknown, choiceCount: number): Cho
   }
   if (selected.length === 0) throw new InvalidAnswerError('Select at least one choice.')
   return { selected }
+}
+
+/**
+ * What the learner sees of a question before answering, and the only part of its body that leaves
+ * the main process: the scenario, the Diagram and the choice texts. The `correct` flags and the
+ * explanation stay here until the answer is graded. Every view and brief of a question is built
+ * from this function, so the answer key cannot leak through a second copy.
+ */
+export function questionPresentation(question: GradableQuestion): {
+  scenario: string | null
+  diagram: string | null
+  choices: string[]
+} {
+  if (question.type === 'free_answer') return { scenario: null, diagram: null, choices: [] }
+  const body = parseChoiceBody(question.body)
+  return {
+    scenario: body.scenario ?? null,
+    diagram: body.diagram ?? null,
+    choices: body.choices.map((choice) => choice.text)
+  }
+}
+
+/**
+ * What a Question Clarification prompt may see: exactly what `questionPresentation` sends the
+ * renderer, plus the Topic title and the language of the question's own quiz.
+ */
+export function questionBrief(
+  question: GradableQuestion,
+  context: { topicTitle: string; language: GenerationLanguage }
+): QuestionBrief {
+  const { scenario, choices } = questionPresentation(question)
+  return {
+    questionId: question.id,
+    type: question.type,
+    prompt: question.prompt,
+    scenario,
+    choices,
+    ...context
+  }
 }
 
 function choiceFeedback(
@@ -179,6 +220,27 @@ export function gradeAnswer(
     )
   }
   return grader.grade(question, answer)
+}
+
+/** The stored outcome of an Attempt on a choice question. */
+export interface StoredChoiceAttempt {
+  answer: Json
+  result: AttemptResult
+  score: number
+  feedback: string | null
+}
+
+/**
+ * Feedback of a recorded Attempt on a choice question: the answer re-graded for the answer key and
+ * choices shown, with the stored result, score and feedback.
+ */
+export function choiceAttemptFeedback(
+  question: GradableQuestion,
+  attempt: StoredChoiceAttempt,
+  graders: Graders = localGraders
+): ChoiceQuestionFeedback {
+  const { feedback } = gradeAnswer(question, attempt.answer, graders)
+  return { ...feedback, result: attempt.result, score: attempt.score, feedback: attempt.feedback }
 }
 
 // Free answers

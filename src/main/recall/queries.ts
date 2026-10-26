@@ -54,7 +54,8 @@ export function loadNotionResults(db: Database): Map<number, boolean[]> {
 }
 
 /**
- * Time of the latest answer per Notion, from completed Rounds and completed Recall sessions.
+ * Time of the latest answer per Notion, from the same answers `loadNotionResults` counts (so never
+ * more recent than the results shown).
  */
 export function loadNotionLastSeen(db: Database): Map<number, string> {
   const rows = db
@@ -62,6 +63,7 @@ export function loadNotionLastSeen(db: Database): Map<number, string> {
       `SELECT an.notion_id AS notionId, MAX(a.attempted_at) AS lastSeenAt
        FROM attempts a
        JOIN attempt_notions an ON an.attempt_id = a.id
+       JOIN questions q ON q.id = a.question_id AND q.replaced_by_question_id IS NULL
        LEFT JOIN rounds r ON r.id = a.round_id
        LEFT JOIN recall_sessions s ON s.id = a.recall_session_id
        WHERE r.completed_at IS NOT NULL OR s.completed_at IS NOT NULL
