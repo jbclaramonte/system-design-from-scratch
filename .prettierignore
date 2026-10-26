@@ -3,6 +3,7 @@ out/
 dist/
 release/
 spikes/
+.superpowers/
 docs/
 package-lock.json
 resources/corpus/
