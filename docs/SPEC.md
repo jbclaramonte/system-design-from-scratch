@@ -52,7 +52,7 @@ Personal desktop app to learn system design from scratch, built around this loop
 - [[Lesson|Lessons]] are streamed.
 - While a lesson is being read, the matching quiz is pre-generated in the background.
 - All generated content (lessons, remediation lessons, quizzes) is stored in the [[Content Cache]] (SQLite) and reused when a topic is redone.
-- Once a lesson has finished streaming, a small batch of new questions for a later [[Recall Quiz]] is pre-generated in the background (at most one batch, plus at most one declared topic, per opened lesson); the learner never waits for it and never sees an error from it.
+- Once a lesson has finished streaming, a small batch of new questions for a later [[Recall Quiz]] is pre-generated in the background (at most two batches per opened lesson, one on a topic with notions often missed and one on a declared topic, and up to three Generations when that declared topic still needs its notion outline); the learner never waits for it and never sees an error from it.
 
 ### 4.4 Diagrams
 

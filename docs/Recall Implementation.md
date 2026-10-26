@@ -64,7 +64,7 @@ Weight = status x age. Solid Notions come back rarely and never disappear. With 
 | Scenario | yes | locally |
 | Free answer | no, never reused or generated | n/a |
 
-So a Recall Quiz never calls a Generation to grade, and there is no contest of a grade. The screen is the quiz screen of the [[Quiz Engine]] (same presentation, [[Question Clarification]] and "I don't understand the question", recorded in the session's target) with a "Recall" pill and, on a Notion that needs attention, an honey "Often missed" tag with the plain count ("You missed this notion in 3 of your last 6 quizzes", the shakiest Notion of the question counts).
+So a Recall Quiz never calls a Generation to grade, and there is no contest of a grade. The screen is the quiz screen of the [[Quiz Engine]] (same presentation, [[Question Clarification]] and "I don't understand the question", recorded in the session's target) with a "Recall" pill and, on a Notion that needs attention, a honey "Often missed" tag with the plain count ("You missed this notion in 3 of your last 6 quizzes", the shakiest Notion of the question counts).
 
 ## When the gate shows
 
@@ -90,7 +90,7 @@ New questions are **Pre-generations** (`GenerationService.pregenerate`, priority
 | A Lesson stream that reaches `done` (`triggerRecallBatches`, `src/main/content/lessonIpc.ts`, right after the first-Round quiz Pre-generation) | at most one batch of **new questions** (3, single choice, multiple choice and scenario, one of each) on the eligible Topic with the most Notions that need attention, then the most steadier ones (ties: the Topic passed earliest). Focus: up to 3 Notions, attention first. `avoidPrompts`: every prompt already answered on those Notions, in the Generation Language |
 | The same Lesson stream | at most one **declared Topic** (an eligible Topic with a Declared Mastery, no recall quiz in the language and no answered question): its Notion Outline when missing, then its batch. The outline is the one its Lesson will use later |
 
-So at most two Generations per opened Lesson. A declared Topic is planned again after a failed batch (an outline stored but no recall quiz yet) and after a language switch. A batch served again from the Content Cache with the same key stores nothing twice. A batch waits in storage until a Recall Quiz uses it; it serves a later Lesson, not the one that follows immediately. Code: `planRecallBatch`, `planDeclaredBatch`, `generateRecallBatches` (`src/main/recall/batch.ts`).
+So at most two batches per opened Lesson (the shaky one and the declared Topic's), and up to three Generations when the declared Topic still needs its Notion Outline: the outline is generated first, in the background, by `prepareQuiz`. A declared Topic is planned again after a failed batch (an outline stored but no recall quiz yet) and after a language switch. A batch served again from the Content Cache with the same key stores nothing twice. A batch waits in storage until a Recall Quiz uses it; it serves a later Lesson, not the one that follows immediately. Code: `planRecallBatch`, `planDeclaredBatch`, `generateRecallBatches` (`src/main/recall/batch.ts`).
 
 ## Memory Review
 

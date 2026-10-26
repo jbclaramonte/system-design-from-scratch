@@ -14,7 +14,7 @@ It is always taken and never blocks: whatever the result, the Lesson opens next,
 
 - Taken in a [[Recall Session]] (kind `gate` before a Lesson, kind `practice` from the [[Memory Review]])
 - Answers are [[Attempt]]s of that session, never of a [[Round]]
-- Covers passed Topics: mastered by a [[Round]] or a [[Declared Mastery]]; the Topic being opened and the most recently passed Topic are left out (that gap is the spacing)
+- Covers passed Topics: mastered by a [[Round]] or a [[Declared Mastery]]; the Topic being opened and the most recently passed Topic are left out (that interval is the spacing)
 - New questions come from a [[Pre-generation]] that fills the [[Content Cache]]; the learner never waits for one
 - Not a [[Quiz]] played as a Round: the stored quiz behind the new questions has `purpose = 'recall'`
 
