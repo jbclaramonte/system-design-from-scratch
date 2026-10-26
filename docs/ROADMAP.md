@@ -128,8 +128,8 @@ gantt
     #70 Recall logic and selection            :done, r1, 2026-10-26, 1d
     #71 Recall data model and isolation       :done, r2, after r1, 1d
     #72 Pre-generate recall questions         :done, r3, after r2, 1d
-    #73 Recall service and IPC                :active, r4, after r3, 2d
-    #74 Recall Quiz before a Lesson           :r5, after r4, 2d
+    #73 Recall service and IPC                :done, r4, after r3, 2d
+    #74 Recall Quiz before a Lesson           :active, r5, after r4, 2d
     #75 Memory Review screen                  :r6, after r5, 2d
     #76 Recall docs and smoke test            :r7, after r6, 1d
 ```
