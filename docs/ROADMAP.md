@@ -131,7 +131,7 @@ gantt
     #73 Recall service and IPC                :done, r4, after r3, 2d
     #74 Recall Quiz before a Lesson           :done, r5, after r4, 2d
     #75 Memory Review screen                  :done, r6, after r5, 2d
-    #76 Recall docs and smoke test            :r7, after r6, 1d
+    #76 Recall docs and smoke test            :done, r7, after r6, 1d
 ```
 
 ## Dependency table
