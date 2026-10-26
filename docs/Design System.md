@@ -145,6 +145,16 @@ Focus on a heading set by script (`tabindex="-1"` on a screen, question or panel
 
 `lesson-*` classes belong to the Lesson: `.lesson-screen`, `.lesson-header`, `.lesson-notions`, `.lesson-sources` for the Lesson screen, and the prose classes `.lesson-body`, `.lesson-scroll`, `.lesson-table`, `.lesson-notion-anchor`, used wherever a Lesson text is shown (topic screen panel, Remediation Lesson, Protocol Step Lesson).
 
+### Recall patterns
+
+`recall-*` and `memory-*` classes (`src/renderer/src/recall/recall.css`, `memoryReview.css`) belong to the [[Recall Quiz]] and the [[Memory Review]] ([[Recall Implementation]]). Tokens and shared classes only; the tone is calm, never red.
+
+- **Recall pill**: a neutral `.chip` reading "Recall" at the head of the quiz, not the progress accent: in the Light theme the progress accent is terracotta and would read like the honey tag below.
+- **Often missed tag** (`.recall-tag`): a `.chip.chip-attention` (a "!" glyph and the words "Often missed", honey in Light, amber in Dark) followed by the plain count ("You missed this notion in 3 of your last 6 quizzes").
+- **No red in a Recall Quiz**: `.recall` remaps `--color-error*` to the `--color-attention*` tokens inside its subtree, so the shared `QuestionFeedbackView`, `.chip-error` and `.mark-row-error` render honey there. Right and wrong stay in the glyph and the word; the override is scoped to `.recall` and changes nothing elsewhere.
+- **Result marks** (`.memory-mark`): a small circle with an SVG check (`-correct`, sage tint) or minus (`-missed`, honey tint), in an `<ol>` of the latest results oldest first; each is `role="img"` with the label "Correct" or "Missed", so the tint only adds to the icon and the word.
+- **Memory Review layout**: a `.memory-strip` of three `.card.stat` (Notions tracked, Need attention, Getting steadier, an icon and a word on the two statuses), groups with a title and a count chip, rows as `.card.memory-row` with a tone class (`memory-row-attention`, `memory-row-steady`), and the Solid group collapsed behind a real button with `aria-expanded` and `aria-controls`. A load failure and a Practice that cannot start are `.notice.notice-attention`, never `.notice-error`.
+
 ## App shell
 
 Issue #29. `AppShell` (`src/renderer/src/shell/AppShell.tsx`, `shell.css`) wraps every screen from `App`. It fills the window (`height: 100vh`, flex column): header, content area, footer. Only the content area scrolls, so the header is always in view.

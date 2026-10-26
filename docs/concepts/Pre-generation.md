@@ -12,6 +12,7 @@ A [[Generation]] started in the background before the learner needs its result, 
 - A background [[Generation]]
 - Fills the [[Content Cache]]
 - Typical case: the [[Quiz]] of the [[Topic]] whose [[Lesson]] is open
+- Also the background batch of new questions for a later [[Recall Quiz]], started when a Lesson has finished streaming ([[Recall Implementation#Generation triggers]])
 
 ## In code
 

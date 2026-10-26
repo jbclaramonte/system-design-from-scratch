@@ -41,6 +41,10 @@ Single source of truth for domain terms. Use these exact terms in code, schema, 
 | [[Notion Map]] | View of mastery per notion. | skill tree |
 | [[Dashboard]] | Screen with mastery, attempts and weak points. | stats page |
 | [[Weak Point]] | A notion tested in a completed round whose latest score is below the current Mastery Threshold; listed on the Dashboard with why. | weakness, gap, struggle |
+| [[Recall Quiz]] | A short quiz (about 6 questions) on Notions of Topics already passed, taken before the Lesson of a new Topic opens (the first time it opens) or from the Memory Review. Old questions are reused, new ones come from a background Pre-generation, with more weight on Shaky Notions. Single choice, multiple choice and scenario, graded locally. Always taken, never blocking (the Lesson opens next whatever the result), skipped silently when there is nothing to recall; never changes mastery, Weak Points, XP, Levels, Badges, the Activity Streak or the Daily Goal. | review, revision, refresher, flashcards |
+| [[Recall Session]] | The stored identity of one Recall Quiz or Practice: its kind (`gate` before a Lesson, `practice` from the Memory Review), its questions in order, its Attempts, completed or not. Not a Round: its Attempts have no Round. The gate session resumes; a Practice session does not. Only completed sessions count. | recall round, review session |
+| [[Memory Review]] | The screen, reached from the Dashboard, of the Notions the learner finds hard to retain, from the latest 6 answers of every completed Round and Recall Session: Needs attention, Getting steadier, Solid; with "Practice" on each and "Start a Recall Quiz on these". Distinct from a Weak Point, which is about the latest score of a completed Round. | weaknesses, gaps |
+| [[Shaky Notion]] | A Notion missed at least 3 of its last 6 answers, across Rounds and Recall Sessions (needs attention); a Notion with fewer than 2 answers is not tracked. Gets more weight in the Recall Quiz and is listed first in the Memory Review. | weakness, struggle |
 
 ## Activity
 

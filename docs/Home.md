@@ -28,6 +28,7 @@ Desktop app to learn system design: lesson, quiz, targeted remediation until mas
 - [[Mastery Loop Implementation|Mastery Loop, remediation and settings]]
 - [[Learning Path Implementation|Learning Path, unlock rules and home screen]]
 - [[Dashboard Implementation|Dashboard, Notion Map and weak points]]
+- [[Recall Implementation|Recall Quiz and Memory Review: window, statuses, eligibility, selection, triggers, IPC]]
 - [[Rewards Implementation|XP, Levels, Badges and Celebrations: rules, tables, IPC and screens]]
 - [[Foundations Module Content|Foundations Module topics and ungrounded guards]]
 
@@ -35,7 +36,7 @@ Desktop app to learn system design: lesson, quiz, targeted remediation until mas
 
 Learning content: [[Topic]], [[Notion]], [[Notion Outline]], [[Lesson]], [[Remediation Lesson]], [[Lesson Question]], [[Foundations Module]], [[Learning Path]], [[Forced Unlock]], [[Diagram]]
 
-Assessment: [[Quiz]], [[Question]], [[Question Clarification]], [[Attempt]], [[Round]], [[Mastery Loop]], [[Mastery Threshold]], [[Round Limit]], [[Declared Mastery]], [[Notion Map]], [[Dashboard]], [[Weak Point]]
+Assessment: [[Quiz]], [[Question]], [[Question Clarification]], [[Attempt]], [[Round]], [[Mastery Loop]], [[Mastery Threshold]], [[Round Limit]], [[Declared Mastery]], [[Notion Map]], [[Dashboard]], [[Weak Point]], [[Recall Quiz]], [[Recall Session]], [[Memory Review]], [[Shaky Notion]]
 
 Activity and rewards: [[Activity Day]], [[Activity Streak]], [[Daily Goal]], [[XP]], [[Level]], [[Badge]], [[Celebration]]
 

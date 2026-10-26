@@ -12,6 +12,7 @@ A [[Notion]] the learner should practice: tested in at least one completed [[Rou
 - A [[Notion]] of the [[Notion Map]] that is not mastered
 - Built from [[Attempt]]s
 - Shown on the [[Dashboard]]
+- Not a [[Shaky Notion]]: that one comes from the latest 6 answers of Rounds and Recall Sessions, and is listed in the [[Memory Review]]
 
 ## In code
 

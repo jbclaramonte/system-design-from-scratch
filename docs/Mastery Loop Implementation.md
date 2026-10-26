@@ -141,6 +141,10 @@ Applied without restart: the Course language is read when a Generation is prepar
 
 "Open Settings": every Generation error display (lesson, Remediation Lesson, quiz preparation, free-answer grading, Protocol Step Lesson and protocol calls, dev Generation panel) is `GenerationErrorView` ([[Generation Service#Error display]]); for `not_logged_in` and `cli_not_found` it shows "Open Settings" next to Retry, which opens the Settings screen (`OpenSettingsContext`, provided by `App`; Back returns to the screen it was opened from).
 
+## Recall Quiz
+
+The first time the [[Lesson]] of a Topic opens, the Topic screen can show a [[Recall Quiz]] on earlier Topics before it (`RecallGate` instead of `LessonScreen`, `showsRecallGate`): only on the initial `lesson` step with no Lesson generated yet and no Round, never for a [[Remediation Lesson]], and never for a Lesson generated before the feature. It is always taken, never blocks (whatever the result, the Lesson opens next, and any technical failure opens it too) and is skipped silently when there is nothing to recall. The state machine, the Round Limit, the Mastery Threshold, unlocks, [[Forced Unlock]] and [[Declared Mastery]] are unchanged: Recall Attempts have no Round, so no mastery code reads them. When the Lesson stream finishes, the app also pre-generates new questions for later Recall Quizzes in the background. See [[Recall Implementation]].
+
 ## Rewards
 
 A completed Round pays [[XP]] (its score divided by 5, plus 10 when passed) and the first passed Round of a Topic pays the Topic's mastery (+50); the results screen says what the Round paid ("+30 XP: Round passed") through `rewards:getRound`. The state machine is unchanged: rewards only read rounds, never write them. A [[Declared Mastery]] pays nothing, and a declared Topic's first passed Round still pays the mastery. See [[Rewards Implementation]].
@@ -174,4 +178,4 @@ Migration 3 `mastery-loop` ([[Data Model]]): table `round_limit_choices (round_i
 ## Related
 
 - [[Mastery Loop]], [[Round]], [[Round Limit]], [[Mastery Threshold]], [[Remediation Lesson]], [[Notion]]
-- [[Quiz Engine]], [[Lesson View]], [[Prompts]], [[Generation Service]], [[Data Model]]
+- [[Quiz Engine]], [[Lesson View]], [[Prompts]], [[Generation Service]], [[Data Model]], [[Recall Implementation]]

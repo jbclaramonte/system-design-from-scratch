@@ -12,6 +12,7 @@ A set of [[Question]]s on a [[Topic]], played as one [[Round]]. Pre-generated in
 - Composed of [[Question]]s
 - Played in a [[Round]]
 - Validated against the [[Mastery Threshold]]
+- A quiz of purpose `recall` holds questions generated for [[Recall Quiz]]es and is never played as a Round
 
 ## In code
 

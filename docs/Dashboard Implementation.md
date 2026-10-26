@@ -80,6 +80,10 @@ Order, most urgent first: lowest latest score, then most rounds missed, then mos
 
 Untested notions are never weak points (they show as "not tested yet" in the Notion Map). A notion of a mastered topic can be a weak point (a pass below 100%, or a threshold raised later).
 
+### Memory Review
+
+The Dashboard header has a **Memory Review** button (next to "Learning Path"), and the overview ends, after the Badges, with a short **Memory Review** section (a sentence and an "Open the Memory Review" button). Neither calls `dashboard:get`: the [[Memory Review]] loads its own read model (`recall:getMemoryReview`), and no count shows on the Dashboard. A Topic opened from the Memory Review keeps the Dashboard item highlighted, and its back button returns to the Memory Review. Recall Attempts have no Round, so the Overview, the Notion Map, the [[Weak Point]]s and the history never count them; a Memory Review notion is not a Weak Point (see [[Recall Implementation]]).
+
 ### Attempt history
 
 Rounds most recent first (by start date), at most 50 (`HISTORY_ROUND_LIMIT`), each with its attempts: prompt (French), question type, result, notions, date. A free answer whose grade was contested shows its current (re-graded) result with "contested, re-graded" (the grading record's `contest`, see [[Quiz Engine]]). `dashboard:get` with a `topicId` restricts the history to that topic; the rest of the Dashboard is always the full picture.
@@ -116,4 +120,5 @@ Issue #31, on the dark [[Design System]] (tokens and shared classes only, no lit
 
 - [[Dashboard]], [[Notion Map]], [[Weak Point]], [[Attempt]], [[Round]], [[Notion]], [[Mastery Threshold]], [[Round Limit]]
 - [[Activity Streak]], [[Activity Day]], [[Daily Goal]]
+- [[Memory Review]], [[Recall Implementation]]
 - [[Mastery Loop Implementation]], [[Learning Path Implementation]], [[Quiz Engine]], [[Data Model]]

@@ -52,6 +52,7 @@ Personal desktop app to learn system design from scratch, built around this loop
 - [[Lesson|Lessons]] are streamed.
 - While a lesson is being read, the matching quiz is pre-generated in the background.
 - All generated content (lessons, remediation lessons, quizzes) is stored in the [[Content Cache]] (SQLite) and reused when a topic is redone.
+- Once a lesson has finished streaming, a small batch of new questions for a later [[Recall Quiz]] is pre-generated in the background (at most one batch, plus at most one declared topic, per opened lesson); the learner never waits for it and never sees an error from it.
 
 ### 4.4 Diagrams
 
@@ -82,6 +83,13 @@ Small helpers around the text and the quiz, outside the mastery loop: they never
   - Scenario / trade-off choice.
   - Short free answer, graded by the LLM.
 - The first three are graded locally, with no LLM call. Free answers go through the LLM.
+
+### 5.1 Recall Quiz and Memory Review
+
+Nothing in the loop above brings an old topic back, so two features around it do (spaced repetition without a scheduler). They never change mastery, weak points, XP, levels, badges, the streak or the Daily Goal: a Recall Quiz is not a Round. Rules, tables and IPC: [[Recall Implementation]].
+
+- **[[Recall Quiz]]**: the first time the Lesson of a topic opens, a short quiz (about 6 questions) on earlier topics comes first: the topics already passed (by a Round or declared), except the topic opened and the one passed most recently. Questions already asked are reused, a few new ones are added when a batch is stored, and notions often missed get more weight. Single choice, multiple choice and scenario only, all graded locally, with the usual feedback and Question Clarification, a "Recall" label and an "Often missed" tag with the plain count. It is always taken and never blocks: whatever the result, the Lesson opens next, and a technical failure opens it too. It is skipped silently when there is nothing to recall (a first Lesson, or a second one when only one topic is passed: it is the most recent, so it is left out). Leaving it midway keeps the answers and resumes it when the Lesson is opened again; once finished, the topic is not asked again. No pass or fail wording, nothing red.
+- **[[Memory Review]]**: a screen reached from the Dashboard that lists the notions the learner finds hard to retain, from the latest 6 answers of every completed Round and Recall Quiz: "Needs attention" (missed 3 or more of the last 6, a [[Shaky Notion]]), "Getting steadier" and "Solid". Each row shows the last results as marks (an icon and a word), "Missed 3 of last 6" and "Last seen", with "Open the lesson section" and "Practice", which starts a Recall Quiz on that notion; "Start a Recall Quiz on these" does it for the notions that need attention. A practice uses stored questions only, may include the topic passed most recently, never waits for a Generation and says "Nothing to practice yet" when it has nothing to ask. Calm tone: honey for attention, sage for the rest.
 
 ## 6. Design exercise
 
@@ -114,7 +122,7 @@ The exact order of additions from design 2 onwards is still to be refined while 
 ## 7. Path and navigation
 
 - Linear [[Learning Path]]: foundations, topics, then designs. Each step is unlocked by mastering the previous one. It is drawn as a roadmap of nodes linked by a dashed path (status in words and a mark, the current step highlighted with its action, locked steps dimmed), under a strip with the global progress and the next milestone; the Level and the Streak sit in a side panel; a single column on a narrow window. See [[Learning Path Implementation#Roadmap of nodes]].
-- [[Notion Map]] and [[Dashboard]]: mastery per notion, attempt history, weak points.
+- [[Notion Map]] and [[Dashboard]]: mastery per notion, attempt history, weak points, and a link to the [[Memory Review]].
 - [[XP]], [[Level]] and [[Badge]]s **reward mastery only**: a completed Round, a Topic's first mastery, a passed Protocol Step and a completed Design Exercise pay XP; a Declared Mastery, a Forced Unlock, reading a Lesson, asking a question and re-reading pay nothing, and the same event never pays twice. No tokens, no currency, no leaderboard, no notification. The Level and XP show in the Learning Path side panel and the Dashboard, the Badges (earned with date, locked with their rule) on the Dashboard, and the XP of a Round with its reason on its results screen. All derived from the history; see [[Rewards Implementation]].
 - [[Celebration]]s: a passed Round makes the XP total of its results tick up with a soft glow; a [[Badge]] earned or a [[Level]] reached slides a card in at the corner, one at a time, in order, dismissible and gone by itself. CSS only, no sound, never blocking, plays once per unlock, never for a failed Round and never for what was earned before the first launch with the feature. Nothing red; unlocks are announced politely to screen readers; with reduced motion the same content shows still; the "Celebrations" setting (default on) turns the animation off while the XP line and the Badges stay. See [[Rewards Implementation#Celebrations]].
 - [[Activity Streak]] and [[Daily Goal]]: a "Streak" card on the Learning Path and the Dashboard overview with the week strip (Monday to Sunday) and today's progress. An [[Activity Day]] is a local calendar day with a completed Round or a reviewed Protocol Step; one grace day per 7 days keeps a streak alive; the Daily Goal is 1 to 3 Rounds a day (Settings, default 1). Derived from existing data, no XP, no notification, no sound, and a fresh install says "Start your streak" with nothing red.
@@ -130,7 +138,7 @@ Local SQLite. Everything is recorded:
 
 The [[Activity Streak]], [[XP]], [[Level]] and [[Badge]]s are not stored: they are computed from the completed Rounds, the reviewed Protocol Step submissions and the final reviews of Design Exercises. Only the Badges already celebrated and the Level celebrated so far are remembered (the baseline and the celebrations, see [[Celebration]]).
 
-Spaced repetition is out of the MVP, but the attempt model must allow it without a migration.
+A [[Recall Quiz]] is stored as a [[Recall Session]] (its questions in order, completed or not); its answers are Attempts of that session, with no Round, so they never reach mastery or the rewards. New questions for it are stored as quizzes of purpose `recall` ([[Data Model#Recall Quiz data]]).
 
 ## 9. Scope
 
@@ -144,7 +152,7 @@ Spaced repetition is out of the MVP, but the attempt model must allow it without
 
 ### Out of MVP
 
-- Spaced repetition and a "review today" queue.
+- A spaced repetition scheduler (an interval per question) and a daily queue: the [[Recall Quiz]] and the [[Memory Review]] are in, a schedule is not.
 - Multi-machine sync.
 - Distribution to other users (LLM provider abstraction, API key, i18n).
 - The remaining ~30 primer topics.

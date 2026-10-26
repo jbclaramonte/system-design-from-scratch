@@ -34,6 +34,7 @@ The schema version of a database is the highest version in `schema_migrations`; 
 | 8 | `generation-language` | Column `language` (`fr` or `en`, default `fr`, checked) on `content_cache`, `lessons`, `quizzes` and `remediation_lessons`, backfilled to French by the default; indexes on `(topic_id, language)` and `(notion_id, language)`; setting `generation_language = "fr"` (#57). No table is rebuilt. |
 | 9 | `language-chosen-marker` | Setting row `generation_language_chosen = true` (the "language chosen" marker), inserted only when the data folder already holds learner data: a row in `content_cache`, `lessons`, `quizzes`, `remediation_lessons`, `rounds`, `attempts`, `round_limit_choices`, `forced_unlocks`, `declared_masteries`, `protocol_step_submissions`, `protocol_step_drafts`, `protocol_step_encounters`, `design_scenes` or `design_feedback`, or a setting the learner saved (any `settings` row other than the seeded ones and the `update_*` memory, or a seeded one changed since it was seeded). A fresh folder gets no marker (#61). |
 | 10 | `celebrated-badges` | Table `celebrated_badges` (#65). Celebrations (#66) add no migration. |
+| 11 | `recall-sessions` | Column `quizzes.purpose` (`round` or `recall`, default `round`, so every existing quiz stays a Round quiz); tables `recall_sessions` and `recall_session_questions`; column `attempts.recall_session_id` with its index. Additive, no table rebuilt (#71). |
 | 4 | `interview-protocol` | `content_cache` rebuilt to accept the `protocol_step_lesson` kind (the `content_cache_key` of lessons, quizzes and remediation lessons are saved and restored around the rebuild); `design_exercises.problem_statement`; tables `protocol_step_submissions`, `protocol_step_drafts`, `protocol_step_encounters` (#14). |
 
 ## Diagram
@@ -259,9 +260,9 @@ Generated rows carry `grounded` and `source_sections` ([[Grounding]]) and an opt
 
 ### Recall Quiz data
 
-Added by migration 11 (#71). A Recall Quiz is a short quiz on Notions the learner passed, taken as a gate before a Lesson or from Memory Review. Nothing about it changes mastery, Weak Points, XP, Levels, Badges, the Activity Streak or the Daily Goal.
+Added by migration 11 (#71). A [[Recall Quiz]] is a short quiz on Notions the learner passed, taken as a gate before a Lesson or from the [[Memory Review]]. Nothing about it changes mastery, [[Weak Point]]s, [[XP]], [[Level]]s, [[Badge]]s, the [[Activity Streak]] or the [[Daily Goal]]. Rules and IPC: [[Recall Implementation]].
 
-- `recall_sessions`: one taking of a Recall Quiz. `kind` is `gate` (before a Lesson; `topic_id` is the Topic being opened) or `practice` (from Memory Review; `topic_id` null). `started_at`, and `completed_at` (null while the session is open). An open `gate` session is resumed with its answers (`findOpenGateSession`); once a `gate` session is completed the Topic is never asked again (`hasCompletedGateSession`). Repository: `src/main/db/repositories/recall.ts`.
+- `recall_sessions`: one taking of a Recall Quiz, a [[Recall Session]]. `kind` is `gate` (before a Lesson; `topic_id` is the Topic being opened) or `practice` (from the Memory Review; `topic_id` null). `started_at`, and `completed_at` (null while the session is open). An open `gate` session is resumed with its answers (`findOpenGateSession`); once a `gate` session is completed the Topic is never asked again (`hasCompletedGateSession`). Repository: `src/main/db/repositories/recall.ts`.
 - `recall_session_questions`: the questions a session asks, in order (`position`, unique per session; a question once per session). The order is stored so an interrupted session resumes as it was.
 - `attempts.recall_session_id`: set for an Attempt of a Recall session, indexed.
 - `quizzes.purpose`: see above.
