@@ -55,6 +55,10 @@ erDiagram
   topics ||--o| declared_masteries : "declared as known"
   questions ||--o{ attempts : "answered by"
   rounds |o--o{ attempts : ""
+  topics |o--o{ recall_sessions : "gate of"
+  recall_sessions ||--o{ recall_session_questions : asks
+  questions ||--o{ recall_session_questions : ""
+  recall_sessions |o--o{ attempts : ""
   attempts ||--o{ attempt_notions : ""
   notions ||--o{ attempt_notions : ""
   content_cache |o--o{ lessons : ""
@@ -151,6 +155,18 @@ erDiagram
     int topic_id PK
     text created_at "time of the declaration"
   }
+  recall_sessions {
+    int id PK
+    text kind "gate or practice"
+    int topic_id FK "gate: the Topic being opened"
+    text started_at
+    text completed_at "null while open"
+  }
+  recall_session_questions {
+    int session_id PK
+    int question_id PK
+    int position "unique per session"
+  }
   celebrated_badges {
     text badge_id PK "id of BADGES, not a foreign key"
     text unlocked_at
@@ -232,17 +248,36 @@ Generated rows carry `grounded` and `source_sections` ([[Grounding]]) and an opt
 
 ### Assessment
 
-- `quizzes`: one [[Quiz]] on a topic, in one [[Generation Language]] (`language`): a topic can have quizzes in each language, and a [[Round]] plays one quiz, so it finishes in the language of its quiz. Free-answer grading and [[Question Clarification|clarifications]] of its questions follow that language.
+- `quizzes`: one [[Quiz]] on a topic, in one [[Generation Language]] (`language`): a topic can have quizzes in each language, and a [[Round]] plays one quiz, so it finishes in the language of its quiz. Free-answer grading and [[Question Clarification|clarifications]] of its questions follow that language. `purpose` is `round` (the default, every quiz that existed before migration 11) or `recall` (questions generated for Recall Quizzes, never played as a Round). `listQuizzesByTopic`, which feeds the quiz list and the Mastery Loop's "next quiz", returns only `round` quizzes, and `startRound` refuses a `recall` one; `getQuiz` by id is unfiltered.
 - `questions`: [[Question]]s of a quiz, unique `position` per quiz. `type` is one of `single_choice`, `multiple_choice`, `scenario`, `free_answer`. `body` holds the type-specific payload (choices with their `correct` flag, explanation, scenario, optional `diagram` Mermaid source of a choice question (#24, no migration), expected points and model answer, source sections; see [[Prompts]]). Deleted with their quiz, unless they have attempts. A faulty question is flagged (`flagged_at`, `flag_reason`) and may be replaced: the replacement takes its position, the flagged row moves after the last position and points to it with `replaced_by_question_id` (history; attempts stay valid). `listQuestions` skips replaced questions, `listQuestionHistory` keeps them.
 - `question_notions`: tags each question with one or more notions.
 - `rounds`: one [[Round]] of the [[Mastery Loop]] on a topic, playing one quiz. `number` is unique per topic and never restarts, so the history stays ordered; the [[Round Limit]] counts rounds since the last passed round of that topic. `completed_at`, `score_percent` (0 to 100) and `passed` are all null until the round is graded, then all set; `passed` is stored because the [[Mastery Threshold]] can change later.
-- `attempts`: one [[Attempt]] per answer: `attempted_at` (date), `question_id`, `question_type`, `answer` (JSON), `result` (`correct`, `partially_correct`, `incorrect`), `score` (0 to 1), optional `feedback` (free answers: the grading record as JSON, with the grading in force, the contest and the replaced gradings; see [[Quiz Engine#Free answers (#10)]]) and `round_id`. Attempts are history: a question or round with attempts cannot be deleted.
+- `attempts`: one [[Attempt]] per answer: `attempted_at` (date), `question_id`, `question_type`, `answer` (JSON), `result` (`correct`, `partially_correct`, `incorrect`), `score` (0 to 1), optional `feedback` (free answers: the grading record as JSON, with the grading in force, the contest and the replaced gradings; see [[Quiz Engine#Free answers (#10)]]) and `round_id`. Attempts are history: a question or round with attempts cannot be deleted. An Attempt belongs to a [[Round]] (`round_id`) or to a Recall session (`recall_session_id`), never both (`recordAttempt` refuses it); both are null for an Attempt outside any session, which no answer window counts. Everything Round-based (mastery, the Notion Map, the [[Dashboard]], the rewards, the Learning Path, the Activity Streak) reads Attempts through completed Rounds, so Attempts of Recall sessions never reach them.
 - `round_limit_choices`: the learner's choice on a failed [[Round]] that reached the [[Round Limit]]: `another_angle` or `skip` (one per round, changed when the learner comes back to a skipped topic). See [[Mastery Loop Implementation]].
 - `declared_masteries`: the [[Declared Mastery]] of a topic: one row per topic the learner declared as already known (`topic_id`, and `created_at`, the time of the declaration; no `updated_at`, a row is inserted or deleted, never changed). It is not a round or an attempt: the mastery of the topic is still derived, the row is one more input of the state machine. Deleted with its topic. A declaration can be undone (row deleted) only while no round of the topic was started at or after `created_at`. See [[Mastery Loop Implementation#Declared Mastery]].
 - `attempt_notions`: notions of the question at the time of the attempt, copied on insert, so per-notion history survives retagging. Indexed by notion for the [[Notion Map]] and [[Dashboard]].
 
-> [!note] Spaced repetition
-> Spaced repetition is out of the MVP. Each attempt already has its date, notions, type and result, so a review schedule can be computed from `attempts` + `attempt_notions` without changing them; scheduling state, if needed, goes in a new table.
+### Recall Quiz data
+
+Added by migration 11 (#71). A Recall Quiz is a short quiz on Notions the learner passed, taken as a gate before a Lesson or from Memory Review. Nothing about it changes mastery, Weak Points, XP, Levels, Badges, the Activity Streak or the Daily Goal.
+
+- `recall_sessions`: one taking of a Recall Quiz. `kind` is `gate` (before a Lesson; `topic_id` is the Topic being opened) or `practice` (from Memory Review; `topic_id` null). `started_at`, and `completed_at` (null while the session is open). An open `gate` session is resumed with its answers (`findOpenGateSession`); once a `gate` session is completed the Topic is never asked again (`hasCompletedGateSession`). Repository: `src/main/db/repositories/recall.ts`.
+- `recall_session_questions`: the questions a session asks, in order (`position`, unique per session; a question once per session). The order is stored so an interrupted session resumes as it was.
+- `attempts.recall_session_id`: set for an Attempt of a Recall session, indexed.
+- `quizzes.purpose`: see above.
+
+**Answer windows** (`src/main/recall/queries.ts`, `loadNotionResults`; the status rules are in `src/main/recall/memory.ts`):
+
+- Only completed sessions count: a [[Round]] with `completed_at` or a Recall session with `completed_at`. An open Round or Recall session is ignored, and so is an Attempt with neither.
+- One result per Question per session: the final Attempt of the Question in that session (by `attempted_at`, then id), for each Notion the Attempt is tagged with in `attempt_notions`. The same Question in two sessions counts twice.
+- An Attempt on a replaced question (flagged and regenerated) is left out, like the Round scores do.
+- `correct` only when `result = 'correct'`; `partially_correct` and `incorrect` count as missed. A [[Declared Mastery]] and a Forced Unlock never produce an Attempt, so never an answer.
+- Results of a Notion are listed oldest first by the time of the final Attempt; only the last 6 count (`RECALL_WINDOW`).
+- Status of a Notion, in this order: fewer than 2 answers is untracked; 3 or more missed of the last 6 is `needs_attention`; correct on the last 4 (or on all, if fewer than 4) is `solid`; every other tracked Notion is `steadier`.
+
+**Passed Topics** (`loadPassedTopics`): a Topic is passed by a [[Round]] with `passed = 1` or by a [[Declared Mastery]]. Its passed date is the earliest of its first passing Round's `completed_at` and its `declared_masteries.created_at`; it appears once.
+
+**Candidates** (`loadRecallCandidates`): the questions of the quizzes of the given Topics, of any `purpose`, of type `single_choice`, `multiple_choice` or `scenario` (graded locally; free answers are not reused), not flagged, not replaced, in the current [[Generation Language]] (`quizzes.language`). A Topic with Notions but no quiz has no candidate. `lastAskedAt` is the latest `attempted_at` of the question over all its Attempts; a question never asked is `new`.
 
 ### Design practice
 
@@ -277,4 +312,5 @@ Generated rows carry `grounded` and `source_sections` ([[Grounding]]) and an opt
 - `src/main/db/migrate.ts`, `src/main/db/migrations/`: migration runner and migrations.
 - `src/main/db/index.ts`: `openAppDatabase()`, called from `src/main/index.ts` at startup.
 - `src/main/db/types.ts`: row types.
-- `src/main/db/repositories/`: typed data access, one file per glossary section (`learningContent`, `assessment`, `designPractice`, `contentCache`, `settings`). No business logic.
+- `src/main/db/repositories/`: typed data access, one file per glossary section (`learningContent`, `assessment`, `designPractice`, `contentCache`, `settings`, `recall`). No business logic.
+- `src/main/recall/`: Recall Quiz logic; `queries.ts` reads the rows its pure functions work on (see Recall Quiz data).

@@ -3,7 +3,16 @@ import {
   type GenerationLanguage
 } from '../../../shared/generationLanguage'
 import type { Database } from '../driver'
-import type { Attempt, AttemptResult, Json, Question, QuestionType, Quiz, Round } from '../types'
+import type {
+  Attempt,
+  AttemptResult,
+  Json,
+  Question,
+  QuestionType,
+  Quiz,
+  QuizPurpose,
+  Round
+} from '../types'
 import { fromFlag, fromIdList, fromJson, NOW, TIMESTAMP_COLUMNS, toFlag, toJson } from './mapping'
 
 // Quizzes and questions
@@ -18,6 +27,8 @@ export interface NewQuestion {
 
 export interface NewQuiz {
   topicId: number
+  /** Default `round`. */
+  purpose?: QuizPurpose
   /** Default French (what rows were before the Generation Language existed). */
   language?: GenerationLanguage
   grounded: boolean
@@ -31,7 +42,7 @@ interface QuizRow extends Omit<Quiz, 'grounded' | 'sourceSections'> {
   sourceSections: string
 }
 
-const QUIZ_COLUMNS = `id, topic_id AS topicId, language, grounded, source_sections AS sourceSections,
+const QUIZ_COLUMNS = `id, topic_id AS topicId, purpose, language, grounded, source_sections AS sourceSections,
   content_cache_key AS contentCacheKey, ${TIMESTAMP_COLUMNS}`
 
 const toQuiz = (row: QuizRow): Quiz => ({
@@ -65,11 +76,12 @@ export function createQuiz(db: Database, quiz: NewQuiz): Quiz {
   return db.transaction(() => {
     const { lastInsertRowid: quizId } = db
       .prepare(
-        `INSERT INTO quizzes (topic_id, language, grounded, source_sections, content_cache_key)
-         VALUES ($topicId, $language, $grounded, $sourceSections, $contentCacheKey)`
+        `INSERT INTO quizzes (topic_id, purpose, language, grounded, source_sections, content_cache_key)
+         VALUES ($topicId, $purpose, $language, $grounded, $sourceSections, $contentCacheKey)`
       )
       .run({
         topicId: quiz.topicId,
+        purpose: quiz.purpose ?? 'round',
         language: quiz.language ?? DEFAULT_GENERATION_LANGUAGE,
         grounded: toFlag(quiz.grounded),
         sourceSections: toJson(quiz.sourceSections ?? []),
@@ -106,9 +118,16 @@ export function getQuiz(db: Database, id: number): Quiz | undefined {
   return row && toQuiz(row)
 }
 
+/**
+ * The Round quizzes of a topic, latest first. Recall quizzes are left out: this is "the quiz of a
+ * topic" for the quiz list and the Mastery Loop, which must never play a recall quiz as a Round.
+ */
 export function listQuizzesByTopic(db: Database, topicId: number): Quiz[] {
   return db
-    .prepare(`SELECT ${QUIZ_COLUMNS} FROM quizzes WHERE topic_id = $topicId ORDER BY id DESC`)
+    .prepare(
+      `SELECT ${QUIZ_COLUMNS} FROM quizzes WHERE topic_id = $topicId AND purpose = 'round'
+       ORDER BY id DESC`
+    )
     .all<QuizRow>({ topicId })
     .map(toQuiz)
 }
@@ -279,6 +298,8 @@ export function listRoundCompletionTimes(db: Database): string[] {
 export interface NewAttempt {
   questionId: number
   roundId?: number | null
+  /** An Attempt belongs to a Round or to a Recall session, never both. */
+  recallSessionId?: number | null
   answer: Json
   result: AttemptResult
   score: number
@@ -293,7 +314,7 @@ interface AttemptRow extends Omit<Attempt, 'answer' | 'notionIds'> {
 }
 
 const ATTEMPT_SELECT = `SELECT a.id, a.question_id AS questionId, a.round_id AS roundId,
-    a.question_type AS questionType, a.answer, a.result, a.score, a.feedback,
+    a.recall_session_id AS recallSessionId, a.question_type AS questionType, a.answer, a.result, a.score, a.feedback,
     a.attempted_at AS attemptedAt, a.created_at AS createdAt, a.updated_at AS updatedAt,
     (SELECT group_concat(notion_id) FROM
       (SELECT notion_id FROM attempt_notions WHERE attempt_id = a.id ORDER BY notion_id)
@@ -311,18 +332,23 @@ const toAttempt = (row: AttemptRow): Attempt => ({
  * attempt history stays stable if the question is later retagged.
  */
 export function recordAttempt(db: Database, attempt: NewAttempt): Attempt {
+  if (attempt.roundId != null && attempt.recallSessionId != null) {
+    throw new Error('An Attempt belongs to a Round or to a Recall session, not both.')
+  }
   return db.transaction(() => {
     const { changes, lastInsertRowid: attemptId } = db
       .prepare(
         `INSERT INTO attempts
-           (question_id, round_id, question_type, answer, result, score, feedback, attempted_at)
-         SELECT id, $roundId, type, $answer, $result, $score, $feedback,
+           (question_id, round_id, recall_session_id, question_type, answer, result, score,
+            feedback, attempted_at)
+         SELECT id, $roundId, $recallSessionId, type, $answer, $result, $score, $feedback,
            coalesce($attemptedAt, ${NOW})
          FROM questions WHERE id = $questionId`
       )
       .run({
         questionId: attempt.questionId,
         roundId: attempt.roundId ?? null,
+        recallSessionId: attempt.recallSessionId ?? null,
         answer: toJson(attempt.answer),
         result: attempt.result,
         score: attempt.score,
@@ -362,6 +388,13 @@ export function listAttemptsByRound(db: Database, roundId: number): Attempt[] {
   return db
     .prepare(`${ATTEMPT_SELECT} WHERE a.round_id = $roundId ORDER BY a.id`)
     .all<AttemptRow>({ roundId })
+    .map(toAttempt)
+}
+
+export function listAttemptsByRecallSession(db: Database, sessionId: number): Attempt[] {
+  return db
+    .prepare(`${ATTEMPT_SELECT} WHERE a.recall_session_id = $sessionId ORDER BY a.id`)
+    .all<AttemptRow>({ sessionId })
     .map(toAttempt)
 }
 

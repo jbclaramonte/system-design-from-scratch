@@ -60,9 +60,13 @@ export interface RemediationLesson extends Timestamps, Grounded, Localized {
   contentCacheKey: string | null
 }
 
+/** What a quiz is for: played as a Round, or holding questions of Recall Quizzes. */
+export type QuizPurpose = 'round' | 'recall'
+
 export interface Quiz extends Timestamps, Grounded, Localized {
   id: number
   topicId: number
+  purpose: QuizPurpose
   contentCacheKey: string | null
 }
 
@@ -99,7 +103,9 @@ export interface Round extends Timestamps {
 export interface Attempt extends Timestamps {
   id: number
   questionId: number
+  /** Null for an Attempt of a Recall session (and for one outside any Round). */
   roundId: number | null
+  recallSessionId: number | null
   questionType: QuestionType
   notionIds: number[]
   answer: Json
@@ -108,6 +114,19 @@ export interface Attempt extends Timestamps {
   score: number
   feedback: string | null
   attemptedAt: string
+}
+
+/** `gate` is taken before a Lesson, `practice` from Memory Review. */
+export type RecallSessionKind = 'gate' | 'practice'
+
+/** One taking of a Recall Quiz. Its Attempts have no Round and never change mastery. */
+export interface RecallSession extends Timestamps {
+  id: number
+  kind: RecallSessionKind
+  /** The Topic being opened (`gate`); null for `practice`. */
+  topicId: number | null
+  startedAt: string
+  completedAt: string | null
 }
 
 export interface DesignExercise extends Timestamps {

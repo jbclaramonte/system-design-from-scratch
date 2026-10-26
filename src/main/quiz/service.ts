@@ -328,6 +328,7 @@ export function createQuizService(
     startRound(quizId) {
       return db.transaction(() => {
         const quiz = requireQuiz(quizId)
+        if (quiz.purpose !== 'round') throw new Error(`Quiz ${quizId} is not a Round quiz.`)
         const round =
           findOpenRound(db, quizId) ??
           createRound(db, {

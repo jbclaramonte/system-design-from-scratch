@@ -126,7 +126,7 @@ gantt
 
     section Spaced repetition
     #70 Recall logic and selection            :active, r1, 2026-10-26, 1d
-    #71 Recall data model and isolation       :r2, after r1, 1d
+    #71 Recall data model and isolation       :done, r2, after r1, 1d
     #72 Pre-generate recall questions         :r3, after r2, 1d
     #73 Recall service and IPC                :r4, after r3, 2d
     #74 Recall Quiz before a Lesson           :r5, after r4, 2d

@@ -500,6 +500,20 @@ describe('listing', () => {
       }
     ])
   })
+
+  it('leaves recall quizzes out of the lists, and never starts a Round on one', () => {
+    const { topic, quiz, a } = seed()
+    const recall = createQuiz(db, {
+      topicId: topic.id,
+      purpose: 'recall',
+      grounded: false,
+      questions: [{ position: 0, type: 'single_choice', prompt: 'R0', body: {}, notionIds: [a.id] }]
+    })
+
+    expect(service.listTopics().map((t) => t.quizCount)).toEqual([1])
+    expect(service.listQuizzes(topic.id).map((q) => q.id)).toEqual([quiz.id])
+    expect(() => service.startRound(recall.id)).toThrow(/not a Round quiz/)
+  })
 })
 
 describe('flagQuestion', () => {

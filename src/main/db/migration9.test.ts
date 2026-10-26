@@ -4,12 +4,12 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { openDatabase, type Database } from './driver'
 import { migrate } from './migrate'
 import { migrations } from './migrations'
-import { createQuiz, createRound } from './repositories/assessment'
+import { createRound } from './repositories/assessment'
 import { createTopic } from './repositories/learningContent'
 import { declareMastery } from './repositories/mastery'
 import { getSettings, isGenerationLanguageChosen, updateSettings } from './repositories/settings'
 import { saveDismissedUpdateVersion } from './repositories/updateState'
-import { insertLegacyCacheEntry } from './testing/legacyRows'
+import { insertLegacyCacheEntry, insertLegacyQuiz } from './testing/legacyRows'
 
 let db: Database
 
@@ -50,13 +50,8 @@ describe('migration 9 (language-chosen-marker)', () => {
 
   it('sets the marker on an install with a round', () => {
     const topic = createTopic(db, { slug: 'cache', title: 'Cache', position: 1 })
-    const quiz = createQuiz(db, {
-      topicId: topic.id,
-      language: 'fr',
-      grounded: true,
-      questions: []
-    })
-    createRound(db, { topicId: topic.id, quizId: quiz.id, number: 1 })
+    const quizId = insertLegacyQuiz(db, { topicId: topic.id })
+    createRound(db, { topicId: topic.id, quizId, number: 1 })
     migrateToLatest()
     expect(isGenerationLanguageChosen(db)).toBe(true)
   })

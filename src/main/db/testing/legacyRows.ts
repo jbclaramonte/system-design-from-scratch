@@ -51,3 +51,11 @@ export function insertLegacyLesson(
     })
   return lastInsertRowid
 }
+
+/** A French `quizzes` row as the app wrote it before migration 11 (no `purpose`); returns its id. */
+export function insertLegacyQuiz(db: Database, quiz: { topicId: number }): number {
+  const { lastInsertRowid } = db
+    .prepare("INSERT INTO quizzes (topic_id, language, grounded) VALUES ($topicId, 'fr', 1)")
+    .run({ topicId: quiz.topicId })
+  return lastInsertRowid
+}
