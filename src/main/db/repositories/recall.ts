@@ -1,8 +1,7 @@
 // Recall sessions: one taking of a Recall Quiz, with the questions it asks in order. Attempts of a
-// session are recorded with `recordAttempt` (`recallSessionId`) and read back here.
+// session are recorded with `recordAttempt` (`recallSessionId`) and read back with `listAttemptsByRecallSession`.
 import type { Database } from '../driver'
-import type { Attempt, RecallSession, RecallSessionKind } from '../types'
-import { listAttemptsByRecallSession } from './assessment'
+import type { RecallSession, RecallSessionKind } from '../types'
 import { NOW, TIMESTAMP_COLUMNS } from './mapping'
 
 export interface NewRecallSession {
@@ -37,17 +36,6 @@ export function getRecallSession(db: Database, id: number): RecallSession | unde
   return db
     .prepare(`SELECT ${SESSION_COLUMNS} FROM recall_sessions WHERE id = $id`)
     .get<RecallSession>({ id })
-}
-
-/** The latest gate session of the Topic that is not completed yet, if any (to resume it). */
-export function findOpenGateSession(db: Database, topicId: number): RecallSession | undefined {
-  return db
-    .prepare(
-      `SELECT ${SESSION_COLUMNS} FROM recall_sessions
-       WHERE kind = 'gate' AND topic_id = $topicId AND completed_at IS NULL
-       ORDER BY id DESC LIMIT 1`
-    )
-    .get<RecallSession>({ topicId })
 }
 
 /** Gate sessions of the Topic that are not completed yet, newest first. */
@@ -95,7 +83,3 @@ export function completeRecallSession(db: Database, id: number): RecallSession {
   if (changes === 0) throw new Error(`Recall session ${id} does not exist.`)
   return getRecallSession(db, id)!
 }
-
-/** Attempts of a session, in the order they were recorded. */
-export const listRecallAttempts = (db: Database, sessionId: number): Attempt[] =>
-  listAttemptsByRecallSession(db, sessionId)

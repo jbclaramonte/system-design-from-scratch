@@ -527,4 +527,43 @@ describe('triggerRecallBatches', () => {
     // The first Round's quiz Pre-generation of the opened Topic, then the recall batch.
     expect(calls.map(kindOf)).toEqual(['lesson', 'quiz', 'quiz'])
   })
+
+  it('starts the recall batches after the first Round quiz request is enqueued', async () => {
+    const { c } = seedPath()
+    const declared = seedTopic('declared', { bare: true })
+    declare(declared, 2)
+    const client = Object.assign(new EventEmitter(), {
+      send: () => {},
+      isDestroyed: () => false
+    }) as unknown as GenerationClient
+
+    createLessonIpc({ db, corpus, service }).start({ requestId: 'r1', topicId: c.topic.id }, client)
+
+    await expect.poll(() => generatedRecallQuizzes().length).toBe(2)
+    // The declared batch starts with an outline Generation: it must not take the single
+    // background slot before the first Round quiz (the one made from the Lesson just read).
+    const firstRound = calls.findIndex(
+      (call) => kindOf(call) === 'quiz' && call.prompt.includes('Texte [source: cache]')
+    )
+    const outline = calls.findIndex((call) => kindOf(call) === 'outline')
+    expect(calls.map(kindOf)[0]).toBe('lesson')
+    expect(firstRound).toBe(1)
+    expect(outline).toBeGreaterThan(firstRound)
+    expect(callsOf('outline')).toHaveLength(1)
+  })
+
+  it('still starts the recall batches when the first Round quiz cannot be prepared', async () => {
+    const { c } = seedPath()
+    const client = Object.assign(new EventEmitter(), {
+      send: () => {},
+      isDestroyed: () => false
+    }) as unknown as GenerationClient
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    failQuiz = true
+
+    createLessonIpc({ db, corpus, service }).start({ requestId: 'r1', topicId: c.topic.id }, client)
+
+    // The first Round quiz Generation fails; the recall batch is still tried.
+    await expect.poll(() => callsOf('quiz').length).toBe(2)
+  })
 })

@@ -124,7 +124,9 @@ export function createLessonIpc(deps: PipelineDeps, options: LessonIpcOptions = 
 
   /**
    * Pre-generates the quiz of the lesson the learner is reading (answerable from it), with the
-   * first round's options: the Mastery Loop's first round finds it in the Content Cache.
+   * first round's options: the Mastery Loop's first round finds it in the Content Cache. The
+   * recall batches start once that request is enqueued (or could not be), so they queue behind it
+   * for the background slot; the Lesson never waits on either.
    */
   function pregenerateQuiz(
     topicId: number,
@@ -132,9 +134,24 @@ export function createLessonIpc(deps: PipelineDeps, options: LessonIpcOptions = 
     language: GenerationLanguage
   ): void {
     // The language of the lesson being read, even if the setting changes meanwhile.
+    let recallStarted = false
+    const startRecallBatches = () => {
+      if (recallStarted) return
+      recallStarted = true
+      try {
+        triggerRecallBatches(deps, topicId, language)
+      } catch (error) {
+        console.error('Could not start the recall batches', error)
+      }
+    }
     prepareQuiz(deps, topicId, firstRoundQuizOptions(lessonMarkdown, getSettings(db)), { language })
-      .then((request) => service.pregenerate(request).result)
+      .then((request) => {
+        const pregeneration = service.pregenerate(request)
+        startRecallBatches()
+        return pregeneration.result
+      })
       .catch((error: unknown) => {
+        startRecallBatches()
         if (!(error instanceof GenerationError && error.code === 'cancelled')) {
           onPregenerationError(error)
         }
@@ -172,7 +189,6 @@ export function createLessonIpc(deps: PipelineDeps, options: LessonIpcOptions = 
         send(event)
         if (markdown !== null) {
           pregenerateQuiz(topicId, markdown, language)
-          triggerRecallBatches(deps, topicId, language)
         }
       }
     } catch (error) {

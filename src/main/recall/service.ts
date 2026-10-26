@@ -3,7 +3,12 @@
 // Recall session is not a Round: its Attempts never change mastery, XP, the streak or the Daily
 // Goal, and nothing here touches the Learning Path (see "Constraints" in the design spec).
 import type { Database } from '../db'
-import { getQuestion, getQuiz, recordAttempt } from '../db/repositories/assessment'
+import {
+  getQuestion,
+  getQuiz,
+  listAttemptsByRecallSession,
+  recordAttempt
+} from '../db/repositories/assessment'
 import { getNotion, getTopic } from '../db/repositories/learningContent'
 import {
   completeRecallSession,
@@ -11,7 +16,6 @@ import {
   getRecallSession,
   hasCompletedGateSession,
   listOpenGateSessions,
-  listRecallAttempts,
   listRecallSessionQuestionIds
 } from '../db/repositories/recall'
 import { getGenerationLanguage } from '../db/repositories/settings'
@@ -130,7 +134,9 @@ export function createRecallService(
   }
 
   const sessionAttempts = (session: RecallSession): Map<number, Attempt> =>
-    new Map(listRecallAttempts(db, session.id).map((attempt) => [attempt.questionId, attempt]))
+    new Map(
+      listAttemptsByRecallSession(db, session.id).map((attempt) => [attempt.questionId, attempt])
+    )
 
   function requireUnanswered(session: RecallSession, questionId: number): void {
     if (sessionAttempts(session).has(questionId)) {

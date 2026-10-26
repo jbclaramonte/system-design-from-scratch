@@ -7,13 +7,14 @@ import {
   createQuiz,
   createRound,
   flagQuestion,
+  listAttemptsByRecallSession,
   listQuestions,
   recordAttempt,
   replaceQuestion
 } from '../db/repositories/assessment'
 import { createNotions, createTopic } from '../db/repositories/learningContent'
 import { declareMastery } from '../db/repositories/mastery'
-import { createRecallSession, listRecallAttempts } from '../db/repositories/recall'
+import { createRecallSession } from '../db/repositories/recall'
 import { updateSettings } from '../db/repositories/settings'
 import type { QuestionType } from '../db/types'
 import type { QuestionBrief } from '../generation/prompts/questionClarification'
@@ -350,7 +351,7 @@ describe('submitAnswer', () => {
     const feedback = answerRight(recall, start.session.id, questionId)
 
     expect(feedback).toMatchObject({ questionId, result: 'correct', score: 1, kind: 'choice' })
-    const [attempt] = listRecallAttempts(db, start.session.id)
+    const [attempt] = listAttemptsByRecallSession(db, start.session.id)
     expect(attempt).toMatchObject({
       questionId,
       roundId: null,
@@ -381,7 +382,7 @@ describe('submitAnswer', () => {
     answerRight(recall, start.session.id, questionId)
 
     expect(() => answerRight(recall, start.session.id, questionId)).toThrow(/already answered/)
-    expect(listRecallAttempts(db, start.session.id)).toHaveLength(1)
+    expect(listAttemptsByRecallSession(db, start.session.id)).toHaveLength(1)
   })
 
   it('refuses a question outside the session', () => {
@@ -430,7 +431,7 @@ describe('submitAnswer', () => {
     expect(() =>
       service().submitAnswer(session.id, { questionId, answer: { text: 'An answer' } })
     ).toThrow()
-    expect(listRecallAttempts(db, session.id)).toHaveLength(0)
+    expect(listAttemptsByRecallSession(db, session.id)).toHaveLength(0)
   })
 })
 
@@ -523,7 +524,7 @@ describe('complete', () => {
 
     expect(second).toEqual(first)
     expect(second.session.completedAt).toBe(first.session.completedAt)
-    expect(listRecallAttempts(db, start.session.id)).toHaveLength(start.questions.length)
+    expect(listAttemptsByRecallSession(db, start.session.id)).toHaveLength(start.questions.length)
   })
 })
 

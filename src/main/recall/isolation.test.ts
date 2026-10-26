@@ -14,6 +14,7 @@ import {
   completeRound,
   createQuiz,
   createRound,
+  listAttemptsByRecallSession,
   listAttemptsByRound,
   listQuestions,
   listQuizzesByTopic,
@@ -21,11 +22,7 @@ import {
   recordAttempt
 } from '../db/repositories/assessment'
 import { createNotions, getTopicBySlug } from '../db/repositories/learningContent'
-import {
-  completeRecallSession,
-  createRecallSession,
-  listRecallAttempts
-} from '../db/repositories/recall'
+import { completeRecallSession, createRecallSession } from '../db/repositories/recall'
 import { getTopicMastery, latestNotionScores, listTopicMasteries } from '../mastery/queries'
 import { getLearningPath } from '../path/pathIpc'
 import { loadRewardHistory } from '../rewards/queries'
@@ -33,6 +30,9 @@ import { createRewardsIpc } from '../rewards/rewardsIpc'
 
 const corpus = loadCorpus(corpusPath(process.cwd()))
 const NOW = Date.parse('2026-10-26T12:00:00.000Z')
+/** Fixed times on the same day as NOW, so a leak into the activity would show on any date. */
+const MORNING = '2026-10-26T09:00:00.000Z'
+const LATE_MORNING = '2026-10-26T10:00:00.000Z'
 const dayOf = dayOfInZone('Europe/Paris')
 
 let db: Database
@@ -94,16 +94,22 @@ describe('Recall data isolation', () => {
       roundId: round.id,
       answer: {},
       result: 'correct',
-      score: 1
+      score: 1,
+      attemptedAt: MORNING
     })
     recordAttempt(db, {
       questionId: second!.id,
       roundId: round.id,
       answer: {},
       result: 'incorrect',
-      score: 0
+      score: 0,
+      attemptedAt: MORNING
     })
     completeRound(db, round.id, { scorePercent: 50, passed: false })
+    db.prepare('UPDATE rounds SET completed_at = $at WHERE id = $id').run({
+      at: MORNING,
+      id: round.id
+    })
 
     const topicIds = [clientServer.id, http.id]
     const before = readEverything(topicIds)
@@ -111,6 +117,8 @@ describe('Recall data isolation', () => {
     expect(before.quizzes[0]).toHaveLength(1)
     expect(before.rewardHistory.rounds).toHaveLength(1)
     expect(before.notionScores[0]).toHaveLength(2)
+    // The Round counts today in the activity (one completed Round on the day of NOW).
+    expect(before.activity.goal.roundsToday).toBe(1)
 
     // A recall quiz on the same Topic and on a Topic with no Round, and Recall sessions (one
     // completed with wrong answers that would drag mastery down, one still open).
@@ -144,10 +152,15 @@ describe('Recall data isolation', () => {
         recallSessionId: completed.id,
         answer: {},
         result: 'incorrect',
-        score: 0
+        score: 0,
+        attemptedAt: LATE_MORNING
       })
     }
     completeRecallSession(db, completed.id)
+    db.prepare('UPDATE recall_sessions SET completed_at = $at WHERE id = $id').run({
+      at: LATE_MORNING,
+      id: completed.id
+    })
     const open = createRecallSession(db, {
       kind: 'practice',
       topicId: null,
@@ -158,11 +171,12 @@ describe('Recall data isolation', () => {
       recallSessionId: open.id,
       answer: {},
       result: 'correct',
-      score: 1
+      score: 1,
+      attemptedAt: LATE_MORNING
     })
 
     // The rows are really there...
-    expect(listRecallAttempts(db, completed.id)).toHaveLength(4)
+    expect(listAttemptsByRecallSession(db, completed.id)).toHaveLength(4)
     expect(recallOnHttp.purpose).toBe('recall')
     // ...and nothing Round-based can see them.
     expect(readEverything(topicIds)).toEqual(before)
