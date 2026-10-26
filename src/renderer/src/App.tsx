@@ -13,6 +13,7 @@ import { MasteryView } from './mastery/MasteryView'
 import { LearningPathScreen } from './path/LearningPathScreen'
 import { PathTopicView } from './path/PathTopicView'
 import { QuizScreen } from './quiz/QuizScreen'
+import { MemoryReviewScreen } from './recall/MemoryReviewScreen'
 import { OpenSettingsContext } from './settings/openSettings'
 import { SettingsScreen } from './settings/SettingsScreen'
 import { CelebrationProvider } from './celebrations/CelebrationProvider'
@@ -161,8 +162,20 @@ function AppScreen({
         <PathTopicView
           key={screen.topic.id}
           topic={screen.topic}
-          onBack={screen.from === 'dashboard' ? () => setScreen({ name: 'dashboard' }) : home}
-          backLabel={screen.from === 'dashboard' ? 'Dashboard' : undefined}
+          onBack={
+            screen.from === 'dashboard'
+              ? () => setScreen({ name: 'dashboard' })
+              : screen.from === 'memory-review'
+                ? () => setScreen({ name: 'memory-review' })
+                : home
+          }
+          backLabel={
+            screen.from === 'dashboard'
+              ? 'Dashboard'
+              : screen.from === 'memory-review'
+                ? 'Memory review'
+                : undefined
+          }
           onOpenTopic={openTopic}
         />
       )
@@ -171,6 +184,14 @@ function AppScreen({
         <DashboardScreen
           onClose={home}
           onOpenTopic={(topic) => setScreen({ name: 'topic', topic, from: 'dashboard' })}
+          onOpenMemoryReview={() => setScreen({ name: 'memory-review' })}
+        />
+      )
+    case 'memory-review':
+      return (
+        <MemoryReviewScreen
+          onClose={() => setScreen({ name: 'dashboard' })}
+          onOpenTopic={(topic) => setScreen({ name: 'topic', topic, from: 'memory-review' })}
         />
       )
     case 'exercise':

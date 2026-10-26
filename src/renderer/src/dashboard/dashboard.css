@@ -379,3 +379,9 @@
 .dash-limit-reached {
   color: var(--color-error-text);
 }
+
+.dash-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}

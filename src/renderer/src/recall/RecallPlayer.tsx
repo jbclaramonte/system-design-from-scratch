@@ -18,6 +18,8 @@ const typeLabels = {
   free_answer: 'Free answer'
 } as const
 
+const GATE_GIVE_UP = { label: 'Continue to the Lesson', hint: 'go on to the Lesson' }
+
 /**
  * Plays a Recall Quiz one question at a time: answer, see the feedback right away, move on. There
  * is no skip: the quiz is always taken, but it never blocks the Lesson. Every answer is graded
@@ -27,12 +29,15 @@ const typeLabels = {
 export function RecallPlayer({
   start,
   onCompleted,
-  onGiveUp
+  onGiveUp,
+  giveUp = GATE_GIVE_UP
 }: {
   start: RecallStart
   onCompleted: (result: RecallResult) => void
-  /** The "Continue to the Lesson" fallback after a failed answer or completion. */
+  /** The way out offered after a failed answer or completion. */
   onGiveUp: () => void
+  /** Its wording: "Continue to the Lesson" for the gate, the way back for a practice. */
+  giveUp?: { label: string; hint: string }
 }) {
   const { session, questions } = start
   // An install prompt never interrupts a quiz.
@@ -128,9 +133,9 @@ export function RecallPlayer({
   const failure = error && (
     <div className="notice notice-attention recall-failure" role="alert" data-testid="recall-error">
       <p>{error}</p>
-      <p>This does not affect your progress. You can try again, or go on to the Lesson.</p>
+      <p>This does not affect your progress. You can try again, or {giveUp.hint}.</p>
       <button type="button" data-testid="recall-give-up" onClick={onGiveUp}>
-        Continue to the Lesson
+        {giveUp.label}
       </button>
     </div>
   )

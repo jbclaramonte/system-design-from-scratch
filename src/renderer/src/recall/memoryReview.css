@@ -1,0 +1,131 @@
+/* Memory Review: counts, groups of Notions, result marks. Honey for attention, sage for the rest. */
+
+.memory-screen {
+  padding-bottom: var(--space-xl);
+}
+
+.memory-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: var(--space-md);
+  margin: 0;
+}
+
+.memory-stat-label,
+.memory-group-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.memory-tone-attention {
+  color: var(--color-attention-text);
+}
+
+.memory-tone-steady {
+  color: var(--color-mastered-text);
+}
+
+.memory-start {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm) var(--space-md);
+  margin-top: var(--space-md);
+}
+
+.memory-start .notice {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.memory-group {
+  margin-top: var(--space-xl);
+}
+
+.memory-group-title {
+  margin: 0 0 var(--space-sm);
+}
+
+.memory-disclosure {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding-left: 0;
+  color: inherit;
+  font: inherit;
+}
+
+.memory-list {
+  display: grid;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.memory-row {
+  display: grid;
+  gap: var(--space-sm);
+  min-width: 0;
+}
+
+.memory-row-attention {
+  border-color: var(--color-attention-border);
+}
+
+.memory-row-head,
+.memory-meta,
+.memory-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs) var(--space-md);
+}
+
+.memory-row-title {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.memory-results {
+  display: flex;
+  gap: var(--space-xs);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.memory-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.375rem;
+  height: 1.375rem;
+  border: 1px solid;
+  border-radius: 50%;
+}
+
+.memory-mark-correct {
+  border-color: var(--color-mastered-border);
+  background: var(--color-mastered-fill);
+  color: var(--color-mastered-text);
+}
+
+.memory-mark-missed {
+  border-color: var(--color-attention-border);
+  background: var(--color-attention-fill);
+  color: var(--color-attention-text);
+}
+
+.memory-empty h2 {
+  margin: 0 0 var(--space-sm);
+}
+
+.memory-empty p {
+  margin: 0;
+}
+
+.memory-footnote {
+  margin-top: var(--space-lg);
+}

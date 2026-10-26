@@ -143,6 +143,22 @@ function Overview({ dashboard }: { dashboard: Dashboard }) {
   )
 }
 
+/** Entry to the Memory Review: the notions that are hard to remember, and a way to practice them. */
+function MemoryReviewSection({ onOpen }: { onOpen: () => void }) {
+  return (
+    <section className="dash-section" aria-labelledby="dash-memory">
+      <h2 id="dash-memory">Memory review</h2>
+      <p className="dash-note">
+        See which notions are hard to remember across your quizzes, and practice them in a short
+        recall quiz.
+      </p>
+      <button type="button" onClick={onOpen} data-testid="dashboard-open-memory-review">
+        Open the Memory review
+      </button>
+    </section>
+  )
+}
+
 function WeakPoints({
   weakPoints,
   steps,
@@ -441,10 +457,12 @@ function EmptyState({ onClose }: { onClose: () => void }) {
  */
 export function DashboardScreen({
   onClose,
-  onOpenTopic
+  onOpenTopic,
+  onOpenMemoryReview
 }: {
   onClose: () => void
   onOpenTopic: OpenTopic
+  onOpenMemoryReview: () => void
 }) {
   const [dashboard, setDashboard] = useState<Dashboard | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -483,9 +501,19 @@ export function DashboardScreen({
         <h1 ref={heading} tabIndex={-1}>
           Dashboard
         </h1>
-        <button type="button" className="btn-sm" onClick={onClose} data-testid="dashboard-back">
-          Learning Path
-        </button>
+        <div className="dash-header-actions">
+          <button
+            type="button"
+            className="btn-sm"
+            onClick={onOpenMemoryReview}
+            data-testid="dashboard-memory-review"
+          >
+            Memory review
+          </button>
+          <button type="button" className="btn-sm" onClick={onClose} data-testid="dashboard-back">
+            Learning Path
+          </button>
+        </div>
       </header>
       {error && (
         <p role="alert" className="notice notice-error">
@@ -506,6 +534,7 @@ export function DashboardScreen({
         <>
           <Overview dashboard={dashboard} />
           <BadgesSection />
+          <MemoryReviewSection onOpen={onOpenMemoryReview} />
           <WeakPoints weakPoints={dashboard.weakPoints} steps={steps} onOpenTopic={onOpenTopic} />
           <section className="dash-section" aria-labelledby="dash-map">
             <h2 id="dash-map">Notion Map</h2>

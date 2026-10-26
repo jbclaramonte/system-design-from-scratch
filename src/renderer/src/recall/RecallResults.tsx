@@ -18,10 +18,13 @@ const typeLabels = {
  */
 export function RecallResults({
   result,
-  onContinue
+  onContinue,
+  continueLabel = 'Continue to the Lesson'
 }: {
   result: RecallResult
   onContinue: () => void
+  /** "Continue to the Lesson" for the gate; the way back for a practice. */
+  continueLabel?: string
 }) {
   const headingRef = useRef<HTMLHeadingElement>(null)
   const { questions, notionOutcomes } = result
@@ -46,7 +49,7 @@ export function RecallResults({
             data-testid="recall-continue"
             onClick={onContinue}
           >
-            Continue to the Lesson
+            {continueLabel}
           </button>
         </div>
       </header>

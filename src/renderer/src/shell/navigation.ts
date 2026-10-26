@@ -8,8 +8,10 @@ import type { TopicMasterySummary } from '../../../shared/mastery'
 export type Screen =
   | { name: 'home' }
   /** `from`: the screen the back button returns to (the Learning Path by default). */
-  | { name: 'topic'; topic: TopicMasterySummary; from?: 'dashboard' }
+  | { name: 'topic'; topic: TopicMasterySummary; from?: 'dashboard' | 'memory-review' }
   | { name: 'dashboard' }
+  /** Reached from the Dashboard. */
+  | { name: 'memory-review' }
   | { name: 'exercise'; designExerciseId: number }
   /** `back`: the screen to return to when opened from an error ("Open Settings"). */
   | { name: 'settings'; back?: Screen }
@@ -35,15 +37,16 @@ export const NAV_ITEMS: readonly { id: NavItemId; label: string; testId: string 
 
 /**
  * The nav item highlighted for a screen. Screens reached from the Learning Path (topics,
- * exercises, dev tools) keep Learning Path highlighted; a topic opened from the Dashboard keeps
- * Dashboard highlighted.
+ * exercises, dev tools) keep Learning Path highlighted; a topic opened from the Dashboard or the
+ * Memory Review keeps Dashboard highlighted, like the Memory Review itself.
  */
 export function activeNavItem(screen: Screen): NavItemId {
   switch (screen.name) {
     case 'dashboard':
+    case 'memory-review':
       return 'dashboard'
     case 'topic':
-      return screen.from === 'dashboard' ? 'dashboard' : 'learning-path'
+      return screen.from ? 'dashboard' : 'learning-path'
     case 'settings':
       return 'settings'
     case 'about':
@@ -63,7 +66,7 @@ export function activeNavItem(screen: Screen): NavItemId {
 /**
  * How a screen sits in the shell:
  * - `page`: centered container, the content flows and the page scrolls (Learning Path, Dashboard,
- *   Settings, About).
+ *   Settings, About, Memory Review).
  * - `fill`: centered container, the screen fills the height and scrolls its own panes (topic).
  * - `canvas`: full width and height, no padding (Design Exercise and the canvas).
  */
@@ -82,6 +85,7 @@ export function screenLayout(screen: Screen): ShellLayout {
       return 'fill'
     case 'home':
     case 'dashboard':
+    case 'memory-review':
     case 'settings':
     case 'about':
     case 'dev-quiz':

@@ -21,6 +21,14 @@ describe('activeNavItem', () => {
     expect(activeNavItem({ name: 'topic', topic, from: 'dashboard' })).toBe('dashboard')
   })
 
+  it('highlights Dashboard on the Memory Review, which is reached from it', () => {
+    expect(activeNavItem({ name: 'memory-review' })).toBe('dashboard')
+  })
+
+  it('highlights Dashboard on a topic opened from the Memory Review', () => {
+    expect(activeNavItem({ name: 'topic', topic, from: 'memory-review' })).toBe('dashboard')
+  })
+
   it('highlights Settings when it is opened from another screen', () => {
     expect(activeNavItem({ name: 'settings', back: { name: 'topic', topic } })).toBe('settings')
   })
@@ -39,7 +47,12 @@ describe('activeNavItem', () => {
 
   it('returns an item that exists in the navigation', () => {
     const ids = NAV_ITEMS.map((item) => item.id)
-    const screens: Screen[] = [{ name: 'home' }, { name: 'about' }, { name: 'dashboard' }]
+    const screens: Screen[] = [
+      { name: 'home' },
+      { name: 'about' },
+      { name: 'dashboard' },
+      { name: 'memory-review' }
+    ]
     for (const screen of screens) expect(ids).toContain(activeNavItem(screen))
   })
 })
@@ -57,5 +70,6 @@ describe('screenLayout', () => {
     expect(screenLayout({ name: 'dashboard' })).toBe('page')
     expect(screenLayout({ name: 'settings' })).toBe('page')
     expect(screenLayout({ name: 'about' })).toBe('page')
+    expect(screenLayout({ name: 'memory-review' })).toBe('page')
   })
 })
