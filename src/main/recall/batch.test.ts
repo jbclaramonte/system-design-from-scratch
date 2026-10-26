@@ -39,6 +39,8 @@ let db: Database
 let calls: CliCallOptions[]
 let generated: number
 let loggedOut: boolean
+/** Set to make quiz calls fail while outline calls succeed. */
+let failQuiz: boolean
 let service: GenerationService
 
 const kindOf = (options: CliCallOptions) =>
@@ -87,6 +89,7 @@ const runner: CliRunner = async (options) => {
   calls.push(options)
   if (loggedOut) throw cliFailure('Not logged in · Please run /login')
   const kind = kindOf(options)
+  if (failQuiz && kind === 'quiz') throw cliFailure('Not logged in · Please run /login')
   if (kind === 'lesson') options.onEvent?.({ type: 'text_delta', text: LESSON })
   return {
     isError: false,
@@ -108,6 +111,7 @@ beforeEach(() => {
   calls = []
   generated = 0
   loggedOut = false
+  failQuiz = false
   service = new GenerationService({ db, runner, resolveCli: async () => '/x/claude' })
 })
 
@@ -314,33 +318,54 @@ describe('planRecallBatch', () => {
 })
 
 describe('planDeclaredBatch', () => {
-  it('picks the earliest declared eligible Topic that has no Notion Outline', () => {
-    const latest = seedTopic('latest')
-    const outlined = seedTopic('outlined')
-    const early = seedTopic('early', { bare: true })
-    const later = seedTopic('later', { bare: true })
+  it('picks the earliest declared eligible Topic with no recall quiz and no answered question', () => {
+    const latest = seedTopic('latest', { bare: true })
+    const recalled = seedTopic('recalled')
+    const answered = seedTopic('answered')
     const opening = seedTopic('opening', { bare: true })
+    const outlined = seedTopic('outlined')
+    const bare = seedTopic('bare', { bare: true })
     declare(latest, 20)
-    declare(outlined, 1)
-    declare(later, 9)
-    declare(early, 3)
-    declare(opening, 2)
+    declare(recalled, 1)
+    declare(answered, 2)
+    declare(opening, 3)
+    declare(outlined, 4)
+    declare(bare, 5)
+    seedQuiz(recalled, [['cache-aside', 'correct']], { purpose: 'recall' })
+    playRound(answered, [['cache-aside', 'correct']])
 
-    expect(planDeclaredBatch(db, opening.topic.id)).toEqual({
+    // Notions but no question yet (a batch whose question Generation failed): planned again.
+    expect(planDeclaredBatch(db, opening.topic.id, LANGUAGE)).toEqual({
       kind: 'declared',
-      topicId: early.topic.id,
+      topicId: outlined.topic.id,
       focusNotionIds: [],
       avoidPrompts: []
     })
   })
 
-  it('returns null when every declared eligible Topic has its Notion Outline', () => {
+  it('plans a declared Topic again in another Generation Language', () => {
     const latest = seedTopic('latest', { bare: true })
-    const outlined = seedTopic('outlined')
+    const recalled = seedTopic('recalled')
     declare(latest, 20)
-    declare(outlined, 1)
+    declare(recalled, 1)
+    seedQuiz(recalled, [['cache-aside', 'correct']], { purpose: 'recall', language: 'en' })
+    const opening = seedTopic('opening').topic.id
 
-    expect(planDeclaredBatch(db, seedTopic('opening').topic.id)).toBeNull()
+    expect(planDeclaredBatch(db, opening, 'en')).toBeNull()
+    expect(planDeclaredBatch(db, opening, 'fr')).toMatchObject({ topicId: recalled.topic.id })
+  })
+
+  it('returns null when every declared eligible Topic has a recall quiz or an answer', () => {
+    const latest = seedTopic('latest', { bare: true })
+    const recalled = seedTopic('recalled')
+    const answered = seedTopic('answered')
+    declare(latest, 20)
+    declare(recalled, 1)
+    declare(answered, 2)
+    seedQuiz(recalled, [['cache-aside', 'correct']], { purpose: 'recall' })
+    playRound(answered, [['cache-aside', 'incorrect']])
+
+    expect(planDeclaredBatch(db, seedTopic('opening').topic.id, LANGUAGE)).toBeNull()
   })
 })
 
@@ -416,6 +441,30 @@ describe('generateRecallBatches', () => {
     expect(listNotionsByTopic(db, declared.topic.id).map((notion) => notion.slug)).toEqual(
       cacheOutline.notions.map((notion) => notion.slug)
     )
+    expect(generatedRecallQuizzes()).toEqual([
+      expect.objectContaining({ topicId: declared.topic.id })
+    ])
+  })
+
+  it('plans a declared Topic again after its question Generation failed, with its outline', async () => {
+    const latest = seedTopic('latest')
+    const declared = seedTopic('declared', { bare: true })
+    declare(latest, 20)
+    declare(declared, 3)
+    const deps = { db, corpus, service }
+    const opening = seedTopic('c').topic.id
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    failQuiz = true
+    await generateRecallBatches(deps, opening, LANGUAGE)
+    expect(calls.map(kindOf)).toEqual(['outline', 'quiz'])
+    expect(listNotionsByTopic(db, declared.topic.id)).toHaveLength(cacheOutline.notions.length)
+    expect(recallQuizzes()).toEqual([])
+
+    failQuiz = false
+    calls = []
+    await generateRecallBatches(deps, opening, LANGUAGE)
+
+    expect(calls.map(kindOf)).toEqual(['quiz'])
     expect(generatedRecallQuizzes()).toEqual([
       expect.objectContaining({ topicId: declared.topic.id })
     ])

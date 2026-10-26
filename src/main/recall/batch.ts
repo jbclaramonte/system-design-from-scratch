@@ -5,7 +5,6 @@
 import type { GenerationLanguage } from '../../shared/generationLanguage'
 import type { Database } from '../db'
 import { listNotionsByTopic } from '../db/repositories/learningContent'
-import { getDeclaredMastery } from '../db/repositories/mastery'
 import type { QuestionType } from '../db/types'
 import { GenerationError } from '../generation/errors'
 import { prepareQuiz, saveQuiz, type PipelineDeps } from '../generation/pipelines'
@@ -110,13 +109,29 @@ export function planRecallBatch(
 }
 
 /**
- * The batch on the eligible declared Topic passed earliest that has no Notion Outline yet
- * (declaring a Topic does not open it), or null. Its outline is generated with the batch.
+ * The batch on the eligible declared Topic passed earliest that has no recall quiz in the
+ * Generation Language and no answered question, or null. Its Notion Outline is generated with the
+ * batch when missing (declaring a Topic does not open it), and reused when an earlier batch
+ * stored it but failed on its questions.
  */
-export function planDeclaredBatch(db: Database, openingTopicId: number): RecallBatchPlan | null {
+export function planDeclaredBatch(
+  db: Database,
+  openingTopicId: number,
+  language: GenerationLanguage
+): RecallBatchPlan | null {
+  const needsBatch = db.prepare(
+    `SELECT 1 FROM declared_masteries d
+     WHERE d.topic_id = $topicId
+       AND NOT EXISTS (SELECT 1 FROM quizzes z
+                       WHERE z.topic_id = d.topic_id AND z.purpose = 'recall'
+                         AND z.language = $language)
+       AND NOT EXISTS (SELECT 1 FROM attempts a
+                       JOIN questions q ON q.id = a.question_id
+                       JOIN quizzes z ON z.id = q.quiz_id
+                       WHERE z.topic_id = d.topic_id)`
+  )
   const topic = eligibleTopics(db, openingTopicId).find(
-    ({ topicId }) =>
-      getDeclaredMastery(db, topicId) !== undefined && listNotionsByTopic(db, topicId).length === 0
+    ({ topicId }) => needsBatch.get({ topicId, language }) !== undefined
   )
   return topic
     ? { kind: 'declared', topicId: topic.topicId, focusNotionIds: [], avoidPrompts: [] }
@@ -163,7 +178,8 @@ function logFailure(error: unknown): void {
 
 /**
  * Plans and runs the batches of an opened Topic's Lesson. Never rejects: a failure is logged and
- * leaves the database as it was (a declared Topic may keep its new Notion Outline).
+ * leaves the database as it was (a declared Topic may keep its new Notion Outline, reused by
+ * the next batch).
  */
 export async function generateRecallBatches(
   deps: PipelineDeps,
@@ -174,7 +190,7 @@ export async function generateRecallBatches(
   try {
     plans = [
       planRecallBatch(deps.db, openingTopicId, language),
-      planDeclaredBatch(deps.db, openingTopicId)
+      planDeclaredBatch(deps.db, openingTopicId, language)
     ].filter((plan) => plan !== null)
   } catch (error) {
     logFailure(error)
