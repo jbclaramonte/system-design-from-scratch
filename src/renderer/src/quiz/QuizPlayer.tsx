@@ -273,7 +273,12 @@ export function QuizPlayer({
             showGraded(graded)
           }}
           onAnswerLater={() => setSkipped((previous) => new Set(previous).add(question.id))}
-          clarification={<ClarifyQuestion roundId={round.id} questionId={question.id} />}
+          clarification={
+            <ClarifyQuestion
+              target={{ kind: 'round', roundId: round.id }}
+              questionId={question.id}
+            />
+          }
         />
       ) : (
         <form
@@ -287,7 +292,11 @@ export function QuizPlayer({
             <legend lang="fr" className="quiz-prompt">
               {question.prompt}
             </legend>
-            <ClarifyQuestion key={question.id} roundId={round.id} questionId={question.id} />
+            <ClarifyQuestion
+              key={question.id}
+              target={{ kind: 'round', roundId: round.id }}
+              questionId={question.id}
+            />
             {question.choices.map((choice, choiceIndex) => (
               <label key={choiceIndex} lang="fr" className="quiz-choice">
                 <input

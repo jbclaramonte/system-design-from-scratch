@@ -1,17 +1,24 @@
 import { GenerationErrorView } from '../generation/GenerationErrorView'
 import './quiz.css'
-import { useClarification } from './useClarification'
+import { useClarification, type ClarifyTarget } from './useClarification'
 
 /**
  * "I don't understand the question": a plainer wording of the question and one concrete
  * example, shown under the question. The question and its choices stay on screen and the
  * original question is the one answered. It never carries a hint at the answer, records nothing
- * and has no effect on the score, the round or the grading. The result is stored per question
+ * and has no effect on the score, the round or the grading. The question belongs to a Round or to
+ * a Recall Quiz session (`target`). The result is stored per question
  * (Content Cache): pressing again reads it; "Reformulate differently" asks for another version.
  */
-export function ClarifyQuestion({ roundId, questionId }: { roundId: number; questionId: number }) {
+export function ClarifyQuestion({
+  target,
+  questionId
+}: {
+  target: ClarifyTarget
+  questionId: number
+}) {
   const { clarification, fromCache, pending, error, request, cancel, hide } = useClarification(
-    roundId,
+    target,
     questionId
   )
 

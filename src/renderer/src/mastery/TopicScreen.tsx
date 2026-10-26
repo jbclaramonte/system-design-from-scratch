@@ -10,6 +10,8 @@ import { errorMessage } from '../quiz/errorMessage'
 import { formatPercent } from '../quiz/progress'
 import { QuizPlayer } from '../quiz/QuizPlayer'
 import { QuizResults } from '../quiz/QuizResults'
+import { RecallGate } from '../recall/RecallGate'
+import { showsRecallGate } from '../recall/recallTrigger'
 import './mastery.css'
 import { DeclareMastery, UndoDeclaration } from './DeclaredMastery'
 import { LessonReviewPanel } from './LessonReviewPanel'
@@ -52,6 +54,8 @@ export function TopicScreen({
   const [overlay, setOverlay] = useState<Overlay | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [lessonDone, setLessonDone] = useState(false)
+  // The Recall Quiz is over (taken, or nothing to recall) for this visit: the Lesson shows.
+  const [recallDone, setRecallDone] = useState(false)
   // A declared topic shows its Declared Mastery until the learner chooses to be tested ("Test
   // me") or a round is started: from then on the normal loop steps show.
   const [testing, setTesting] = useState(false)
@@ -181,6 +185,8 @@ export function TopicScreen({
     )
   }
 
+  const recallGate = showsRecallGate(state, lessonDone, recallDone)
+
   const declaredIdle = state.declared && !testing && overlay === null && state.step.name !== 'round'
   // The loop's steps, hidden while the Declared Mastery is shown.
   const loop = overlay === null && !declaredIdle
@@ -273,7 +279,12 @@ export function TopicScreen({
             </div>
           </section>
         )}
-        {loop && state.step.name === 'lesson' && (
+        {loop && recallGate && (
+          <div className="mastery-scroll">
+            <RecallGate topicId={topic.id} onDone={() => setRecallDone(true)} />
+          </div>
+        )}
+        {loop && state.step.name === 'lesson' && !recallGate && (
           <>
             <LessonScreen
               key={attempt}

@@ -63,7 +63,9 @@ describe('the clarification button', () => {
   )
 
   it('shows nothing but the button before it is pressed', () => {
-    const html = renderToStaticMarkup(createElement(ClarifyQuestion, { roundId: 1, questionId: 1 }))
+    const html = renderToStaticMarkup(
+      createElement(ClarifyQuestion, { target: { kind: 'round', roundId: 1 }, questionId: 1 })
+    )
 
     expect(html).toContain('clarify-question')
     expect(html).not.toContain('clarification')
