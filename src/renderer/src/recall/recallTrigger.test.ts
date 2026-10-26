@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { MasteryState, MasteryStep } from '../../../shared/mastery'
 import type { RoundView } from '../../../shared/quiz'
-import { showsRecallGate } from './recallTrigger'
+import { showsDeclareMastery, showsRecallGate } from './recallTrigger'
 
 const round: RoundView = {
   id: 1,
@@ -57,6 +57,34 @@ describe('showsRecallGate', () => {
   it('never shows on a Topic that already has a Round', () => {
     expect(
       showsRecallGate(state({ name: 'lesson', lessonReady: false }, round), false, false)
+    ).toBe(false)
+  })
+})
+
+describe('showsDeclareMastery', () => {
+  const lesson = state({ name: 'lesson', lessonReady: false })
+
+  it('offers "I already know this" when the Topic allows it and nothing covers the screen', () => {
+    expect(showsDeclareMastery(lesson, { overlayOpen: false, recallGate: false })).toBe(true)
+  })
+
+  it('hides it while the Recall Quiz is showing', () => {
+    expect(showsDeclareMastery(lesson, { overlayOpen: false, recallGate: true })).toBe(false)
+  })
+
+  it('hides it over an overlay, during a Round, or when the Topic cannot be declared', () => {
+    expect(showsDeclareMastery(lesson, { overlayOpen: true, recallGate: false })).toBe(false)
+    expect(
+      showsDeclareMastery(state({ name: 'round', roundId: 1, quizId: 1 }), {
+        overlayOpen: false,
+        recallGate: false
+      })
+    ).toBe(false)
+    expect(
+      showsDeclareMastery(
+        { ...lesson, canDeclare: false },
+        { overlayOpen: false, recallGate: false }
+      )
     ).toBe(false)
   })
 })

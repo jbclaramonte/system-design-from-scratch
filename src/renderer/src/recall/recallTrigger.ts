@@ -14,3 +14,13 @@ export const showsRecallGate = (state: MasteryState, lessonDone: boolean, recall
   state.lastRound === null &&
   !lessonDone &&
   !recallDone
+
+/**
+ * Whether "I already know this" (Declared Mastery) is offered on the Topic screen: not over an
+ * overlay, not during a Round, and not while the Recall Quiz is showing (the learner has not seen
+ * the Lesson yet, and the gate must not be skipped by it).
+ */
+export const showsDeclareMastery = (
+  state: MasteryState,
+  { overlayOpen, recallGate }: { overlayOpen: boolean; recallGate: boolean }
+) => state.canDeclare && !overlayOpen && state.step.name !== 'round' && !recallGate

@@ -8,13 +8,13 @@ import {
 } from './recallText'
 
 describe('oftenMissedText', () => {
-  it('gives the plain count of misses among the latest quizzes', () => {
-    expect(oftenMissedText(3, 4)).toBe('You missed this notion in 3 of your last 4 quizzes')
-    expect(oftenMissedText(2, 6)).toBe('You missed this notion in 2 of your last 6 quizzes')
+  it('gives the plain count of misses among the latest answers', () => {
+    expect(oftenMissedText(3, 4)).toBe('You missed this notion in 3 of your last 4 answers')
+    expect(oftenMissedText(2, 6)).toBe('You missed this notion in 2 of your last 6 answers')
   })
 
-  it('uses the singular when only one quiz is counted', () => {
-    expect(oftenMissedText(1, 1)).toBe('You missed this notion in 1 of your last 1 quiz')
+  it('uses the singular when only one answer is counted', () => {
+    expect(oftenMissedText(1, 1)).toBe('You missed this notion in 1 of your last 1 answer')
   })
 })
 

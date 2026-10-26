@@ -6,7 +6,7 @@ issue: [70]
 
 # Shaky Notion
 
-A [[Notion]] the learner missed at least 3 of its last 6 answers, across [[Round]]s and [[Recall Session]]s (status `needs_attention`). The [[Recall Quiz]] gives its questions more weight and tags them "Often missed" with the plain count ("You missed this notion in 3 of your last 6 quizzes"); the [[Memory Review]] lists them first, under "Needs attention".
+A [[Notion]] the learner missed at least 3 of its last 6 answers, across [[Round]]s and [[Recall Session]]s (status `needs_attention`). The [[Recall Quiz]] gives its questions more weight and tags them "Often missed" with the plain count ("You missed this notion in 3 of your last 6 answers"); the [[Memory Review]] lists them first, under "Needs attention".
 
 A Notion with fewer than 2 answers is not tracked, so it is never shaky. A Notion that is no longer shaky leaves the group as soon as its latest answers say so, with nothing to unlock.
 

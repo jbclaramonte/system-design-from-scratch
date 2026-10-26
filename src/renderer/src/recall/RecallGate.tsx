@@ -55,9 +55,6 @@ export function RecallGate({ topicId, onDone }: { topicId: number; onDone: () =>
   if (phase.name === 'results') {
     return <RecallResults result={phase.result} onContinue={onDone} />
   }
-  return (
-    <p className="muted" role="status" data-testid="recall-loading">
-      Loading...
-    </p>
-  )
+  // Loading: nothing to show for one round-trip; most Lessons have nothing to recall.
+  return null
 }

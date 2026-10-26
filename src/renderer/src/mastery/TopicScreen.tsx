@@ -11,7 +11,7 @@ import { formatPercent } from '../quiz/progress'
 import { QuizPlayer } from '../quiz/QuizPlayer'
 import { QuizResults } from '../quiz/QuizResults'
 import { RecallGate } from '../recall/RecallGate'
-import { showsRecallGate } from '../recall/recallTrigger'
+import { showsDeclareMastery, showsRecallGate } from '../recall/recallTrigger'
 import './mastery.css'
 import { DeclareMastery, UndoDeclaration } from './DeclaredMastery'
 import { LessonReviewPanel } from './LessonReviewPanel'
@@ -208,7 +208,7 @@ export function TopicScreen({
           )
         }
       />
-      {state.canDeclare && overlay === null && state.step.name !== 'round' && (
+      {showsDeclareMastery(state, { overlayOpen: overlay !== null, recallGate }) && (
         <DeclareMastery topicId={topic.id} topicTitle={state.topicTitle} onChanged={setState} />
       )}
       {reviewOpen && <LessonReviewPanel topicId={topic.id} onClose={closeReview} />}

@@ -1,8 +1,8 @@
 /** Copy of the Recall Quiz screens: plain counts, never a verdict. */
 
-/** The "Often missed" tag: how many of the latest quizzes the Notion was missed in. */
+/** The "Often missed" tag: how many of the latest answers on the Notion were missed. */
 export const oftenMissedText = (missed: number, of: number): string =>
-  `You missed this notion in ${missed} of your last ${of} ${of === 1 ? 'quiz' : 'quizzes'}`
+  `You missed this notion in ${missed} of your last ${of} ${of === 1 ? 'answer' : 'answers'}`
 
 /** `index` is the 1-based position of the question. */
 export const progressText = (index: number, total: number): string =>

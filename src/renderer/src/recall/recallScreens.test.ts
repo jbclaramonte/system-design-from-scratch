@@ -85,7 +85,7 @@ describe('RecallPlayer', () => {
 
     expect(html).toContain('Question 2 of 3')
     expect(html).toContain('data-testid="recall-often-missed"')
-    expect(html).toContain('You missed this notion in 3 of your last 4 quizzes')
+    expect(html).toContain('You missed this notion in 3 of your last 4 answers')
     expect(html).toContain('data-testid="recall-previous"')
     expect(play(start())).not.toContain('recall-often-missed')
   })
