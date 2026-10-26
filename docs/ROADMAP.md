@@ -123,6 +123,15 @@ gantt
     section Maintenance
     #68 Update vulnerable dependencies        :done, dep1, 2026-10-25, 1d
     #69 Tell the learner when data is newer   :done, dep2, after dep1, 1d
+
+    section Spaced repetition
+    #70 Recall logic and selection            :active, r1, 2026-10-26, 1d
+    #71 Recall data model and isolation       :r2, after r1, 1d
+    #72 Pre-generate recall questions         :r3, after r2, 1d
+    #73 Recall service and IPC                :r4, after r3, 2d
+    #74 Recall Quiz before a Lesson           :r5, after r4, 2d
+    #75 Memory Review screen                  :r6, after r5, 2d
+    #76 Recall docs and smoke test            :r7, after r6, 1d
 ```
 
 ## Dependency table
@@ -198,6 +207,13 @@ gantt
 | #67 | #62, #30, #17 |
 | #68 | None |
 | #69 | None |
+| #70 | None |
+| #71 | #70 |
+| #72 | #70, #71 |
+| #73 | #70, #71, #72 |
+| #74 | #73 |
+| #75 | #73, #74 |
+| #76 | #74, #75 |
 
 ## Conventions
 
