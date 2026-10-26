@@ -1,5 +1,6 @@
 // Lesson flow behind `lesson:start`: Notion Outline (generated once), streamed Lesson (Content
-// Cache), recorded `lessons` row, then the quiz Pre-generation. Plus the topic read channels.
+// Cache), recorded `lessons` row, then the quiz and recall batch Pre-generations. Plus the topic
+// read channels.
 import { z } from 'zod'
 import type { Corpus } from '../corpus'
 import {
@@ -19,6 +20,7 @@ import {
 import { sendEvent } from '../ipc/sendEvent'
 import { getGenerationLanguage, getSettings } from '../db/repositories/settings'
 import { firstRoundQuizOptions } from '../mastery/quizOptions'
+import { triggerRecallBatches } from '../recall/batch'
 import type { GenerationErrorInfo, GenerationOutput } from '../../shared/generation'
 import type { GenerationLanguage } from '../../shared/generationLanguage'
 import type {
@@ -168,7 +170,10 @@ export function createLessonIpc(deps: PipelineDeps, options: LessonIpcOptions = 
           recordLesson(topicId, event.output, language)
         }
         send(event)
-        if (markdown !== null) pregenerateQuiz(topicId, markdown, language)
+        if (markdown !== null) {
+          pregenerateQuiz(topicId, markdown, language)
+          triggerRecallBatches(deps, topicId, language)
+        }
       }
     } catch (error) {
       send({ type: 'error', error: toErrorInfo(error) })

@@ -18,7 +18,7 @@ import {
   listNotionsByTopic
 } from '../db/repositories/learningContent'
 import { getGenerationLanguage } from '../db/repositories/settings'
-import type { Notion, Question, Quiz, Topic } from '../db/types'
+import type { Notion, Question, Quiz, QuizPurpose, Topic } from '../db/types'
 import type { GenerationPriority, Json } from '../../shared/generation'
 import type { GenerationLanguage } from '../../shared/generationLanguage'
 import {
@@ -238,7 +238,10 @@ export function prepareRemediationLesson(
   return toRequest(build, options)
 }
 
-/** Stores a generated quiz with its questions, tags mapped from notion slugs to ids. */
+/**
+ * Stores a generated quiz with its questions, tags mapped from notion slugs to ids. `purpose`
+ * defaults to a Round quiz; a recall batch is stored as `recall`.
+ */
 export function saveQuiz(
   db: Database,
   topicId: number,
@@ -246,11 +249,13 @@ export function saveQuiz(
     GenerationResult<QuizContent>,
     'content' | 'grounded' | 'sourceSections' | 'cacheKey'
   >,
-  language: GenerationLanguage
+  language: GenerationLanguage,
+  purpose: QuizPurpose = 'round'
 ): Quiz {
   const idBySlug = new Map(listNotionsByTopic(db, topicId).map((n) => [n.slug, n.id]))
   return createQuiz(db, {
     topicId,
+    purpose,
     language,
     grounded: result.grounded,
     sourceSections: result.sourceSections,
