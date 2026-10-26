@@ -48,7 +48,7 @@ describe('MemoryReviewContent', () => {
     expect(html).toContain('Notions tracked')
     expect(html).toContain('Need attention')
     expect(html).toContain('Getting steadier')
-    expect(html).toContain('Start a recall quiz on these')
+    expect(html).toContain('Start a Recall Quiz on these')
     expect(html).not.toContain('aria-disabled="true"')
   })
 
@@ -120,9 +120,9 @@ describe('MemoryReviewContent', () => {
       solid: 0,
       groups: { needs_attention: [], steadier: [], solid: [] }
     })
-    expect(html).toContain('Nothing to review yet')
+    expect(html).toContain('Nothing tracked yet')
     expect(html).toContain('different quizzes')
-    expect(html).not.toContain('Start a recall quiz on these')
+    expect(html).not.toContain('Start a Recall Quiz on these')
   })
 })
 
@@ -132,7 +132,7 @@ describe('MemoryReviewLoadError', () => {
   it('is calm: honey, never red, and no raw error text', () => {
     expect(html).toContain('notice-attention')
     expect(html).not.toContain('notice-error')
-    expect(html).toContain('Could not load the Memory review')
+    expect(html).toContain('Could not load the Memory Review')
     expect(html).not.toMatch(/Error invoking|remote method/)
   })
 

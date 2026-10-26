@@ -173,7 +173,7 @@ function AppScreen({
             screen.from === 'dashboard'
               ? 'Dashboard'
               : screen.from === 'memory-review'
-                ? 'Memory review'
+                ? 'Memory Review'
                 : undefined
           }
           onOpenTopic={openTopic}

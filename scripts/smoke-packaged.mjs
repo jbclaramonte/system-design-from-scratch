@@ -31,6 +31,10 @@
 //   2. after every topic is marked mastered in the scratch database: the Light theme survives the
 //      restart (data-theme and the canvas color at first paint), an exercise canvas (React Flow)
 //      where a typed component can be added and the canvas follows the theme, and no console error.
+// A fourth launch sequence has its own scratch folder (see phaseRecall): a fresh install whose
+// Memory Review is empty, then a seeded history of three passed Topics (one of them with a missed
+// Notion) where the Recall Quiz comes before the fourth Lesson, is answered, never asked again for
+// that Topic, and feeds the Memory Review without moving the Level.
 // The App Update check runs against a local fake release server started by this script (the app
 // gets its address through SDFS_UPDATE_API_URL and SDFS_UPDATE_DOWNLOAD_BASE_URL): the real GitHub
 // API is never called. On macOS no update is installed. On Linux a third launch runs the whole
@@ -570,8 +574,8 @@ function assert(condition, message) {
   if (!condition) throw new Error(message)
 }
 
-function readOnlyDb() {
-  return new DatabaseSync(join(userData, 'system-design-from-scratch.db'), { readOnly: true })
+function readOnlyDb(dir = userData) {
+  return new DatabaseSync(join(dir, 'system-design-from-scratch.db'), { readOnly: true })
 }
 
 const EXPECTED_TOPICS = 21
@@ -1533,6 +1537,389 @@ async function phaseTwo() {
   await stopApp()
 }
 
+// ---------------------------------------------------------------------------------------------
+// Recall Quiz and Memory Review
+// ---------------------------------------------------------------------------------------------
+
+/** Generation calls (text or structured) the fake CLI has logged so far. */
+function cliGenerationCalls() {
+  if (!existsSync(callsLog)) return 0
+  return readFileSync(callsLog, 'utf8')
+    .split('\n')
+    .filter(Boolean)
+    .map((line) => JSON.parse(line))
+    .filter((entry) => entry.call === 'text' || entry.call === 'structured').length
+}
+
+const RECALL_NOTION_TITLES = ['Notion A', 'Notion B', 'Notion C']
+
+/**
+ * A history of three passed Topics (the first three of the path), written with `node:sqlite` in a
+ * scratch folder the app has migrated and stopped. Each Topic has one Notion and a Round quiz of
+ * three single choice questions (choice 0 is the right one). Topic A was failed (three wrong
+ * answers) then passed: its Notion has missed 3 of its last 6 answers, so it needs attention.
+ * Topics B and C were passed at the first Round, C the most recently. Opening the fourth Topic, the
+ * eligible Topics are A and B: six questions, all reused. The Celebrations setting is off so no
+ * card covers the screen.
+ */
+function seedRecallHistory(dir) {
+  const db = new DatabaseSync(join(dir, 'system-design-from-scratch.db'))
+  try {
+    db.exec('PRAGMA foreign_keys = ON')
+    const language = JSON.parse(
+      db.prepare("SELECT value FROM settings WHERE key = 'generation_language'").get().value
+    )
+    const topics = db.prepare('SELECT id, title FROM topics ORDER BY position LIMIT 3').all()
+    assert(topics.length === 3, `${topics.length} topics in the scratch database`)
+    const daysAgo = (days) => new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
+    db.prepare(
+      "INSERT OR REPLACE INTO settings (key, value) VALUES ('celebrations', 'false')"
+    ).run()
+    let questionNumber = 0
+    topics.forEach((topic, index) => {
+      const notion = db
+        .prepare('INSERT INTO notions (topic_id, slug, title) VALUES (?, ?, ?)')
+        .run(topic.id, `recall-smoke-${index}`, RECALL_NOTION_TITLES[index]).lastInsertRowid
+      const quiz = db
+        .prepare('INSERT INTO quizzes (topic_id, grounded, language) VALUES (?, 0, ?)')
+        .run(topic.id, language).lastInsertRowid
+      const questions = [0, 1, 2].map((position) => {
+        questionNumber++
+        const body = {
+          choices: [
+            { text: 'La bonne réponse', correct: true },
+            { text: 'Une mauvaise réponse', correct: false },
+            { text: 'Une autre mauvaise réponse', correct: false }
+          ],
+          explanation: 'Parce que.'
+        }
+        const id = db
+          .prepare(
+            "INSERT INTO questions (quiz_id, position, type, prompt, body) VALUES (?, ?, 'single_choice', ?, ?)"
+          )
+          .run(
+            quiz,
+            position,
+            `Question ${questionNumber} de rappel ?`,
+            JSON.stringify(body)
+          ).lastInsertRowid
+        db.prepare('INSERT INTO question_notions (question_id, notion_id) VALUES (?, ?)').run(
+          id,
+          notion
+        )
+        return id
+      })
+      const round = (number, completedAt, correct) => {
+        const id = db
+          .prepare(
+            'INSERT INTO rounds (topic_id, quiz_id, number, started_at, completed_at, score_percent, passed) VALUES (?, ?, ?, ?, ?, ?, ?)'
+          )
+          .run(
+            topic.id,
+            quiz,
+            number,
+            completedAt,
+            completedAt,
+            correct ? 100 : 0,
+            correct ? 1 : 0
+          ).lastInsertRowid
+        for (const question of questions) {
+          const attempt = db
+            .prepare(
+              "INSERT INTO attempts (question_id, round_id, question_type, answer, result, score, attempted_at) VALUES (?, ?, 'single_choice', ?, ?, ?, ?)"
+            )
+            .run(
+              question,
+              id,
+              JSON.stringify({ selected: [correct ? 0 : 1] }),
+              correct ? 'correct' : 'incorrect',
+              correct ? 1 : 0,
+              completedAt
+            ).lastInsertRowid
+          db.prepare('INSERT INTO attempt_notions (attempt_id, notion_id) VALUES (?, ?)').run(
+            attempt,
+            notion
+          )
+        }
+      }
+      if (index === 0) round(1, daysAgo(6), false)
+      round(index === 0 ? 2 : 1, daysAgo(5 - index), true)
+    })
+  } finally {
+    db.close()
+  }
+}
+
+/** The counts of the Memory Review header strip, by label. */
+const memoryCounts = (c) =>
+  c.evaluate(`JSON.stringify(Object.fromEntries(
+    [...document.querySelectorAll('[data-testid="memory-counts"] .stat')].map((card) => [
+      card.querySelector('dt').textContent.trim(),
+      Number(card.querySelector('dd').textContent)
+    ])
+  ))`)
+
+/**
+ * The Recall Quiz and the Memory Review, on their own scratch folder (a fresh install, then a
+ * seeded history). The fake CLI is the same: a Recall Quiz made of stored questions asks it for
+ * nothing, which the script checks by counting its Generation calls.
+ */
+async function phaseRecall() {
+  const dir = join(scratch, 'recall-data')
+  mkdirSync(dir, { recursive: true })
+  consoleProblems = []
+
+  // 1. Fresh install: answer the first-run screen (the preselected language), then open the
+  // Memory Review from the Dashboard.
+  let port = await launchApp({}, { userDataDir: dir })
+  let c
+  const fresh = await check(
+    'fresh install: the Dashboard link opens the Memory Review, which shows its empty state',
+    async () => {
+      c = await connect(port)
+      await c.waitFor(`!!${c.testId('first-run')}`, 'the first-run screen', 60000)
+      await c.pressKey('Enter')
+      await c.waitFor(`!!${c.testId('learning-path')}`, 'the Learning Path', 60000)
+      await c.click('open-dashboard')
+      await c.waitFor(`!!${c.testId('dashboard-memory-review')}`, 'the Memory Review link')
+      await c.click('dashboard-memory-review')
+      await c.waitFor(`!!${c.testId('memory-review-screen')}`, 'the Memory Review screen')
+      await c.waitFor(`!!${c.testId('memory-empty')}`, 'the empty state')
+      const state = await c.evaluate(`JSON.stringify({
+        title: document.querySelector('[data-testid="memory-review-screen"] h1').textContent,
+        empty: ${c.testId('memory-empty')}.innerText,
+        start: !!${c.testId('memory-start')},
+        counts: !!${c.testId('memory-counts')}
+      })`)
+      const { title, empty } = JSON.parse(state)
+      assert(title === 'Memory Review', `heading "${title}"`)
+      assert(/Nothing tracked yet/.test(empty), `empty state: ${empty}`)
+      await c.shot('21-memory-review-empty')
+      await c.click('memory-back')
+      await c.waitFor(`!!${c.testId('dashboard-screen')}`, 'the Dashboard again')
+    }
+  )
+  c?.close()
+  await stopApp()
+  if (!fresh) return
+
+  // 2. Seeded history: the Memory Review, then the Recall Quiz before the fourth Lesson.
+  const seeded = await check('scratch database seeded with three passed Topics', async () => {
+    seedRecallHistory(dir)
+    const db = readOnlyDb(dir)
+    try {
+      const passed = db
+        .prepare('SELECT COUNT(DISTINCT topic_id) AS n FROM rounds WHERE passed = 1')
+        .get().n
+      assert(passed === 3, `${passed} passed Topics`)
+    } finally {
+      db.close()
+    }
+  })
+  if (!seeded) return
+
+  port = await launchApp({}, { userDataDir: dir })
+  const opened = await check('relaunch on the seeded history', async () => {
+    c = await connect(port)
+    await c.waitFor(`!!${c.testId('path-continue')}`, 'the Learning Path', 60000)
+  })
+  if (!opened) return
+
+  let xpBefore
+  await check(
+    'Memory Review from the Dashboard: three Notions tracked, one needs attention',
+    async () => {
+      await c.click('open-dashboard')
+      await c.waitFor(`!!${c.testId('level-xp')}`, 'the Level card')
+      xpBefore = await c.evaluate(`${c.testId('level-xp')}.innerText`)
+      await c.waitFor(`!!${c.testId('dashboard-open-memory-review')}`, 'the Memory Review section')
+      await c.click('dashboard-open-memory-review')
+      await c.waitFor(`!!${c.testId('memory-counts')}`, 'the counts')
+      const counts = JSON.parse(await memoryCounts(c))
+      assert(
+        JSON.stringify(counts) ===
+          JSON.stringify({ 'Notions tracked': 3, 'Need attention': 1, 'Getting steadier': 0 }),
+        `counts: ${JSON.stringify(counts)}`
+      )
+      const row = await c.evaluate(`JSON.stringify(
+        [...document.querySelectorAll('[data-testid="memory-group-needs-attention"] > li')].map((li) => li.innerText.replace(/\\s+/g, ' '))
+      )`)
+      const rows = JSON.parse(row)
+      assert(rows.length === 1 && /Notion A/.test(rows[0]), `needs attention: ${row}`)
+      assert(/Missed 3 of last 6/.test(rows[0]), `row: ${rows[0]}`)
+      const marks = await c.evaluate(`JSON.stringify(
+        [...document.querySelectorAll('[data-testid="memory-group-needs-attention"] [role="img"]')].map((mark) => mark.getAttribute('aria-label'))
+      )`)
+      assert(
+        marks === JSON.stringify(['Missed', 'Missed', 'Missed', 'Correct', 'Correct', 'Correct']),
+        `result marks: ${marks}`
+      )
+      assert(
+        /Recall Quiz/.test(await c.evaluate(`${c.testId('memory-start')}.innerText`)),
+        'the start button does not say Recall Quiz'
+      )
+      await c.shot('22-memory-review')
+      await c.click('memory-back')
+      await c.waitFor(`!!${c.testId('dashboard-screen')}`, 'the Dashboard again')
+    }
+  )
+
+  const callsBefore = cliGenerationCalls()
+  const gateOpened = await check(
+    'Recall Quiz before the fourth Lesson: six stored questions, the Lesson waits, no Generation',
+    async () => {
+      await c.click('open-learning-path')
+      await c.waitFor(`!!${c.testId('path-continue')}`, 'the Learning Path')
+      await c.click('path-continue')
+      await c.waitFor(`!!${c.testId('recall-player')}`, 'the Recall Quiz', 30000)
+      const state = await c.evaluate(`JSON.stringify({
+        position: ${c.testId('recall-position')}.innerText,
+        subtitle: ${c.testId('recall-subtitle')}.innerText,
+        lesson: !!${c.testId('lesson-origin')}
+      })`)
+      const { position, subtitle, lesson } = JSON.parse(state)
+      assert(position === 'Question 1 of 6', `position "${position}"`)
+      assert(/earlier lessons/.test(subtitle), `sub-title "${subtitle}"`)
+      assert(!lesson, 'the Lesson is on screen behind the Recall Quiz')
+      await sleep(1500)
+      assert(
+        cliGenerationCalls() === callsBefore,
+        `${cliGenerationCalls() - callsBefore} Generation call(s) before the Recall Quiz was answered`
+      )
+      await c.shot('23-recall-quiz')
+    }
+  )
+  if (!gateOpened) return
+
+  const answered = await check(
+    'the Recall Quiz is answered: the Often missed tag shows, the results carry no verdict',
+    async () => {
+      const tags = []
+      for (let index = 0; index < 6; index++) {
+        await c.waitFor(`!!${c.testId('choice-0')}`, `question ${index + 1}`)
+        const tag = await c.evaluate(`${c.testId('recall-often-missed')}?.innerText ?? ''`)
+        if (tag) tags.push(tag.replace(/\s+/g, ' '))
+        await c.click('choice-0')
+        await c.click('submit-answer')
+        await c.waitFor(
+          `!!${c.testId('next-question')} || !!${c.testId('recall-complete')}`,
+          `the feedback of question ${index + 1}`
+        )
+        await c.click(index === 5 ? 'recall-complete' : 'next-question')
+      }
+      await c.waitFor(`!!${c.testId('recall-results')}`, 'the results')
+      assert(
+        tags.length === 3,
+        `${tags.length} Often missed tags (the three questions of Notion A)`
+      )
+      assert(
+        tags.every((tag) => /You missed this notion in 3 of your last 6 quizzes/.test(tag)),
+        `tag: ${tags[0]}`
+      )
+      const results = await c.evaluate(`JSON.stringify({
+        summary: ${c.testId('recall-summary')}.innerText,
+        text: ${c.testId('recall-results')}.innerText,
+        notions: [...${c.testId('recall-notions')}.querySelectorAll('li')].length
+      })`)
+      const { summary, text, notions } = JSON.parse(results)
+      assert(summary === 'You answered 6 of 6 questions correctly.', `summary: ${summary}`)
+      assert(notions === 2, `${notions} Notions in the results`)
+      assert(!/\b(passed|failed|pass mark|XP|streak)\b/i.test(text), 'a verdict or a reward word')
+      assert(
+        !(await c.evaluate(`!!${c.testId('lesson-origin')}`)),
+        'the Lesson came before the end'
+      )
+      await c.shot('24-recall-results')
+    }
+  )
+  if (!answered) return
+
+  await check(
+    'Continue opens the Lesson (generated by the fake CLI) after the Recall Quiz',
+    async () => {
+      await c.click('recall-continue')
+      await c.waitFor(`!!${c.testId('lesson-origin')}`, 'the Lesson', 90000)
+      assert(cliGenerationCalls() > callsBefore, 'the Lesson was not generated')
+      assert(
+        !(await c.evaluate(`!!${c.testId('recall-player')}`)),
+        'the Recall Quiz is still on screen'
+      )
+    }
+  )
+
+  await check(
+    'the same Topic is not asked again, and the Recall Quiz changed nothing else',
+    async () => {
+      await c.click('open-learning-path')
+      await c.waitFor(`!!${c.testId('path-continue')}`, 'the Learning Path')
+      await c.click('path-continue')
+      await c.waitFor(`!!${c.testId('lesson-origin')}`, 'the Lesson again', 60000)
+      assert(
+        !(await c.evaluate(`!!${c.testId('recall-player')}`)),
+        'asked again for the same Topic'
+      )
+      const db = readOnlyDb(dir)
+      try {
+        const count = (sql) => db.prepare(sql).get().n
+        assert(
+          count(
+            "SELECT COUNT(*) AS n FROM recall_sessions WHERE kind = 'gate' AND completed_at IS NOT NULL"
+          ) === 1,
+          'no single completed gate session'
+        )
+        assert(
+          count(
+            'SELECT COUNT(*) AS n FROM attempts WHERE recall_session_id IS NOT NULL AND round_id IS NULL'
+          ) === 6,
+          'the six answers are not Recall Attempts'
+        )
+        assert(count('SELECT COUNT(*) AS n FROM rounds') === 4, 'a Round was created')
+        assert(
+          count('SELECT COUNT(*) AS n FROM attempts WHERE round_id IS NOT NULL') === 12,
+          'a Round Attempt changed'
+        )
+      } finally {
+        db.close()
+      }
+      await c.click('open-dashboard')
+      await c.waitFor(`!!${c.testId('level-xp')}`, 'the Level card')
+      const xpAfter = await c.evaluate(`${c.testId('level-xp')}.innerText`)
+      assert(xpAfter === xpBefore, `XP went from "${xpBefore}" to "${xpAfter}"`)
+    }
+  )
+
+  await check(
+    'Memory Review counts the Recall answers: nothing needs attention any more',
+    async () => {
+      await c.click('dashboard-memory-review')
+      await c.waitFor(`!!${c.testId('memory-counts')}`, 'the counts')
+      const counts = JSON.parse(await memoryCounts(c))
+      assert(
+        JSON.stringify(counts) ===
+          JSON.stringify({ 'Notions tracked': 3, 'Need attention': 0, 'Getting steadier': 0 }),
+        `counts: ${JSON.stringify(counts)}`
+      )
+      assert(
+        /Nothing needs attention/.test(
+          await c.evaluate(
+            `document.querySelector('[data-testid="memory-review-screen"]').innerText`
+          )
+        ),
+        'no calm message for an empty group'
+      )
+    }
+  )
+
+  await check('no console errors (Recall Quiz and Memory Review)', async () => {
+    if (process.env.SMOKE_VERBOSE)
+      for (const problem of consoleProblems) console.log(`      console: ${problem}`)
+    assert(consoleProblems.length === 0, consoleProblems.join(' | '))
+  })
+
+  c.close()
+  await stopApp()
+}
+
 /**
  * Linux only: the whole AppImage update, in the packaged app. APPIMAGE (what the AppImage runtime
  * sets) names a scratch file standing for the installed AppImage; "Install and restart" downloads
@@ -1638,6 +2025,7 @@ try {
   await phaseOne()
   if (results.every((result) => result.ok)) {
     await phaseTwo()
+    if (results.every((result) => result.ok)) await phaseRecall()
     if (platform === 'linux' && results.every((result) => result.ok)) await phaseThree()
   } else {
     console.log('SKIP  second launch (exercise canvas): the first launch failed')

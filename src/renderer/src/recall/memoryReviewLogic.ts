@@ -1,6 +1,6 @@
 import type { MemoryReviewView, RecallStart } from '../../../shared/recall'
 
-/** The Notions of the needs-attention group: what "Start a recall quiz on these" practices. */
+/** The Notions of the needs-attention group: what "Start a Recall Quiz on these" practices. */
 export const attentionNotionIds = (view: MemoryReviewView): number[] =>
   view.groups.needs_attention.map((entry) => entry.notion.id)
 

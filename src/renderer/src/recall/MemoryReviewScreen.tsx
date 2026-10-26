@@ -38,7 +38,7 @@ type Phase =
   | { name: 'play'; start: RecallStart }
   | { name: 'results'; result: RecallResult }
 
-const BACK_TO_REVIEW = 'Back to Memory review'
+const BACK_TO_REVIEW = 'Back to Memory Review'
 
 function Icon({ children }: { children: React.ReactNode }) {
   return (
@@ -183,7 +183,7 @@ export function MemoryReviewLoadError({ onRetry }: { onRetry: () => void }) {
 }
 
 /**
- * The Memory Review of a loaded view: the three counts, "Start a recall quiz on these", the
+ * The Memory Review of a loaded view: the three counts, "Start a Recall Quiz on these", the
  * groups (Needs attention, Getting steadier, Solid collapsed by default) and the footnote. Calm
  * by design: honey for attention, sage for the rest, never red; every status has an icon and a
  * word. A notion that is not tracked yet is in none of the groups.
@@ -273,7 +273,7 @@ export function MemoryReviewContent({
             if (attention.length > 0 && !busy) onStart()
           }}
         >
-          {starting === 'all' ? 'Starting...' : 'Start a recall quiz on these'}
+          {starting === 'all' ? 'Starting...' : 'Start a Recall Quiz on these'}
         </button>
         {attention.length === 0 && (
           <span id={noteId} className="dash-note" data-testid="memory-start-note">
@@ -395,7 +395,7 @@ export function MemoryReviewScreen({
         setFailed(false)
       })
       .catch((reason: unknown) => {
-        console.warn('Could not load the Memory review:', reason)
+        console.warn('Could not load the Memory Review:', reason)
         if (active) setFailed(true)
       })
     return () => {
@@ -467,7 +467,7 @@ export function MemoryReviewScreen({
               if (playing.current === phase.start.session.id) setPhase({ name: 'results', result })
             }}
             onGiveUp={backToReview}
-            giveUp={{ label: BACK_TO_REVIEW, hint: 'go back to Memory review' }}
+            giveUp={{ label: BACK_TO_REVIEW, hint: 'go back to Memory Review' }}
           />
         ) : (
           <RecallResults
@@ -484,7 +484,7 @@ export function MemoryReviewScreen({
     <main className="memory-screen" data-testid="memory-review-screen">
       <header className="page-header">
         <h1 ref={heading} tabIndex={-1}>
-          Memory review
+          Memory Review
         </h1>
         <button type="button" className="btn-sm" onClick={onClose} data-testid="memory-back">
           Dashboard
@@ -492,7 +492,7 @@ export function MemoryReviewScreen({
       </header>
       {failed && <MemoryReviewLoadError onRetry={retry} />}
       {!view ? (
-        !failed && <p>Loading the Memory review...</p>
+        !failed && <p>Loading the Memory Review...</p>
       ) : (
         <MemoryReviewContent
           view={view}

@@ -28,7 +28,7 @@ export const resultMarkLabel = (correct: boolean): string => (correct ? 'Correct
 export const footnoteText =
   'Based on the latest 6 answers per notion. Declared Mastery and Forced Unlock never count.'
 
-export const emptyTitle = 'Nothing to review yet'
+export const emptyTitle = 'Nothing tracked yet'
 export const emptyText =
   'A notion appears here after you have answered a couple of questions on it in different quizzes. Keep going on the Learning Path, and this page fills in by itself.'
 
@@ -45,6 +45,6 @@ export const practiceEmptyText = (scope: 'notion' | 'notions'): string =>
 export const practiceFailedText = 'Could not start the practice. Try again in a moment.'
 
 /** The Memory Review could not be loaded: calm, with a retry; the raw error stays in the console. */
-export const loadFailedText = 'Could not load the Memory review. Nothing is lost: try again.'
+export const loadFailedText = 'Could not load the Memory Review. Nothing is lost: try again.'
 
 export const openTopicFailedText = 'Could not open the lesson section. Try again in a moment.'

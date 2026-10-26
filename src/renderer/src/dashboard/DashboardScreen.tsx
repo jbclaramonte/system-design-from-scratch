@@ -147,13 +147,13 @@ function Overview({ dashboard }: { dashboard: Dashboard }) {
 function MemoryReviewSection({ onOpen }: { onOpen: () => void }) {
   return (
     <section className="dash-section" aria-labelledby="dash-memory">
-      <h2 id="dash-memory">Memory review</h2>
+      <h2 id="dash-memory">Memory Review</h2>
       <p className="dash-note">
         See which notions are hard to remember across your quizzes, and practice them in a short
-        recall quiz.
+        Recall Quiz.
       </p>
       <button type="button" onClick={onOpen} data-testid="dashboard-open-memory-review">
-        Open the Memory review
+        Open the Memory Review
       </button>
     </section>
   )
@@ -508,7 +508,7 @@ export function DashboardScreen({
             onClick={onOpenMemoryReview}
             data-testid="dashboard-memory-review"
           >
-            Memory review
+            Memory Review
           </button>
           <button type="button" className="btn-sm" onClick={onClose} data-testid="dashboard-back">
             Learning Path
