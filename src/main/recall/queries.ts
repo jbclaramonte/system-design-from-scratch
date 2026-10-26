@@ -53,6 +53,24 @@ export function loadNotionResults(db: Database): Map<number, boolean[]> {
   return results
 }
 
+/**
+ * Time of the latest answer per Notion, from completed Rounds and completed Recall sessions.
+ */
+export function loadNotionLastSeen(db: Database): Map<number, string> {
+  const rows = db
+    .prepare(
+      `SELECT an.notion_id AS notionId, MAX(a.attempted_at) AS lastSeenAt
+       FROM attempts a
+       JOIN attempt_notions an ON an.attempt_id = a.id
+       LEFT JOIN rounds r ON r.id = a.round_id
+       LEFT JOIN recall_sessions s ON s.id = a.recall_session_id
+       WHERE r.completed_at IS NOT NULL OR s.completed_at IS NOT NULL
+       GROUP BY an.notion_id`
+    )
+    .all<{ notionId: number; lastSeenAt: string }>()
+  return new Map(rows.map((row) => [row.notionId, row.lastSeenAt]))
+}
+
 /** Topics the learner passed (a passing Round or a Declared Mastery), with their passed date. */
 export function loadPassedTopics(db: Database): PassedTopic[] {
   const rounds = db

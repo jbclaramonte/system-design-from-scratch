@@ -28,10 +28,12 @@ import {
 } from './db/repositories/updateState'
 import { resolveCliPath } from './generation/resolveCli'
 import { createQuizIpc } from './ipc/quiz'
+import { createRecallIpc } from './ipc/recall'
 import { createFreeAnswerGrader } from './quiz/freeAnswerGrader'
 import { createQuestionClarifier } from './quiz/questionClarifier'
 import { localGraders } from './quiz/grading'
 import { createQuizService } from './quiz/service'
+import { createRecallService } from './recall/service'
 import { registerHandlers } from './ipc/registerHandlers'
 import { sendEvent } from './ipc/sendEvent'
 import {
@@ -244,6 +246,9 @@ function start(): void {
         allowDevFixture: !app.isPackaged,
         assertTopicUnlocked
       }),
+      recall: createRecallIpc(
+        createRecallService(db, { questionClarifier: createQuestionClarifier(generation, db) })
+      ),
       mastery: createMasteryIpc(
         masteryDeps,
         createMasteryService({ ...masteryDeps, quiz: quizService }),

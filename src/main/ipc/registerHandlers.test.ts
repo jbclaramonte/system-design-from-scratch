@@ -159,6 +159,23 @@ const handlers: IpcHandlers = {
   'quiz:clarifyQuestion': () => ({ status: 'failed', error: { code: 'unknown', message: '' } }),
   'quiz:cancelClarification': () => undefined,
   'quiz:flagQuestion': () => undefined,
+  'recall:prepareGate': () => null,
+  'recall:startPractice': () => null,
+  'recall:submitAnswer': () => {
+    throw new Error('no session')
+  },
+  'recall:complete': () => {
+    throw new Error('no session')
+  },
+  'recall:clarifyQuestion': () => ({ status: 'failed', error: { code: 'unknown', message: '' } }),
+  'recall:cancelClarification': () => undefined,
+  'recall:getMemoryReview': () => ({
+    tracked: 0,
+    needsAttention: 0,
+    steadier: 0,
+    solid: 0,
+    groups: { needs_attention: [], steadier: [], solid: [] }
+  }),
   'protocol:openDevExercise': () => ({ id: 1, slug: 'dev-protocol-1', title: 'Dev' }),
   'protocol:getExercise': () => {
     throw new Error('no exercise')
@@ -237,6 +254,13 @@ describe('registerHandlers', () => {
       'quiz:startRound',
       'quiz:submitAnswer',
       'quiz:submitFreeAnswer',
+      'recall:cancelClarification',
+      'recall:clarifyQuestion',
+      'recall:complete',
+      'recall:getMemoryReview',
+      'recall:prepareGate',
+      'recall:startPractice',
+      'recall:submitAnswer',
       'rewards:get',
       'rewards:getCelebrations',
       'rewards:getRound',

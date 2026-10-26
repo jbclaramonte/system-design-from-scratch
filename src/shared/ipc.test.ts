@@ -36,6 +36,29 @@ describe('createApi', () => {
     ])
   })
 
+  it('forwards Recall calls to the recall channels', async () => {
+    const invoke = vi.fn(() => Promise.resolve(null))
+    const api = createApi(invoke, vi.fn())
+
+    await api.prepareRecallGate({ topicId: 3 })
+    await api.startRecallPractice({ notionIds: [1] })
+    await api.submitRecallAnswer({ sessionId: 1, questionId: 2, answer: { selected: [0] } })
+    await api.completeRecall({ sessionId: 1 })
+    await api.clarifyRecallQuestion({ sessionId: 1, questionId: 2, another: true })
+    await api.cancelRecallClarification({ sessionId: 1, questionId: 2 })
+    await api.getMemoryReview()
+
+    expect(invoke.mock.calls).toEqual([
+      ['recall:prepareGate', { topicId: 3 }],
+      ['recall:startPractice', { notionIds: [1] }],
+      ['recall:submitAnswer', { sessionId: 1, questionId: 2, answer: { selected: [0] } }],
+      ['recall:complete', { sessionId: 1 }],
+      ['recall:clarifyQuestion', { sessionId: 1, questionId: 2, another: true }],
+      ['recall:cancelClarification', { sessionId: 1, questionId: 2 }],
+      ['recall:getMemoryReview', undefined]
+    ])
+  })
+
   it('subscribes event listeners to their channel and returns the unsubscribe', () => {
     const unsubscribe = vi.fn()
     const subscribe = vi.fn(() => unsubscribe)

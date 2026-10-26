@@ -14,6 +14,7 @@ import type { SettingsIpc } from '../settings/settingsIpc'
 import type { UpdateIpc } from '../update'
 import type { DesignIpc } from './design'
 import type { QuizIpc } from './quiz'
+import type { RecallIpc } from './recall'
 import type { IpcHandlers } from './registerHandlers'
 
 export interface HandlerDependencies {
@@ -23,6 +24,7 @@ export interface HandlerDependencies {
   lesson: LessonIpc
   lessonQuestion: LessonQuestionIpc
   quiz: QuizIpc
+  recall: RecallIpc
   mastery: MasteryIpc
   path: LearningPathIpc
   dashboard: DashboardIpc
@@ -41,6 +43,7 @@ export function createHandlers({
   lesson,
   lessonQuestion,
   quiz,
+  recall,
   mastery,
   path,
   dashboard,
@@ -135,6 +138,13 @@ export function createHandlers({
     'quiz:clarifyQuestion': (request, event) => quiz.clarifyQuestion(request, event.sender),
     'quiz:cancelClarification': (request) => quiz.cancelClarification(request),
     'quiz:flagQuestion': (request) => quiz.flagQuestion(request),
+    'recall:prepareGate': (request) => recall.prepareGate(request),
+    'recall:startPractice': (request) => recall.startPractice(request),
+    'recall:submitAnswer': (request) => recall.submitAnswer(request),
+    'recall:complete': (request) => recall.complete(request),
+    'recall:clarifyQuestion': (request, event) => recall.clarifyQuestion(request, event.sender),
+    'recall:cancelClarification': (request) => recall.cancelClarification(request),
+    'recall:getMemoryReview': () => recall.getMemoryReview(),
     'protocol:openDevExercise': (request) => protocol.openDevExercise(request),
     'protocol:getExercise': (request) => protocol.getExercise(request),
     'protocol:saveDraft': (request) => protocol.saveDraft(request),

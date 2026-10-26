@@ -74,6 +74,7 @@ import type {
   RoundStart,
   SubmittedAnswer
 } from './quiz'
+import type { MemoryReviewView, RecallResult, RecallStart } from './recall'
 
 /** The fields of a Design Exercise the renderer needs to open its Design Canvas. */
 export interface DesignExerciseRef {
@@ -282,6 +283,36 @@ export interface IpcChannels {
   }
   /** Flags a question in play as faulty with a reason (for example its Diagram could not be drawn). */
   'quiz:flagQuestion': { request: { questionId: number; reason: string }; response: void }
+  /**
+   * The Recall Quiz taken before the Lesson of the Topic opens: resumes the open one or builds a
+   * new one. Null when there is nothing to recall (no eligible Topic or question, already taken
+   * for this Topic) or when anything fails: the Lesson then opens. Never waits for a Generation.
+   */
+  'recall:prepareGate': { request: { topicId: number }; response: RecallStart | null }
+  /**
+   * Starts a Recall Quiz from Memory Review, on the given Notions or on every passed Topic. Null
+   * when there is no question to ask.
+   */
+  'recall:startPractice': { request: { notionIds?: number[] }; response: RecallStart | null }
+  /** Grades one answer locally and records it as an Attempt of the Recall session. */
+  'recall:submitAnswer': {
+    request: { sessionId: number } & SubmittedAnswer
+    response: QuestionFeedback
+  }
+  /** Completes the Recall session once every question is answered. */
+  'recall:complete': { request: { sessionId: number }; response: RecallResult }
+  /** Rewords a question of the Recall session that is not answered yet (a Question Clarification). */
+  'recall:clarifyQuestion': {
+    request: { sessionId: number; questionId: number; another?: boolean }
+    response: QuestionClarificationOutcome
+  }
+  /** Cancels the clarification of a Recall question in progress. */
+  'recall:cancelClarification': {
+    request: { sessionId: number; questionId: number }
+    response: void
+  }
+  /** The Notions the learner finds hard to remember, by group, from the results of every quiz. */
+  'recall:getMemoryReview': { request: void; response: MemoryReviewView }
   /** Dev only (rejected in a packaged app): gets or creates the fixture exercise playing index n. */
   'protocol:openDevExercise': { request: ProtocolDevExerciseRequest; response: DesignExerciseRef }
   /** A Design Exercise with its Protocol Steps (active or locked), submissions, Hints, review. */
@@ -387,6 +418,13 @@ export const apiChannels = {
   clarifyQuestion: 'quiz:clarifyQuestion',
   cancelClarification: 'quiz:cancelClarification',
   flagQuestion: 'quiz:flagQuestion',
+  prepareRecallGate: 'recall:prepareGate',
+  startRecallPractice: 'recall:startPractice',
+  submitRecallAnswer: 'recall:submitAnswer',
+  completeRecall: 'recall:complete',
+  clarifyRecallQuestion: 'recall:clarifyQuestion',
+  cancelRecallClarification: 'recall:cancelClarification',
+  getMemoryReview: 'recall:getMemoryReview',
   openDevProtocolExercise: 'protocol:openDevExercise',
   getProtocolExercise: 'protocol:getExercise',
   saveProtocolDraft: 'protocol:saveDraft',
