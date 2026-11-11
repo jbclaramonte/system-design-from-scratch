@@ -1821,7 +1821,7 @@ async function phaseRecall() {
         `${tags.length} Often missed tags (the three questions of Notion A)`
       )
       assert(
-        tags.every((tag) => /You missed this notion in 3 of your last 6 quizzes/.test(tag)),
+        tags.every((tag) => /You missed this notion in 3 of your last 6 answers/.test(tag)),
         `tag: ${tags[0]}`
       )
       const results = await c.evaluate(`JSON.stringify({
