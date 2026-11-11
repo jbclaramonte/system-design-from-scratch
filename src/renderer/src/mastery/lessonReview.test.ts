@@ -117,7 +117,6 @@ describe('LessonReviewView', () => {
     renderToStaticMarkup(
       createElement(LessonReviewView, {
         review,
-        error: null,
         selected: null,
         onSelect: () => {},
         onClose: () => {},
@@ -183,7 +182,6 @@ describe('TopicHeader actions', () => {
         state: lessonState,
         grounded: true,
         showTitle: false,
-        error: null,
         actions
       })
     )

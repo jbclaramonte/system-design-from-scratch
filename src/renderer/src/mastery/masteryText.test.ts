@@ -5,8 +5,7 @@ import {
   firstRemediationIndex,
   masteryChip,
   declareConfirmation,
-  roundPreparation,
-  roundProgress
+  roundPreparation
 } from './masteryText'
 import { topicMasteries } from '../../../shared/mastery'
 
@@ -24,38 +23,6 @@ const state = (changes: Partial<MasteryState>): MasteryState => ({
   canDeclare: true,
   canUndoDeclaration: false,
   ...changes
-})
-
-describe('roundProgress', () => {
-  it('says a declared topic was declared, without a score', () => {
-    expect(roundProgress(state({ status: 'mastered', declared: true }))).toBe(
-      'Declared as already known, no score recorded · Mastery Threshold 100%'
-    )
-  })
-
-  it('shows the round number and the attempt before the Round Limit', () => {
-    expect(roundProgress(state({}))).toBe(
-      'Round 1 · attempt 1 of 3 before the Round Limit · Mastery Threshold 100%'
-    )
-    expect(roundProgress(state({ roundNumber: 3, failedRounds: 2 }))).toBe(
-      'Round 3 · attempt 3 of 3 before the Round Limit · Mastery Threshold 100%'
-    )
-    expect(roundProgress(state({ roundNumber: 4, failedRounds: 3, status: 'limit_reached' }))).toBe(
-      'Round 4 · Round Limit reached (3 rounds without success) · Mastery Threshold 100%'
-    )
-    expect(roundProgress(state({ roundNumber: 4, failedRounds: 3 }))).toBe(
-      'Round 4 · another angle after the Round Limit (3 rounds without success) · Mastery Threshold 100%'
-    )
-    expect(roundProgress(state({ status: 'mastered', masteryThreshold: 80 }))).toBe(
-      'Mastered · Mastery Threshold 80%'
-    )
-  })
-
-  it('has no attempt to count before the lesson is recorded', () => {
-    expect(
-      roundProgress(state({ status: 'not_started', step: { name: 'lesson', lessonReady: false } }))
-    ).toBe('Read the lesson, then take round 1 · Mastery Threshold 100%')
-  })
 })
 
 describe('roundPreparation', () => {

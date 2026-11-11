@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode, type Ref } from 'react'
+import { createPortal } from 'react-dom'
 import type { MasteryState, RemediationTarget } from '../../../shared/mastery'
 import type { RoundResult, RoundStart } from '../../../shared/quiz'
 import type { TopicSummary } from '../../../shared/topic'
@@ -23,7 +24,6 @@ import {
   masteryLabels,
   preparationText,
   roundPreparation,
-  roundProgress,
   type RoundPreparation
 } from './masteryText'
 import { RemediationLesson } from './RemediationLesson'
@@ -68,6 +68,8 @@ export function TopicScreen({
   const [reviewRequested, setReviewRequested] = useState(false)
   const reviewButtonRef = useRef<HTMLButtonElement>(null)
   const reviewWasOpen = useRef(false)
+  // The sidebar element the step's notion list (Lesson notions, missed notions) is portaled into.
+  const [notionsSlot, setNotionsSlot] = useState<HTMLElement | null>(null)
 
   /**
    * Reloads the loop state without changing the screen, so the header shows the status the main
@@ -193,197 +195,206 @@ export function TopicScreen({
 
   return (
     <section className="mastery-topic" data-testid="mastery-topic">
-      <TopicHeader
-        state={state}
-        grounded={topic.grounded}
-        showTitle={showTitle}
-        error={error}
-        actions={
-          canReview && (
-            <LessonButton
-              ref={reviewButtonRef}
-              open={reviewOpen}
-              onClick={() => setReviewRequested((open) => !open)}
-            />
-          )
-        }
-      />
-      {showsDeclareMastery(state, { overlayOpen: overlay !== null, recallGate }) && (
-        <DeclareMastery topicId={topic.id} topicTitle={state.topicTitle} onChanged={setState} />
-      )}
-      {reviewOpen && <LessonReviewPanel topicId={topic.id} onClose={closeReview} />}
+      <aside className="topic-sidebar" aria-label="Topic progress">
+        <TopicHeader
+          state={state}
+          grounded={topic.grounded}
+          showTitle={showTitle}
+          actions={
+            canReview && (
+              <LessonButton
+                ref={reviewButtonRef}
+                open={reviewOpen}
+                onClick={() => setReviewRequested((open) => !open)}
+              />
+            )
+          }
+        />
+        {showsDeclareMastery(state, { overlayOpen: overlay !== null, recallGate }) && (
+          <DeclareMastery topicId={topic.id} topicTitle={state.topicTitle} onChanged={setState} />
+        )}
+        {/* Hidden while the reading panel is open: the panel has its own notion buttons. */}
+        <div className="topic-sidebar-notions" ref={setNotionsSlot} hidden={reviewOpen} />
+      </aside>
 
-      <div className="mastery-step" hidden={reviewOpen} data-testid="mastery-step">
-        {overlay?.name === 'preparing' && (
-          <Preparing
-            preparation={overlay.preparation}
-            roundNumber={state.roundNumber}
-            onCancel={() => void window.api.cancelMastery({ requestId: overlay.requestId })}
-            onRetry={startRound}
-            onBack={backToLoop}
-          />
-        )}
-        {overlay?.name === 'play' && (
-          <div className="mastery-scroll">
-            <QuizPlayer
-              key={overlay.start.round.id}
-              start={overlay.start}
-              onCompleted={(result) => setOverlay({ name: 'results', result })}
-            />
-          </div>
-        )}
-        {overlay?.name === 'results' && (
-          <div className="mastery-scroll">
-            <p>
-              <button
-                type="button"
-                className="btn-primary"
-                data-testid="mastery-continue"
-                onClick={backToLoop}
-                autoFocus
-              >
-                {overlay.result.round.passed ? 'Continue' : 'Continue to the Remediation Lessons'}
-              </button>
-            </p>
-            {/* The Outside the primer badge is already on the progress line. */}
-            <QuizResults result={overlay.result} />
-          </div>
-        )}
+      <div className="topic-main">
+        {error && <GenerationErrorView code="refused" message={error} testId="mastery-error" />}
+        {reviewOpen && <LessonReviewPanel topicId={topic.id} onClose={closeReview} />}
 
-        {declaredIdle && (
-          <section
-            className="mastery-outcome mastery-outcome-mastered mastery-outcome-declared"
-            data-testid="mastery-declared"
-          >
-            <h3>Declared mastery</h3>
-            <p>
-              You declared this topic as already known: it counts as mastered and the next topic is
-              unlocked. No score is recorded. Test yourself with a quiz whenever you want
-              {state.step.name === 'lesson' && !state.step.lessonReady
-                ? ' (you read the Lesson first)'
-                : ''}
-              .
-            </p>
-            <div className="chip-row">
-              <button
-                type="button"
-                className="btn-primary"
-                data-testid="mastery-test-me"
-                onClick={testMe}
-              >
-                Test me
-              </button>
-              {state.canUndoDeclaration && (
-                <UndoDeclaration topicId={topic.id} onChanged={setState} />
-              )}
+        <div className="mastery-step" hidden={reviewOpen} data-testid="mastery-step">
+          {overlay?.name === 'preparing' && (
+            <Preparing
+              preparation={overlay.preparation}
+              roundNumber={state.roundNumber}
+              onCancel={() => void window.api.cancelMastery({ requestId: overlay.requestId })}
+              onRetry={startRound}
+              onBack={backToLoop}
+            />
+          )}
+          {overlay?.name === 'play' && (
+            <div className="mastery-scroll">
+              <QuizPlayer
+                key={overlay.start.round.id}
+                start={overlay.start}
+                onCompleted={(result) => setOverlay({ name: 'results', result })}
+              />
             </div>
-          </section>
-        )}
-        {loop && recallGate && (
-          <div className="mastery-scroll">
-            <RecallGate topicId={topic.id} onDone={() => setRecallDone(true)} />
-          </div>
-        )}
-        {loop && state.step.name === 'lesson' && !recallGate && (
-          <>
-            <LessonScreen
-              key={attempt}
-              embedded
-              topic={topic}
-              onRetry={() => setAttempt((n) => n + 1)}
-              onDone={lessonRecorded}
-            />
-            <footer className="mastery-footer">
-              <button
-                type="button"
-                className="btn-primary"
-                data-testid="mastery-start-round"
-                disabled={!lessonDone && !state.step.lessonReady}
-                onClick={startRound}
-              >
-                Take the quiz (round {state.roundNumber})
-              </button>
-            </footer>
-          </>
-        )}
-        {loop && state.step.name === 'round' && (
-          <p className="muted" role="status">
-            Resuming round {state.roundNumber}...
-          </p>
-        )}
-        {loop && state.step.name === 'remediation' && (
-          <RemediationStep
-            key={`${state.step.roundId}:${attempt}`}
-            state={state}
-            targets={state.step.targets}
-            anotherAngle={state.step.anotherAngle}
-            onLessonDone={backToLoop}
-            onRetry={() => setAttempt((n) => n + 1)}
-            onStartRound={startRound}
-          />
-        )}
-        {loop && state.step.name === 'limit_reached' && (
-          <section
-            className="mastery-outcome mastery-outcome-limit"
-            data-testid="mastery-limit-reached"
-          >
-            <h3>Round Limit reached</h3>
-            <p>
-              {state.failedRounds} rounds without reaching the Mastery Threshold (
-              {state.masteryThreshold}%). Repeating the same explanation will not help: pick how to
-              go on.
-            </p>
-            <div className="mastery-choices">
-              <div className="card card-elevated mastery-choice">
+          )}
+          {overlay?.name === 'results' && (
+            <div className="mastery-scroll">
+              <p>
                 <button
                   type="button"
                   className="btn-primary"
-                  data-testid="choose-another-angle"
-                  onClick={() => choose('another_angle')}
+                  data-testid="mastery-continue"
+                  onClick={backToLoop}
+                  autoFocus
                 >
-                  Try another angle
+                  {overlay.result.round.passed ? 'Continue' : 'Continue to the Remediation Lessons'}
                 </button>
-                <p>New Remediation Lessons in a style you have not read yet, then a new round.</p>
-              </div>
-              <div className="card card-elevated mastery-choice">
-                <button type="button" data-testid="choose-skip" onClick={() => choose('skip')}>
-                  Skip and come back later
-                </button>
-                <p>The topic stays marked as skipped; reopen it whenever you want.</p>
-              </div>
+              </p>
+              {/* The Outside the primer badge is already on the progress line. */}
+              <QuizResults result={overlay.result} />
             </div>
-          </section>
-        )}
-        {loop && state.step.name === 'skipped' && (
-          <section
-            className="mastery-outcome mastery-outcome-skipped"
-            data-testid="mastery-skipped"
-          >
-            <h3>Topic skipped</h3>
-            <p>You chose to come back to this topic later.</p>
-            <button
-              type="button"
-              className="btn-primary"
-              data-testid="choose-come-back"
-              onClick={() => choose('another_angle')}
+          )}
+
+          {declaredIdle && (
+            <section
+              className="mastery-outcome mastery-outcome-mastered mastery-outcome-declared"
+              data-testid="mastery-declared"
             >
-              Come back now with another angle
-            </button>
-          </section>
-        )}
-        {loop && state.step.name === 'mastered' && (
-          <section
-            className="mastery-outcome mastery-outcome-mastered"
-            data-testid="mastery-mastered"
-          >
-            <h3>Topic mastered</h3>
-            <p>
-              Round {state.lastRound?.number} passed with{' '}
-              {formatPercent(state.lastRound?.scorePercent ?? 0)} (Mastery Threshold{' '}
-              {state.masteryThreshold}%).
+              <h3>Declared mastery</h3>
+              <p>
+                You declared this topic as already known: it counts as mastered and the next topic
+                is unlocked. No score is recorded. Test yourself with a quiz whenever you want
+                {state.step.name === 'lesson' && !state.step.lessonReady
+                  ? ' (you read the Lesson first)'
+                  : ''}
+                .
+              </p>
+              <div className="chip-row">
+                <button
+                  type="button"
+                  className="btn-primary"
+                  data-testid="mastery-test-me"
+                  onClick={testMe}
+                >
+                  Test me
+                </button>
+                {state.canUndoDeclaration && (
+                  <UndoDeclaration topicId={topic.id} onChanged={setState} />
+                )}
+              </div>
+            </section>
+          )}
+          {loop && recallGate && (
+            <div className="mastery-scroll">
+              <RecallGate topicId={topic.id} onDone={() => setRecallDone(true)} />
+            </div>
+          )}
+          {loop && state.step.name === 'lesson' && !recallGate && (
+            <>
+              <LessonScreen
+                key={attempt}
+                embedded
+                notionsSlot={notionsSlot}
+                topic={topic}
+                onRetry={() => setAttempt((n) => n + 1)}
+                onDone={lessonRecorded}
+              />
+              <footer className="mastery-footer">
+                <button
+                  type="button"
+                  className="btn-primary"
+                  data-testid="mastery-start-round"
+                  disabled={!lessonDone && !state.step.lessonReady}
+                  onClick={startRound}
+                >
+                  Take the quiz (round {state.roundNumber})
+                </button>
+              </footer>
+            </>
+          )}
+          {loop && state.step.name === 'round' && (
+            <p className="muted" role="status">
+              Resuming round {state.roundNumber}...
             </p>
-          </section>
-        )}
+          )}
+          {loop && state.step.name === 'remediation' && (
+            <RemediationStep
+              key={`${state.step.roundId}:${attempt}`}
+              state={state}
+              targets={state.step.targets}
+              anotherAngle={state.step.anotherAngle}
+              notionsSlot={notionsSlot}
+              onLessonDone={backToLoop}
+              onRetry={() => setAttempt((n) => n + 1)}
+              onStartRound={startRound}
+            />
+          )}
+          {loop && state.step.name === 'limit_reached' && (
+            <section
+              className="mastery-outcome mastery-outcome-limit"
+              data-testid="mastery-limit-reached"
+            >
+              <h3>Round Limit reached</h3>
+              <p>
+                {state.failedRounds} rounds without reaching the Mastery Threshold (
+                {state.masteryThreshold}%). Repeating the same explanation will not help: pick how
+                to go on.
+              </p>
+              <div className="mastery-choices">
+                <div className="card card-elevated mastery-choice">
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    data-testid="choose-another-angle"
+                    onClick={() => choose('another_angle')}
+                  >
+                    Try another angle
+                  </button>
+                  <p>New Remediation Lessons in a style you have not read yet, then a new round.</p>
+                </div>
+                <div className="card card-elevated mastery-choice">
+                  <button type="button" data-testid="choose-skip" onClick={() => choose('skip')}>
+                    Skip and come back later
+                  </button>
+                  <p>The topic stays marked as skipped; reopen it whenever you want.</p>
+                </div>
+              </div>
+            </section>
+          )}
+          {loop && state.step.name === 'skipped' && (
+            <section
+              className="mastery-outcome mastery-outcome-skipped"
+              data-testid="mastery-skipped"
+            >
+              <h3>Topic skipped</h3>
+              <p>You chose to come back to this topic later.</p>
+              <button
+                type="button"
+                className="btn-primary"
+                data-testid="choose-come-back"
+                onClick={() => choose('another_angle')}
+              >
+                Come back now with another angle
+              </button>
+            </section>
+          )}
+          {loop && state.step.name === 'mastered' && (
+            <section
+              className="mastery-outcome mastery-outcome-mastered"
+              data-testid="mastery-mastered"
+            >
+              <h3>Topic mastered</h3>
+              <p>
+                Round {state.lastRound?.number} passed with{' '}
+                {formatPercent(state.lastRound?.scorePercent ?? 0)} (Mastery Threshold{' '}
+                {state.masteryThreshold}%).
+              </p>
+            </section>
+          )}
+        </div>
       </div>
     </section>
   )
@@ -418,49 +429,49 @@ function LessonButton({
 }
 
 /**
- * Title (unless the enclosing screen shows it), then the progress line: mastery status, the
- * Outside the primer badge (the only one on the topic screen), round progress.
+ * The topic sidebar card: title (unless the enclosing screen shows it), mastery status, the
+ * grounding badge (the only one on the topic screen), the round figures, then the actions.
  */
 export function TopicHeader({
   state,
   grounded,
   showTitle,
-  error,
   actions
 }: {
   state: MasteryState
   grounded: boolean
   showTitle: boolean
-  error: string | null
-  /** Buttons at the end of the progress line (the Lesson button). */
+  /** Buttons at the end of the card (the Lesson button). */
   actions?: ReactNode
 }) {
   return (
     <header className="mastery-header">
       {showTitle && <h2>{state.topicTitle}</h2>}
       <div className="mastery-progress card" data-testid="mastery-progress">
-        <div className="mastery-state">
-          <div className="chip-row">
-            <span className={masteryChip[state.status]} data-testid="mastery-status">
-              {masteryLabels[state.status]}
+        <div className="chip-row">
+          <span className={masteryChip[state.status]} data-testid="mastery-status">
+            {masteryLabels[state.status]}
+          </span>
+          {state.declared && (
+            <span
+              className="chip"
+              title="Mastered without a Round: the learner declared the topic as already known"
+              data-testid="mastery-declared-marker"
+            >
+              Declared
             </span>
-            {state.declared && (
-              <span
-                className="chip"
-                title="Mastered without a Round: the learner declared the topic as already known"
-                data-testid="mastery-declared-marker"
-              >
-                Declared
-              </span>
-            )}
-            {!grounded && <OutsidePrimerBadge testId="mastery-ungrounded" />}
-          </div>
-          <p className="mastery-summary">{roundProgress(state)}</p>
+          )}
+          {grounded ? (
+            <span className="chip" title="Grounded on the System Design Primer">
+              System Design Primer
+            </span>
+          ) : (
+            <OutsidePrimerBadge testId="mastery-ungrounded" />
+          )}
         </div>
         <RoundStats state={state} />
         {actions && <div className="mastery-actions">{actions}</div>}
       </div>
-      {error && <GenerationErrorView code="refused" message={error} testId="mastery-error" />}
     </header>
   )
 }
@@ -573,6 +584,7 @@ function RemediationStep({
   state,
   targets,
   anotherAngle,
+  notionsSlot,
   onLessonDone,
   onRetry,
   onStartRound
@@ -580,6 +592,8 @@ function RemediationStep({
   state: MasteryState
   targets: RemediationTarget[]
   anotherAngle: boolean
+  /** Where the missed notions go (the topic screen sidebar); above the lesson when null. */
+  notionsSlot: HTMLElement | null
   onLessonDone: () => void
   onRetry: () => void
   onStartRound: () => void
@@ -611,6 +625,28 @@ function RemediationStep({
     )
   }
 
+  const missed = (
+    <nav className="mastery-targets" aria-label="Missed notions">
+      <span className="label-caps" aria-hidden>
+        Missed notions
+      </span>
+      {targets.map((t, i) => (
+        <button
+          key={t.notion.id}
+          type="button"
+          lang="fr"
+          aria-current={i === index}
+          data-ready={String(t.ready)}
+          onClick={() => setIndex(i)}
+        >
+          {t.ready && <span title="Remediation Lesson ready">✓</span>}
+          <span>{t.notion.title}</span>
+          <span className="label-mono muted">{formatPercent(t.scorePercent)}</span>
+        </button>
+      ))}
+    </nav>
+  )
+
   return (
     <div className="mastery-scroll" data-testid="mastery-remediation">
       <p className="mastery-intro">
@@ -619,22 +655,7 @@ function RemediationStep({
         {state.masteryThreshold}%). One short Remediation Lesson per missed notion, then a new round
         with fresh questions.
       </p>
-      <nav className="mastery-targets" aria-label="Missed notions">
-        {targets.map((t, i) => (
-          <button
-            key={t.notion.id}
-            type="button"
-            lang="fr"
-            aria-current={i === index}
-            data-ready={String(t.ready)}
-            onClick={() => setIndex(i)}
-          >
-            {t.ready && <span title="Remediation Lesson ready">✓</span>}
-            <span>{t.notion.title}</span>
-            <span className="label-mono muted">{formatPercent(t.scorePercent)}</span>
-          </button>
-        ))}
-      </nav>
+      {notionsSlot ? createPortal(missed, notionsSlot) : missed}
       <RemediationLesson
         key={target.notion.id}
         topicId={state.topicId}

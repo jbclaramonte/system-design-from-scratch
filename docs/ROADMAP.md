@@ -132,6 +132,9 @@ gantt
     #74 Recall Quiz before a Lesson           :done, r5, after r4, 2d
     #75 Memory Review screen                  :done, r6, after r5, 2d
     #76 Recall docs and smoke test            :done, r7, after r6, 1d
+
+    section Layout
+    #77 Topic sidebar and wider content       :done, ly1, 2026-11-11, 1d
 ```
 
 ## Dependency table
@@ -214,6 +217,7 @@ gantt
 | #74 | #73 |
 | #75 | #73, #74 |
 | #76 | #74, #75 |
+| #77 | #74 |
 
 ## Conventions
 

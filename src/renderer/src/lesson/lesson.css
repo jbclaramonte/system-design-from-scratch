@@ -47,6 +47,51 @@
   color: var(--color-text-primary);
 }
 
+/* Nothing above the text (topic screen, lesson finished): no gap either. */
+.lesson-header:empty {
+  display: none;
+}
+
+/* In the topic screen sidebar: a vertical table of contents, the notion being read marked. */
+
+.topic-sidebar .lesson-notions {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: var(--space-2xs);
+}
+
+.topic-sidebar .lesson-notions .label-caps {
+  margin-bottom: var(--space-xs);
+}
+
+.topic-sidebar .lesson-notions button {
+  padding: var(--space-xs) var(--space-sm);
+  border-color: transparent;
+  border-left: 2px solid var(--color-border-hairline);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: transparent;
+  box-shadow: none;
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.topic-sidebar .lesson-notions button:hover {
+  border-color: transparent;
+  border-left-color: var(--color-border-active);
+}
+
+.lesson-notions button[aria-current='location'] {
+  border-color: var(--color-border-active);
+  color: var(--color-text-primary);
+}
+
+.topic-sidebar .lesson-notions button[aria-current='location'] {
+  border-color: transparent;
+  border-left-color: var(--color-progress);
+  background: var(--color-surface-elevated);
+}
+
 /* Reading column. */
 
 .lesson-scroll {

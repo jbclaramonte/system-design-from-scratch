@@ -2,73 +2,94 @@
    its action bar. Tokens only (docs/Design System.md). Status chips are the shared `.chip-*`. */
 
 .mastery-topic {
-  display: flex;
-  flex-direction: column;
+  display: grid;
   flex: 1;
+  grid-template-columns: var(--layout-sidebar-width) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  gap: var(--space-xl);
   min-height: 0;
 }
 
-/* Header: one layer 1 card, the state on the left and the round figures on the right. */
+/* Sidebar: the progress card, "I already know this", then the notion list of the step (portaled
+   by the Lesson and the Remediation step). It scrolls on its own when taller than the window. */
+
+.topic-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: var(--space-lg);
+}
+
+.topic-sidebar-notions:empty,
+.topic-sidebar-notions[hidden] {
+  display: none;
+}
+
+/* Step content: the reading column, centered in the width left by the sidebar. */
+
+.topic-main {
+  display: flex;
+  flex-direction: column;
+  justify-self: center;
+  width: 100%;
+  max-width: 50rem;
+  min-height: 0;
+}
+
+/* Progress card: status chips, the round figures as label / value rows, the actions. */
 
 .mastery-header {
   flex: none;
-  margin-bottom: var(--space-sm);
 }
 
 .mastery-header h2 {
-  margin: var(--space-xs) 0 var(--space-md);
-  font-size: var(--type-headline-lg-size);
-  line-height: var(--type-headline-lg-line);
-  letter-spacing: var(--type-headline-lg-tracking);
+  margin: 0 0 var(--space-sm);
+  font-size: var(--type-headline-md-size);
+  line-height: var(--type-headline-md-line);
+  letter-spacing: var(--type-headline-md-tracking);
 }
 
 .mastery-progress {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-md) var(--space-lg);
-}
-
-.mastery-state {
   display: grid;
-  flex: 1 1 18rem;
-  gap: var(--space-sm);
-  min-width: 0;
+  gap: var(--space-md);
+  padding: var(--space-md);
 }
-
-.mastery-summary {
-  margin: 0;
-  color: var(--color-text-secondary);
-  font-size: var(--type-body-md-size);
-  line-height: var(--type-body-md-line);
-}
-
-/* Round figures: a .stat each, with hairline dividers between them. */
 
 .mastery-stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-md) 0;
+  display: grid;
+  gap: var(--space-sm);
   margin: 0;
 }
 
 .mastery-stat {
-  min-width: 5rem;
-  padding: 0 var(--space-lg);
-  border-left: 1px solid var(--color-border-hairline);
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-xs) var(--space-sm);
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--color-border-hairline);
 }
 
 .mastery-stat:first-child {
-  border-left: 0;
-  padding-left: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.mastery-stat .stat-value {
+  font-size: var(--type-body-lg-size);
+  line-height: var(--type-body-lg-line);
 }
 
 .mastery-stat dd {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-sm);
+  justify-content: flex-end;
+  gap: var(--space-xs) var(--space-sm);
   margin: 0;
 }
 
@@ -96,7 +117,7 @@
 
 .mastery-actions {
   display: flex;
-  flex: none;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-sm);
 }
@@ -189,13 +210,32 @@
   background: var(--color-canvas);
 }
 
-/* Remediation: one tab-like button per missed notion. */
+/* Remediation: one tab-like button per missed notion (in the sidebar, or above the lesson). */
 
 .mastery-targets {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: var(--space-sm);
   margin: 0 0 var(--space-lg);
+}
+
+.topic-sidebar .mastery-targets {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-xs);
+  margin: 0;
+}
+
+.topic-sidebar .mastery-targets button {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  text-align: left;
+}
+
+.topic-sidebar .mastery-targets button > span:nth-last-child(2) {
+  flex: 1;
 }
 
 .mastery-targets button {
@@ -257,10 +297,10 @@
   box-shadow: var(--glow-mastered);
 }
 
-/* Declared Mastery: "I already know this" under the progress line, with its confirmation. */
+/* Declared Mastery: "I already know this" under the progress card, with its confirmation. */
 
 .declare-mastery {
-  margin: var(--space-sm) 0 var(--space-md);
+  margin: 0;
 }
 
 .declare-mastery-confirm p {
@@ -290,4 +330,37 @@
   margin: 0;
   font-size: var(--type-body-md-size);
   line-height: var(--type-body-md-line);
+}
+
+/* A narrow window: the sidebar stacks above the step, its lists wrap in rows again. */
+
+@media (max-width: 56rem) {
+  .mastery-topic {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: var(--space-md);
+  }
+
+  .topic-sidebar {
+    overflow-y: visible;
+    padding-bottom: 0;
+  }
+
+  .mastery-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm) var(--space-lg);
+  }
+
+  .mastery-stat {
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  .topic-sidebar .lesson-notions,
+  .topic-sidebar .mastery-targets {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+  }
 }

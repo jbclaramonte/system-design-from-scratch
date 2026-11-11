@@ -40,7 +40,7 @@ export function PathTopicView({
 
   return (
     <main className="screen-fill" data-testid="path-topic-view">
-      <nav className="screen-nav">
+      <nav className="screen-nav screen-nav-compact">
         <button type="button" onClick={onBack} data-testid="path-back">
           {backLabel}
         </button>

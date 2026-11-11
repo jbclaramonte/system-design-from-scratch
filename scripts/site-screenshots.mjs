@@ -663,7 +663,7 @@ async function quizScreens() {
   await click('[data-testid=mastery-continue]')
   console.log('generating the Remediation Lesson...')
   await waitFor(
-    `!!document.querySelector('[data-testid=remediation-lesson]') && !!document.querySelector('[data-testid=remediation-origin]')`,
+    `!!document.querySelector('[data-testid=remediation-lesson][data-origin]')`,
     'the Remediation Lesson',
     GENERATION_TIMEOUT
   )

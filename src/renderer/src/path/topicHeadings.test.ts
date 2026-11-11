@@ -41,7 +41,7 @@ function topicFromPath(): string {
   return [
     renderToStaticMarkup(createElement(PathTopicView, { topic, onBack: noop, onOpenTopic: noop })),
     renderToStaticMarkup(
-      createElement(TopicHeader, { state, grounded: topic.grounded, showTitle: false, error: null })
+      createElement(TopicHeader, { state, grounded: topic.grounded, showTitle: false })
     ),
     renderToStaticMarkup(createElement(LessonScreen, { topic, onRetry: noop, embedded: true }))
   ].join('')
@@ -63,7 +63,7 @@ describe('topic screen headings', () => {
     const noop = () => {}
     const lesson = renderToStaticMarkup(createElement(LessonScreen, { topic, onRetry: noop }))
     const header = renderToStaticMarkup(
-      createElement(TopicHeader, { state, grounded: false, showTitle: true, error: null })
+      createElement(TopicHeader, { state, grounded: false, showTitle: true })
     )
 
     expect(headings(lesson)).toEqual([`h2:${topic.title}`])

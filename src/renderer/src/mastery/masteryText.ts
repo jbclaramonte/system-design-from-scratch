@@ -38,32 +38,6 @@ export const angleLabels: Record<RemediationAngle, string> = {
   guided_questions: 'Guided questions'
 }
 
-/**
- * Progress line of the topic screen, after the status badge: round number, rounds left before the
- * Round Limit. Before the lesson is recorded (`not_started`) there is no round to count yet.
- */
-export function roundProgress({
-  roundNumber,
-  failedRounds,
-  roundLimit,
-  masteryThreshold,
-  status,
-  declared
-}: MasteryState): string {
-  const threshold = `Mastery Threshold ${masteryThreshold}%`
-  if (declared) return `Declared as already known, no score recorded · ${threshold}`
-  if (status === 'mastered') return `Mastered · ${threshold}`
-  if (status === 'not_started')
-    return `Read the lesson, then take round ${roundNumber} · ${threshold}`
-  if (failedRounds < roundLimit) {
-    return `Round ${roundNumber} · attempt ${failedRounds + 1} of ${roundLimit} before the Round Limit · ${threshold}`
-  }
-  const failed = `${failedRounds} rounds without success`
-  return status === 'in_progress'
-    ? `Round ${roundNumber} · another angle after the Round Limit (${failed}) · ${threshold}`
-    : `Round ${roundNumber} · Round Limit reached (${failed}) · ${threshold}`
-}
-
 export interface AttemptsStat {
   failedRounds: number
   roundLimit: number

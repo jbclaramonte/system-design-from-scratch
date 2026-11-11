@@ -56,7 +56,7 @@ Names below drop the `--` prefix families: `--color-*`, `--radius-*`, `--space-*
 | Elevation | `shadow-card` none, `shadow-layer-2` (inset top highlight), `shadow-layer-3` black, `glow-mastered/progress/attention` 12px at .2 | `shadow-card` and `shadow-layer-2` (warm brown `rgba(124, 66, 30, ...)`, two layers), `shadow-layer-3` brown .3, glows 10px at .25 |
 | Progress | `progress-gradient` indigo to emerald | bright terracotta to sage |
 
-Shared by both themes: `radius-pill`, `space-*` (`space-2xs` .125rem, `-xs` .25, `-sm` .5, `-md` 1, `-lg` 1.5, `-xl` 2.5rem; `gutter`, `gutter-sm`, `margin`), `font-mono`, `type-<style>-{size,line,tracking,weight}` (headline-xl/lg/md/sm, body-lg/md/sm, code-inline, code-block, label-mono, label-caps), `blur-layer-3`, `ease-out` cubic-bezier(.16, 1, .3, 1), `duration-fast`, `duration-slow`, `progress-height` 4px, `layout-max-width` 1100px (shell container), `layout-header-height` 3.5rem, `layout-reading-width` 48rem (quiz reading column).
+Shared by both themes: `radius-pill`, `space-*` (`space-2xs` .125rem, `-xs` .25, `-sm` .5, `-md` 1, `-lg` 1.5, `-xl` 2.5rem; `gutter`, `gutter-sm`, `margin`), `font-mono`, `type-<style>-{size,line,tracking,weight}` (headline-xl/lg/md/sm, body-lg/md/sm, code-inline, code-block, label-mono, label-caps), `blur-layer-3`, `ease-out` cubic-bezier(.16, 1, .3, 1), `duration-fast`, `duration-slow`, `progress-height` 4px, `layout-max-width` 1440px (shell container), `layout-header-height` 3.5rem, `layout-reading-width` 48rem (quiz reading column), `layout-sidebar-width` 17rem (topic screen sidebar).
 
 ## Themes
 
@@ -110,7 +110,7 @@ Issue #36. All in `components.css`. Tones are named after the status colors: `ma
 | Class | Use |
 |---|---|
 | `.page-header` | Header of a page screen: `h1` on the left, a small Back button (`btn-sm`) on the right, 1.5rem below. Dashboard, Settings, About. |
-| `.screen-nav` | Topic screens: a compact Back button with an arrow, then the `h1`, optional aside at the end. `.screen-fill` makes a screen fill the content area height (flex column, `min-height: 0`). |
+| `.screen-nav` | Topic screens: a compact Back button with an arrow, then the `h1`, optional aside at the end. `.screen-nav-compact` keeps it on one line with a `headline-md` title, ellipsized (topic screen, #77). `.screen-fill` makes a screen fill the content area height (flex column, `min-height: 0`). |
 | `.reading-column` | Centered column, `layout-reading-width` (48rem) wide. Quiz picker, player, results and the quiz screen head. Lesson prose (`.lesson-body`) is 50rem on purpose. |
 | `.notice` | One message in a tinted box (6px radius). Plain is information. `.notice-error` for errors (Settings, Dashboard, Design Exercise), `.notice-attention` for a flag or a fallback, `.notice-success` for a confirmation ("Saved": inline, check mark in front). |
 | `.notice-card` | Titled notice with actions and folded details: `GenerationErrorView`. `.notice-card-error` adds the red tint and the "!" mark before the title. |
@@ -162,7 +162,7 @@ Issue #29. `AppShell` (`src/renderer/src/shell/AppShell.tsx`, `shell.css`) wraps
 - **Header**: `layout-header-height` high, `surface-base` with a hairline bottom border. Brand mark (inline SVG, decorative) and "System Design" with a muted "from Scratch"; navigation on the right. The brand is not a heading: each screen owns its `h1` (the Learning Path renders its own visible "Learning Path" `h1`).
 - **Navigation** (`NAV_ITEMS` in `shell/navigation.ts`): Learning Path, Dashboard, Settings, About, with `data-testid` `open-learning-path`, `open-dashboard`, `open-settings`, `open-about`. The first item is the Learning Path home screen (the mock-up says "Curriculum", which the glossary forbids). The active item has `aria-current="page"` and a raised style (hover fill, control border, primary text); others are secondary text with a transparent border. Focus uses the global focus ring.
 - **Active item**: `activeNavItem(screen)` (pure, tested). Topic screens and exercises keep Learning Path; a topic opened from the Dashboard keeps Dashboard; Settings opened from an error highlights Settings (its back button still returns to the screen it came from); dev screens keep Learning Path.
-- **Content container**: `layout-max-width` (1100px) centered, `gutter` side padding. Screens render their own `<main>` and must not add page-level padding, a page-level max width or `height: 100vh`.
+- **Content container**: `layout-max-width` (1440px, was 1100px before #77) centered, `gutter` side padding. Screens render their own `<main>` and must not add page-level padding, a page-level max width or `height: 100vh`.
 - **Layouts** (`screenLayout(screen)`, `data-layout` on the shell):
 
 | Layout | Screens | Behavior |

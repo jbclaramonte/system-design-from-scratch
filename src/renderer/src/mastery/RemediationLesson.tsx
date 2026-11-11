@@ -72,16 +72,16 @@ export function RemediationLesson({
   const running = isLessonRunning(state.status)
 
   return (
-    <article className="mastery-remediation" data-testid="remediation-lesson" aria-busy={running}>
+    <article
+      className="mastery-remediation"
+      data-testid="remediation-lesson"
+      data-origin={state.status === 'done' ? (state.fromCache ? 'cache' : 'generated') : undefined}
+      aria-busy={running}
+    >
       <p className="chip-row">
         <span className="chip chip-progress" data-testid="remediation-angle">
           Angle: {angleLabels[target.angle]}
         </span>
-        {state.status === 'done' && (
-          <span className="chip" data-testid="remediation-origin">
-            {state.fromCache ? 'From cache' : 'Generated'}
-          </span>
-        )}
       </p>
       {running && (
         <p className="status-strip" role="status" data-testid="remediation-status">

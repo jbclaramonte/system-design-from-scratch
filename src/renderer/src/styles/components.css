@@ -45,6 +45,30 @@
   content: '\2190' / '';
 }
 
+/* One line above a screen that needs the height (topic screen): a smaller title, ellipsized. */
+.screen-nav-compact {
+  flex-wrap: nowrap;
+  margin-bottom: var(--space-md);
+}
+
+.screen-nav-compact h1 {
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--type-headline-md-size);
+  line-height: var(--type-headline-md-line);
+  letter-spacing: var(--type-headline-md-tracking);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.screen-nav-compact > * {
+  flex: none;
+}
+
+.screen-nav-compact > h1 {
+  flex: 0 1 auto;
+}
+
 /* A screen that fills the height of the content area and scrolls its own panes. */
 
 .screen-fill {

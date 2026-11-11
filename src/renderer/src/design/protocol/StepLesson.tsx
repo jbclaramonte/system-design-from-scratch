@@ -72,15 +72,11 @@ function StepLessonStream({
     <article
       className="protocol-lesson card card-elevated"
       data-testid="step-lesson"
+      data-origin={state.status === 'done' ? (state.fromCache ? 'cache' : 'generated') : undefined}
       aria-busy={running}
     >
       <p className="protocol-lesson-chips">
         <span className="chip chip-progress chip-dot">Why it matters</span>
-        {state.status === 'done' && (
-          <span className="chip" data-testid="step-lesson-origin">
-            {state.fromCache ? 'From cache' : 'Generated'}
-          </span>
-        )}
       </p>
       {running && (
         <p className="status-strip" role="status" data-testid="step-lesson-status">
