@@ -99,6 +99,7 @@ gantt
     #53 Reformulate a Quiz question           :done, a2, after a1, 1d
     #54 Forced Unlock of Learning Path steps  :done, a3, 2026-10-15, 2d
     #55 Declared Mastery, mark a topic known  :done, a4, after a3, 2d
+    #78 Answer Lesson Questions beyond course :done, a5, 2026-11-13, 1d
 
     section Course language
     #57 Course language, French or English    :done, l1, 2026-10-24, 3d
@@ -218,6 +219,7 @@ gantt
 | #75 | #73, #74 |
 | #76 | #74, #75 |
 | #77 | #74 |
+| #78 | #52 |
 
 ## Conventions
 

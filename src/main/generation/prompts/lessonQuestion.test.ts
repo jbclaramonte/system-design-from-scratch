@@ -60,8 +60,21 @@ describe('buildLessonQuestionGeneration', () => {
     expect(system).toContain('3 to 6 sentences')
     expect(system).toContain('only')
     expect(system).toContain("Ce point n'est pas traité dans le cours.")
-    expect(system).toContain('Never invent a fact')
     expect(system).toContain('[source: <excerpt id>]')
+  })
+
+  it('answers a system design question beyond the course from general knowledge, under a label', () => {
+    const fr = buildLessonQuestionGeneration(brief, input, grounding, 'fr').prompt.system
+    const en = buildLessonQuestionGeneration(brief, input, grounding, 'en').prompt.system
+
+    expect(fr).toContain('**Hors du cours :**')
+    expect(fr).toContain('general system design knowledge')
+    expect(fr).toContain('only well-established, widely accepted facts')
+    expect(fr).toContain('Never put a [source: ...] citation in it.')
+    expect(fr).toContain('Never present general knowledge as part of the course')
+    expect(fr).toContain('not about system design, say so briefly and do not answer it')
+    expect(en).toContain('**Beyond the course:**')
+    expect(en).toContain('This point is not covered in the course.')
   })
 
   it('has no schema: the answer streams as Markdown and is not a Content Cache kind', () => {

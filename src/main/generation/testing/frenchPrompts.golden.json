@@ -120,20 +120,20 @@
     "sha256": "9e6ec38166f763d8f30498d046b7d31d4e7a466c54ee3c37ed6b0520b216b35d"
   },
   "lesson-question-lesson": {
-    "version": "lesson-question-1",
-    "sha256": "958b6238079861d42825e92b31ccdf3f5174a3a42dc367f70a598202ad04f5ad"
+    "version": "lesson-question-2",
+    "sha256": "e7a5f92d21af0bdc7af4f7aca28f1a05efbfd3d0b30144ea5afd2c2d18381ed8"
   },
   "lesson-question-remediation_lesson": {
-    "version": "lesson-question-1",
-    "sha256": "8a7065788ea8e98b68636264a7144a7a9cfccb482cc7051cfafabf3dcd5d5958"
+    "version": "lesson-question-2",
+    "sha256": "b3e9f8b66b6b0c08c952a304525b99afa1613eda357248845bb00d7a943aba4f"
   },
   "lesson-question-protocol_step_lesson": {
-    "version": "lesson-question-1",
-    "sha256": "6556671eeb36a5cd081aa2c62f72bc82387da4396bead70b3b4cc32047ab25ff"
+    "version": "lesson-question-2",
+    "sha256": "0ba9c8ff616281840c8352d0e2951a268d434afff7bfbbe5f726f5ba712add0d"
   },
   "lesson-question-ungrounded": {
-    "version": "lesson-question-1",
-    "sha256": "cfd9499b5fd576a0a99c6d74bc028c22ff1fba8236a185db98a6b7c3ee34fa06"
+    "version": "lesson-question-2",
+    "sha256": "cb99fdcadd88ffec34f2e4ad721ddf44b38f766c0c8b18cf85089ad687a9ecc5"
   },
   "clarification-single_choice": {
     "version": "question-clarification-1",

@@ -152,6 +152,9 @@ describe.each(generationLanguages)('every prompt in %s', (language) => {
     expect(prompts['lesson-question-lesson']!.system).toContain(
       profile.lessonQuestion.notCoveredExample
     )
+    expect(prompts['lesson-question-lesson']!.system).toContain(
+      `**${profile.lessonQuestion.beyondCourseLabel}**`
+    )
   })
 
   it('tells the free-answer grader and the design feedback to answer in the language, whatever the learner wrote', () => {

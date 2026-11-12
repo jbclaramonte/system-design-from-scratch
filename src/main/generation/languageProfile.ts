@@ -81,6 +81,8 @@ export interface LanguageProfile {
   lessonQuestion: {
     notCoveredExample: string
     followUpExample: string
+    /** Bold label that opens the part of an answer taken from general knowledge, not the course. */
+    beyondCourseLabel: string
   }
 }
 
@@ -154,7 +156,8 @@ const FRENCH: LanguageProfile = {
   },
   lessonQuestion: {
     notCoveredExample: "Ce point n'est pas traité dans le cours.",
-    followUpExample: "et pour l'écriture ?"
+    followUpExample: "et pour l'écriture ?",
+    beyondCourseLabel: 'Hors du cours :'
   }
 }
 
@@ -229,7 +232,8 @@ const ENGLISH: LanguageProfile = {
   },
   lessonQuestion: {
     notCoveredExample: 'This point is not covered in the course.',
-    followUpExample: 'what about writing?'
+    followUpExample: 'what about writing?',
+    beyondCourseLabel: 'Beyond the course:'
   }
 }
 
